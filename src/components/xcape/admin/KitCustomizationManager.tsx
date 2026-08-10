@@ -146,6 +146,10 @@ const KitCustomizationManager = () => {
 
   const saveCategory = async (category: string) => {
     const d = draftFor(category);
+    if (d.status === 'active' && delightKitMissing) {
+      toast.error('Delight Express Kit mapping required — create the real kit in Products first');
+      return;
+    }
     if (d.status === 'active' && (!d.kit_product_id || !d.base_product_id || !d.active_product_id)) {
       toast.error('An active mapping needs a kit, a base product and an active solution');
       return;
@@ -211,9 +215,35 @@ const KitCustomizationManager = () => {
           products, active solutions and companions are all existing products — no duplicates are
           created. Keep mappings as <span className="text-foreground font-medium">draft</span> until
           the clinical criteria are confirmed; only <span className="text-foreground font-medium">active</span>{' '}
-          mappings are used when proposals resolve formulas.
+          mappings are used when proposals resolve formulas. The same{' '}
+          <span className="text-foreground font-medium">Delight Express Kit</span> product should be
+          mapped as the kit for every applicable category — only the base, active and companion
+          components differ.
         </p>
       </div>
+
+      {/* Blocking guardrail — the real kit product must exist in the
+          catalogue (Products menu) with its real image and price before any
+          mapping can go live. */}
+      {delightKitMissing && (
+        <div
+          role="alert"
+          className="rounded-lg border border-destructive/40 bg-destructive/10 p-3 flex items-start gap-2"
+        >
+          <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0 text-destructive" />
+          <div className="space-y-1">
+            <p className="text-xs font-semibold text-destructive">
+              Delight Express Kit product mapping required
+            </p>
+            <p className="text-[11px] text-muted-foreground">
+              Create the real <span className="font-medium text-foreground">Delight Express Kit</span>{' '}
+              in the Products menu above with its real price and image, then complete the mappings
+              below. Mappings cannot be activated until then, and formula approval and purchase
+              stay blocked downstream.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Category mapping */}
       <section className="space-y-3">
