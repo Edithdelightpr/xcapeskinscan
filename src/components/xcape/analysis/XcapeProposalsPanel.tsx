@@ -25,6 +25,17 @@ import {
   useDecideProposal,
 } from '@/hooks/useXcapeProposals';
 import { buildEvalContext, evaluateRules, selectExecutableRules } from '@/lib/xcapeRules/evaluate';
+import { useProducts } from '@/hooks/useProducts';
+import {
+  useActiveCategoryCustomizations,
+  useCreateFormulaSnapshot,
+  useFormulaSnapshots,
+} from '@/hooks/useXcapeCustomization';
+import {
+  CUSTOMIZATION_CATEGORIES,
+  resolveFormula,
+  type ResolvedFormula,
+} from '@/lib/xcapeRules/customization';
 import type { RuleOutputs, XcapeProposal } from '@/lib/xcapeRules/types';
 import type { SkinAnalysisPayload } from '@/hooks/useVisitAssessments';
 import { cn } from '@/lib/utils';
@@ -102,6 +113,10 @@ const XcapeProposalsPanel = ({
   const { data: proposals = [] } = useAssessmentProposals(assessmentId);
   const createMut = useCreateProposals();
   const decideMut = useDecideProposal();
+  const { data: products = [] } = useProducts();
+  const { data: categoryMaps = [] } = useActiveCategoryCustomizations();
+  const { data: formulaSnapshots = [] } = useFormulaSnapshots(assessmentId);
+  const snapshotMut = useCreateFormulaSnapshot();
 
   const [rejecting, setRejecting] = useState<XcapeProposal | null>(null);
   const [rejectReason, setRejectReason] = useState('');
@@ -123,6 +138,21 @@ const XcapeProposalsPanel = ({
   );
 
   const executable = useMemo(() => selectExecutableRules(rules, versions), [rules, versions]);
+
+  const productById = (id: string | null | undefined) => products.find((p) => p.id === id);
+
+  const categoryLabel = (key: string) =>
+    CUSTOMIZATION_CATEGORIES.find((c) => c.key === key)?.label ?? key;
+
+  /** Resolve a proposal's customization output into a concrete formula using
+   *  the active admin mapping and the practitioner-approved category score. */
+  const formulaFor = (outputs: RuleOutputs): ResolvedFormula | null => {
+    const c = outputs.customization;
+    if (!c) return null;
+    const mapping = categoryMaps.find((m) => m.category === c.category);
+    const raw = ctx[`score.${c.category}`];
+    return resolveFormula(c, mapping, typeof raw === 'number' ? raw : null);
+  };
 
   /** Evaluate live (without persisting) so the practitioner sees what would
    *  match before generating traceable proposal records. */
@@ -184,12 +214,34 @@ const XcapeProposalsPanel = ({
     if (!assessmentId) return;
     try {
       await decideMut.mutateAsync({ id: p.id, assessmentId, status, reason: reason ?? undefined, finalResult });
-      if (status !== 'rejected') {
-        onApply(finalResult ?? p.proposal);
-        toast.success(status === 'edited' ? 'Edited proposal accepted & applied' : 'Proposal accepted & applied');
-      } else {
+      if (status === 'rejected') {
         toast.success('Proposal rejected — reason recorded');
+        return;
       }
+      const outputs = finalResult ?? p.proposal;
+      const formula = formulaFor(outputs);
+      if (formula && !formulaSnapshots.some((s) => s.proposal_id === p.id)) {
+        // The approved formula is snapshotted immutably — catalogue prices or
+        // rule changes later never rewrite it. This snapshot is what flows to
+        // the report, cart and order.
+        await snapshotMut.mutateAsync({
+          assessmentId,
+          proposalId: p.id,
+          clientId,
+          formula,
+          names: {
+            kit_name: productById(formula.kit_product_id)?.name ?? null,
+            kit_unit_price: productById(formula.kit_product_id)?.selling_price ?? null,
+            base_product_name: productById(formula.base_product_id)?.name ?? null,
+            active_name: productById(formula.active_product_id)?.name ?? null,
+            companion_name: productById(formula.companion_product_id)?.name ?? null,
+          },
+          rule: { rule_id: p.rule_id, rule_version_id: p.rule_version_id, rule_version: p.rule_version },
+          decisionReason: reason,
+        });
+      }
+      onApply(outputs);
+      toast.success(status === 'edited' ? 'Edited proposal accepted & applied' : 'Proposal accepted & applied');
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Decision failed');
     }
@@ -283,7 +335,10 @@ const XcapeProposalsPanel = ({
       {/* Proposal cards */}
       <div className="space-y-3">
         {proposals.map((p) => {
-          const warnings = warningsFor(p.status === 'edited' && p.final_result ? p.final_result : p.proposal);
+          const effectiveOutputs = p.status === 'edited' && p.final_result ? p.final_result : p.proposal;
+          const warnings = warningsFor(effectiveOutputs);
+          const formula = formulaFor(effectiveOutputs);
+          const snapshot = formulaSnapshots.find((s) => s.proposal_id === p.id);
           const linkedProtocols = (p.proposal.protocol_ids ?? [])
             .map((id) => protocols.find((pr) => pr.id === id))
             .filter(Boolean);
@@ -355,7 +410,62 @@ const XcapeProposalsPanel = ({
                 </div>
               )}
 
-              <OutputsSummary outputs={p.status === 'edited' && p.final_result ? p.final_result : p.proposal} />
+              <OutputsSummary outputs={effectiveOutputs} />
+
+              {/* XCAPE customization formula — resolved from the rule tiers,
+                  the admin category mapping and the approved category score. */}
+              {formula ? (
+                <div className="rounded-lg border border-primary/30 bg-surface/40 p-3 space-y-1.5">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <FlaskConical className="w-3.5 h-3.5 text-primary" />
+                    <p className="text-xs font-semibold text-foreground">
+                      XCAPE customization formula — {categoryLabel(formula.category)}
+                    </p>
+                    {formula.is_demo && (
+                      <Badge variant="outline" className="text-[10px] border-amber-500/50 text-amber-400">
+                        Demo mapping
+                      </Badge>
+                    )}
+                    {snapshot && (
+                      <Badge variant="outline" className="text-[10px] border-emerald-500/50 text-emerald-400">
+                        Formula saved
+                      </Badge>
+                    )}
+                  </div>
+                  <ul className="text-[11px] text-foreground space-y-0.5">
+                    <li>Kit: {productById(formula.kit_product_id)?.name ?? '— not mapped —'}</li>
+                    <li>Customize: {productById(formula.base_product_id)?.name ?? '— not mapped —'}</li>
+                    <li>
+                      Active: {productById(formula.active_product_id)?.name ?? '— not mapped —'}
+                      {formula.dose_ml != null
+                        ? ` — ${formula.dose_ml} ml`
+                        : ' — dose unresolved (score outside tiers)'}
+                    </li>
+                    {formula.requires_companion && (
+                      <li>
+                        Companion (required): {productById(formula.companion_product_id)?.name ?? '— not mapped —'}
+                        {formula.companion_dose_ml != null ? ` — ${formula.companion_dose_ml} ml` : ''}
+                      </li>
+                    )}
+                    {formula.score != null && (
+                      <li className="text-muted-foreground">
+                        Based on an approved {categoryLabel(formula.category)} score of {formula.score}/100
+                      </li>
+                    )}
+                  </ul>
+                  {formula.instructions && (
+                    <p className="text-[11px] text-muted-foreground">{formula.instructions}</p>
+                  )}
+                </div>
+              ) : (
+                effectiveOutputs.customization && (
+                  <p className="text-[11px] text-amber-400">
+                    This rule proposes a formula customization, but the category mapping is missing or
+                    inactive — an admin must activate it under Products &amp; Ingredients → Kits &amp;
+                    Customization.
+                  </p>
+                )
+              )}
 
               {(p.proposal.alternatives?.length ?? 0) > 0 && (
                 <p className="text-[11px] text-muted-foreground">

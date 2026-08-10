@@ -119,6 +119,15 @@ Deno.serve(async (req) => {
       ((treatment_plan as any)?.id as string | undefined) ?? null,
     );
 
+    // Staff preview includes ALL approved formula snapshots — demo-labelled
+    // ones too — so admins can verify mappings before going live.
+    const { data: formulas } = await admin
+      .from('xcape_formula_snapshots')
+      .select('id, category, score, kit_product_id, kit_name, kit_unit_price, base_product_name, active_name, dose_ml, companion_name, companion_dose_ml, instructions, warnings, rule_version, approved_at, is_demo')
+      .eq('assessment_id', assessment.id)
+      .eq('status', 'approved')
+      .order('created_at', { ascending: true });
+
     const recommended_sessions_by_service_id: Record<string, number> = {};
     if (Array.isArray(assessment.recommended_services)) {
       // deno-lint-ignore no-explicit-any
@@ -153,6 +162,7 @@ Deno.serve(async (req) => {
       treatment_plan,
       payment_settings,
       care_journey,
+      formulas: formulas ?? [],
       // Synthetic link stub — the shared renderer's inner components accept
       // a `token` + `link.prefix`. Preview links are non-functional; CTAs
       // that require a real token still render but are visually consistent.

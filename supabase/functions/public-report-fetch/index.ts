@@ -104,6 +104,17 @@ Deno.serve(async (req) => {
       ((treatment_plan as any)?.id as string | undefined) ?? null,
     );
 
+    // ---- Approved XCAPE customization formulas (immutable snapshots) ----
+    // Only practitioner-approved, non-demo snapshots reach the client report.
+    // The client never constructs a formula — this data IS the snapshot.
+    const { data: formulas } = await admin
+      .from('xcape_formula_snapshots')
+      .select('id, category, score, kit_product_id, kit_name, kit_unit_price, base_product_name, active_name, dose_ml, companion_name, companion_dose_ml, instructions, warnings, rule_version, approved_at')
+      .eq('assessment_id', assessment.id)
+      .eq('status', 'approved')
+      .eq('is_demo', false)
+      .order('created_at', { ascending: true });
+
     // ---- Promo block: practitioner code + clinic contact + defaults ----
     const [{ data: creator }, { data: outreach }, { data: siteRow }] = await Promise.all([
       linkFull?.created_by
@@ -205,6 +216,7 @@ Deno.serve(async (req) => {
       payment_settings,
       promo,
       care_journey,
+      formulas: formulas ?? [],
       link: { prefix: link.token_prefix, expires_at: link.expires_at },
     });
   } catch (e) {

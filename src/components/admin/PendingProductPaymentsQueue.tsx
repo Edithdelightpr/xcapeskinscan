@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Wallet, MessageCircle, ExternalLink, Phone, X, Globe, Megaphone, Clock, Package,
-  Truck, Store, MapPin,
+  Truck, Store, MapPin, FlaskConical,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -208,15 +208,23 @@ const PendingProductPaymentsQueue = () => {
                 {/* Items */}
                 <div className="rounded-md bg-muted/20 p-2 space-y-1">
                   {g.items.map((it) => (
-                    <div key={it.id} className="flex items-center justify-between text-xs">
-                      <span className="inline-flex items-center gap-1.5 truncate">
-                        <Package className="w-3 h-3 text-muted-foreground shrink-0" />
-                        <span className="truncate">{it.product_name ?? 'Product'}</span>
-                        <span className="text-muted-foreground">×{Number(it.quantity)}</span>
-                      </span>
-                      <span className="font-medium whitespace-nowrap">
-                        {formatNaira(Number(it.quantity) * Number(it.unit_price))}
-                      </span>
+                    <div key={it.id} className="space-y-0.5">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="inline-flex items-center gap-1.5 truncate">
+                          <Package className="w-3 h-3 text-muted-foreground shrink-0" />
+                          <span className="truncate">{it.product_name ?? 'Product'}</span>
+                          <span className="text-muted-foreground">×{Number(it.quantity)}</span>
+                        </span>
+                        <span className="font-medium whitespace-nowrap">
+                          {formatNaira(Number(it.quantity) * Number(it.unit_price))}
+                        </span>
+                      </div>
+                      {it.formula_summary && (
+                        <p className="pl-[18px] text-[10px] text-primary flex items-start gap-1">
+                          <FlaskConical className="w-3 h-3 mt-0.5 shrink-0" />
+                          Customized formula: {it.formula_summary}
+                        </p>
+                      )}
                     </div>
                   ))}
                 </div>

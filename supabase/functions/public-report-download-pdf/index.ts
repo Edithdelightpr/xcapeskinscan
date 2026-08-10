@@ -74,6 +74,17 @@ async function buildPdf(payload: {
   nextVisitInWeeks: number | null;
   services: Array<{ name: string; description?: string | null; price_per_session?: number | null }>;
   products: Array<{ name: string; short_description?: string | null; selling_price?: number | null }>;
+  formulas: Array<{
+    kit_name?: string | null;
+    kit_unit_price?: number | null;
+    base_product_name?: string | null;
+    active_name?: string | null;
+    dose_ml?: number | null;
+    companion_name?: string | null;
+    companion_dose_ml?: number | null;
+    instructions?: string | null;
+    warnings?: string[] | null;
+  }>;
 }): Promise<Uint8Array> {
   const pdf = await PDFDocument.create();
   const font = await pdf.embedFont(StandardFonts.Helvetica);
@@ -227,6 +238,50 @@ async function buildPdf(payload: {
     y -= 4;
   }
 
+  // Customized XCAPE formulas — practitioner-approved immutable snapshots.
+  // Rendered verbatim; the client never constructs a formula.
+  if (payload.formulas.length > 0) {
+    ensure(30);
+    drawText('Your customized formula', { size: 12, bold: true, color: BRONZE });
+    y -= 2;
+    for (const f of payload.formulas) {
+      ensure(70);
+      drawText(
+        `• ${f.kit_name ?? 'Customized kit'}${f.kit_unit_price ? `  —  ₦${Number(f.kit_unit_price).toLocaleString()}` : ''}`,
+        { size: 11, bold: true, color: COCOA },
+      );
+      if (f.base_product_name) {
+        drawText(`Customized product: ${f.base_product_name}`, {
+          size: 10.5, color: COCOA_SOFT, x: MARGIN + 12, maxWidth: CONTENT_W - 12,
+        });
+      }
+      if (f.active_name) {
+        drawText(
+          `Active solution: ${f.active_name}${f.dose_ml != null ? ` — ${f.dose_ml} ml` : ''}`,
+          { size: 10.5, color: COCOA_SOFT, x: MARGIN + 12, maxWidth: CONTENT_W - 12 },
+        );
+      }
+      if (f.companion_name) {
+        drawText(
+          `Companion solution: ${f.companion_name}${f.companion_dose_ml != null ? ` — ${f.companion_dose_ml} ml` : ''}`,
+          { size: 10.5, color: COCOA_SOFT, x: MARGIN + 12, maxWidth: CONTENT_W - 12 },
+        );
+      }
+      if (f.instructions) {
+        drawText(f.instructions, {
+          size: 10.5, italic: true, color: COCOA_SOFT, x: MARGIN + 12, maxWidth: CONTENT_W - 12,
+        });
+      }
+      for (const w of f.warnings ?? []) {
+        drawText(`Warning: ${w}`, {
+          size: 10, color: BAND_COLOR.low, x: MARGIN + 12, maxWidth: CONTENT_W - 12,
+        });
+      }
+      y -= 4;
+    }
+    y -= 4;
+  }
+
   // Footer note on every page
   const totalPages = pdf.getPageCount();
   for (let i = 0; i < totalPages; i++) {
@@ -284,9 +339,15 @@ Deno.serve(async (req) => {
     const prodIds: string[] = Array.isArray(assessment.recommended_products)
       ? assessment.recommended_products.map((x: any) => x?.id ?? x).filter(Boolean) : [];
 
-    const [{ data: services }, { data: products }] = await Promise.all([
+    const [{ data: services }, { data: products }, { data: formulas }] = await Promise.all([
       svcIds.length ? admin.from('services').select('id, name, description, price_per_session').in('id', svcIds) : Promise.resolve({ data: [] as any[] }),
       prodIds.length ? admin.from('products').select('id, name, short_description, selling_price').in('id', prodIds) : Promise.resolve({ data: [] as any[] }),
+      admin.from('xcape_formula_snapshots')
+        .select('kit_name, kit_unit_price, base_product_name, active_name, dose_ml, companion_name, companion_dose_ml, instructions, warnings')
+        .eq('assessment_id', assessment.id)
+        .eq('status', 'approved')
+        .eq('is_demo', false)
+        .order('created_at', { ascending: true }),
     ]);
 
     const clientFirstName = resolveClientFirstName(
@@ -314,6 +375,7 @@ Deno.serve(async (req) => {
       nextVisitInWeeks: assessment.next_visit_in_weeks,
       services: (services ?? []) as any[],
       products: (products ?? []) as any[],
+      formulas: (formulas ?? []) as any[],
     });
 
     // Dedupe pdf_downloaded within 60s
