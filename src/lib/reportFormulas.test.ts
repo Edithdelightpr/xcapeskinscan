@@ -39,19 +39,23 @@ describe('formulasByCategory', () => {
     expect(map.get('pigmentation')?.id).toBe('snap-1');
   });
 
-  it('only a fully purchasable formula (kit + price) occupies a concern', () => {
-    const map = formulasByCategory([formula({ kit_product_id: null })]);
-    expect(map.size).toBe(0);
-    const map2 = formulasByCategory([formula({ kit_unit_price: null })]);
-    expect(map2.size).toBe(0);
+  it('every approved formula occupies its concern — purchasability is enforced at the cart layer, not here', () => {
+    // An approved formula with no real kit mapping still renders in the
+    // CUSTOMIZATION position (no Add to Cart) so the report never silently
+    // drops a practitioner decision; only the cart refuses the line.
+    const unmapped = formula({ kit_product_id: null });
+    const map = formulasByCategory([unmapped]);
+    expect(map.get('pigmentation')?.id).toBe('snap-1');
+    expect(buildFormulaCartItem(unmapped)).toBeNull();
   });
 
-  it('prefers the cheapest purchasable snapshot when several match one category', () => {
+  it('first approved snapshot per category wins — duplicates never stack cards', () => {
     const map = formulasByCategory([
-      formula({ id: 'expensive', kit_unit_price: 95000 }),
-      formula({ id: 'cheap', kit_unit_price: 80000 }),
+      formula({ id: 'first', kit_unit_price: 95000 }),
+      formula({ id: 'second', kit_unit_price: 80000 }),
     ]);
-    expect(map.get('pigmentation')?.id).toBe('cheap');
+    expect(map.get('pigmentation')?.id).toBe('first');
+    expect(map.size).toBe(1);
   });
 
   it('keeps different categories independent', () => {
