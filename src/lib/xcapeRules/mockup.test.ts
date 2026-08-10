@@ -13,7 +13,6 @@
 import { describe, expect, it } from 'vitest';
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import {
   DEFAULT_MOCKUP_CONFIG,
   MOCKUP_KEY,
