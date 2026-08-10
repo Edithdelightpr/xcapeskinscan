@@ -140,7 +140,7 @@ const ScanStage = ({
         )}
 
         {/* Live guidance */}
-        {!reviewUrl && (
+        {!reviewUrl && !busy && (
           <div className="absolute inset-x-3 bottom-3 space-y-2">
             <div
               aria-live="polite"
