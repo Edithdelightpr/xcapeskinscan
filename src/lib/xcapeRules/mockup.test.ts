@@ -193,3 +193,50 @@ describe('public surface isolation', () => {
     expect(src).toContain(".eq('is_demo', false)");
   });
 });
+
+describe('private mock image storage', () => {
+  const editorSrc = () =>
+    readFileSync(
+      join(process.cwd(), 'src/components/xcape/admin/DelightExpressMockup.tsx'),
+      'utf8',
+    );
+
+  it('uploads only to the private xcape-admin-mockups bucket via signed URLs', () => {
+    const src = editorSrc();
+    expect(src).toContain("'xcape-admin-mockups'");
+    expect(src).toContain('createSignedUrl');
+    expect(src).not.toContain('product-media');
+    expect(src).not.toContain('getPublicUrl');
+  });
+
+  it('never persists signed storage URLs in the mock config', () => {
+    const signed =
+      'https://example.supabase.co/storage/v1/object/sign/xcape-admin-mockups/mockups/x.png?token=abc123';
+    const cleaned = sanitizeMockupConfig({
+      kit_image_url: signed,
+      kit_image_storage_path: 'mockups/delight-express/x.png',
+    });
+    expect(cleaned.kit_image_url).toBe(''); // stripped back to the empty default
+    expect(cleaned.kit_image_storage_path).toBe('mockups/delight-express/x.png');
+    // a plain external URL remains an explicit allowed option
+    expect(
+      sanitizeMockupConfig({ kit_image_url: 'https://cdn.example.com/kit.png' }).kit_image_url,
+    ).toBe('https://cdn.example.com/kit.png');
+  });
+
+  it('storage policies for the mockup bucket are admin role-scoped with no anon access', () => {
+    const migrationsDir = join(process.cwd(), 'supabase', 'migrations');
+    const sql = readdirSync(migrationsDir)
+      .filter((f) => f.endsWith('.sql'))
+      .map((f) => readFileSync(join(migrationsDir, f), 'utf8'))
+      .join('\n');
+    const statements = sql.split(/;/).filter((s) => s.includes('xcape-admin-mockups'));
+    // SELECT + INSERT (with check) + DELETE policies
+    expect(statements.length).toBeGreaterThanOrEqual(3);
+    for (const statement of statements) {
+      expect(statement).toContain("public.has_role(auth.uid(), 'admin')");
+      expect(statement.toLowerCase()).not.toContain('to anon');
+      expect(statement.toLowerCase()).toContain('to authenticated');
+    }
+  });
+});
