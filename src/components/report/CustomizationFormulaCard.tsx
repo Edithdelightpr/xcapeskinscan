@@ -153,14 +153,19 @@ const CustomizationFormulaCard = ({ token, formula, compact = false, mock = fals
 
   const header = (
     <div className="flex items-start gap-3">
-      {formula.kit_image_url && (
+      {formula.kit_image_url ? (
         <img
           src={formula.kit_image_url}
           alt={formula.kit_name ?? 'Customized XCAPE kit'}
           loading="lazy"
           className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl object-cover border border-bronze/15 shrink-0"
         />
-      )}
+      ) : mock ? (
+        <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl border border-dashed border-bronze/30 bg-cream-warm/60 flex flex-col items-center justify-center gap-1 shrink-0">
+          <ImageIcon className="w-4 h-4 text-bronze/60" strokeWidth={1.8} />
+          <span className="text-[8px] uppercase tracking-wider text-bronze/60">No image</span>
+        </div>
+      ) : null}
       <div className="flex items-start justify-between gap-3 flex-wrap flex-1 min-w-0">
         <div className="space-y-1 min-w-0">
           <div className="inline-flex items-center gap-1.5 text-[11px] text-bronze font-medium flex-wrap">
