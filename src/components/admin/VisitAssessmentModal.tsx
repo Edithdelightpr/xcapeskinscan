@@ -29,11 +29,14 @@ import SkinAnalysisAiPanel from './SkinAnalysisAiPanel';
 import { supabase } from '@/integrations/supabase/client';
 import {
   bmiCategoryFor, BMI_CATEGORY_LABEL,
-  computeReportReadiness, OBSERVED_CAUSE_OPTIONS, REC_STATUS_LABEL,
-  SEVERITY_BANDS, useSaveVisitAssessment, useVisitAssessmentByScope,
+  computeReportReadiness, OBSERVED_CAUSE_OPTIONS,
+  useSaveVisitAssessment, useVisitAssessmentByScope,
   type AssessmentInput, type BodyBmiPayload, type RecommendedProduct, type RecommendedService,
-  type RecStatus, type SkinAnalysisPayload, type VisitAssessment,
+  type SkinAnalysisPayload, type VisitAssessment,
 } from '@/hooks/useVisitAssessments';
+import {
+  PRESETS, FieldStack, RecommendedServicesPicker, RecommendedProductsPicker,
+} from './assessmentShared';
 
 interface Props {
   open: boolean;
