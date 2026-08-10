@@ -9561,6 +9561,30 @@ export type Database = {
         }
         Relationships: []
       }
+      xcape_admin_mockups: {
+        Row: {
+          config: Json
+          created_at: string
+          key: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          config?: Json
+          created_at?: string
+          key: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          config?: Json
+          created_at?: string
+          key?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       xcape_category_customization: {
         Row: {
           active_product_id: string | null
