@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useAppStore, TODAY, Role } from '@/store/appStore';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from '@/components/ui/use-toast';
-import logo from '@/assets/tropics-logo.jpeg';
+
 import {
   LayoutDashboard, CalendarDays, LogOut, ArrowLeft,
   ListChecks, ClipboardList, Shield, LogIn, Users as UsersIcon,
@@ -401,10 +401,12 @@ const Admin = () => {
   const sidebarBody = (
     <>
       <div className="p-5 border-b border-border/40 flex items-center gap-3">
-        <img src={logo} alt="Tropics" className="w-10 h-10 rounded-full object-cover ring-1 ring-accent/40" />
+        <div className="w-10 h-10 rounded-xl bg-primary/15 ring-1 ring-accent/40 flex items-center justify-center shrink-0">
+          <span className="font-display font-bold text-foreground">X</span>
+        </div>
         <div>
-          <p className="font-display font-bold text-foreground text-sm leading-tight">Tropics MedSpa</p>
-          <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Operating System</p>
+          <p className="font-display font-bold text-foreground text-sm leading-tight tracking-[0.22em]">XCAPE</p>
+          <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Legacy Console</p>
         </div>
       </div>
 
@@ -655,8 +657,10 @@ const Admin = () => {
             )}
           </button>
           <div className="flex items-center gap-2 min-w-0">
-            <img src={logo} alt="Tropics" className="w-7 h-7 rounded-full object-cover ring-1 ring-accent/40" />
-            <p className="font-display font-bold text-foreground text-sm truncate">Tropics MedSpa</p>
+            <div className="w-7 h-7 rounded-lg bg-primary/15 ring-1 ring-accent/40 flex items-center justify-center shrink-0">
+              <span className="font-display font-bold text-xs text-foreground">X</span>
+            </div>
+            <p className="font-display font-bold text-foreground text-sm truncate tracking-[0.2em]">XCAPE</p>
           </div>
           <NotificationBell />
         </div>

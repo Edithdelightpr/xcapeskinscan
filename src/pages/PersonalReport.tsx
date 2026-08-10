@@ -4,12 +4,12 @@ import Seo from '@/components/Seo';
 import PublicFooter from '@/components/public/PublicFooter';
 import { useReportPayload, logReportEvent } from '@/hooks/useReportPayload';
 import PersonalReportView from '@/components/report/PersonalReportView';
-import { BRAND, whatsAppLink } from '@/lib/brand';
+import { whatsAppLink } from '@/lib/brand';
 import { MessageCircle } from 'lucide-react';
 import { toast } from 'sonner';
 
 const seoTitle = 'Your Personal Report';
-const seoDescription = 'A private, personalised skin report from Tropics MedSpa.';
+const seoDescription = 'A private, personalised skin report from XCAPE.';
 
 const StateShell = ({ heading, message }: { heading: string; message: string }) => (
   <div className="min-h-screen flex flex-col bg-[hsl(30_40%_97%)]">
@@ -19,7 +19,7 @@ const StateShell = ({ heading, message }: { heading: string; message: string }) 
         <h1 className="mt-3 font-display text-2xl text-cocoa">{heading}</h1>
         <p className="mt-3 text-[14px] text-cocoa/70 leading-relaxed">{message}</p>
         <a
-          href={whatsAppLink(`Hi ${BRAND.name}! I need help accessing my Personal Report link.`)}
+          href={whatsAppLink(`Hi XCAPE team! I need help accessing my Personal Report link.`)}
           target="_blank"
           rel="noreferrer noopener"
           className="mt-6 inline-flex items-center gap-2 rounded-full bg-cocoa text-white text-[13px] font-medium px-4 py-2 hover:bg-cocoa/90 transition"

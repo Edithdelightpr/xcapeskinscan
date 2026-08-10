@@ -1,6 +1,5 @@
 import { Download } from 'lucide-react';
-import tropicsLogo from '@/assets/tropics-logo.jpeg';
-import { BRAND } from '@/lib/brand';
+import { whatsAppLink } from '@/lib/brand';
 
 interface Props {
   /** Pre-formatted greeting from the shared report formatter (e.g. "Welcome, Ada"). */
