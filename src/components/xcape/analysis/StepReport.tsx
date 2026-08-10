@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import {
   AlertCircle, CheckCircle2, Eye, FileText, Loader2, Save, Share2,
@@ -8,6 +8,7 @@ import ShareReportDialog from '@/components/admin/ShareReportDialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import { buildReportPreviewUrl } from '@/lib/reportPreview';
 import type { RealClient } from '@/hooks/useRealClients';
 import type { VisitAssessment } from '@/hooks/useVisitAssessments';
 import { useAssessmentProposals } from '@/hooks/useXcapeProposals';
@@ -32,8 +33,10 @@ interface Props {
 const StepReport = ({ client, readiness, ensureSaved, savePending, assessments, assessmentId }: Props) => {
   const [sharing, setSharing] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [previewing, setPreviewing] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
   const [shareAssessment, setShareAssessment] = useState<VisitAssessment | null>(null);
+  const navigate = useNavigate();
   const { data: proposals = [] } = useAssessmentProposals(assessmentId);
   const pendingProposals = proposals.filter((p) => p.status === 'proposed').length;
   const blockedByProposals = pendingProposals > 0;
@@ -49,6 +52,23 @@ const StepReport = ({ client, readiness, ensureSaved, savePending, assessments, 
       toast.error(e instanceof Error ? e.message : 'Save failed');
     } finally {
       setSaving(false);
+    }
+  };
+
+  /**
+   * Preview requires a persisted assessment id — save first, then open the
+   * staff preview for the exact saved row. Navigating without the returned
+   * id is rejected by AdminReportPreview ("Missing client or assessment").
+   */
+  const handlePreview = async () => {
+    setPreviewing(true);
+    try {
+      const saved = await ensureSaved();
+      navigate(buildReportPreviewUrl(client.id, saved.id));
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Save failed before preview');
+    } finally {
+      setPreviewing(false);
     }
   };
 
@@ -125,10 +145,15 @@ const StepReport = ({ client, readiness, ensureSaved, savePending, assessments, 
             {(saving || savePending) ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <Save className="w-4 h-4 mr-1.5" />}
             Save analysis
           </Button>
-          <Button type="button" variant="outline" asChild>
-            <Link to={`/admin/clients/${client.id}/report-preview`}>
-              <Eye className="w-4 h-4 mr-1.5" /> Preview report
-            </Link>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handlePreview}
+            disabled={previewing || saving || savePending}
+            title="Saves the analysis, then opens the staff preview for this exact assessment"
+          >
+            {previewing ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <Eye className="w-4 h-4 mr-1.5" />}
+            Preview report
           </Button>
           <Button
             type="button"
