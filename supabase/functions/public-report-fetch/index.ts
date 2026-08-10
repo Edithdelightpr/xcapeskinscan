@@ -115,6 +115,36 @@ Deno.serve(async (req) => {
       .eq('is_demo', false)
       .order('created_at', { ascending: true });
 
+    // Presentation-only hydration: fetch ONLY the kit products referenced by
+    // the approved snapshots and attach image/slug/short description. The
+    // snapshot's own kit_name/kit_unit_price stay authoritative — catalogue
+    // values never overwrite them (a missing snapshot name falls back to the
+    // catalogue name purely for display).
+    const kitIds = [...new Set(
+      (formulas ?? []).map((f: any) => f?.kit_product_id).filter(Boolean),
+    )] as string[];
+    // deno-lint-ignore no-explicit-any
+    let kitById = new Map<string, any>();
+    if (kitIds.length > 0) {
+      const { data: kitProducts } = await admin
+        .from('products')
+        .select('id, name, image_url, thumbnail_url, public_slug, short_description')
+        .in('id', kitIds);
+      // deno-lint-ignore no-explicit-any
+      kitById = new Map((kitProducts ?? []).map((p: any) => [p.id, p]));
+    }
+    // deno-lint-ignore no-explicit-any
+    const hydratedFormulas = (formulas ?? []).map((f: any) => {
+      const kit = f.kit_product_id ? kitById.get(f.kit_product_id) : null;
+      return {
+        ...f,
+        kit_name: f.kit_name ?? kit?.name ?? null,
+        kit_image_url: kit?.image_url ?? kit?.thumbnail_url ?? null,
+        kit_public_slug: kit?.public_slug ?? null,
+        kit_short_description: kit?.short_description ?? null,
+      };
+    });
+
     // ---- Promo block: practitioner code + clinic contact + defaults ----
     const [{ data: creator }, { data: outreach }, { data: siteRow }] = await Promise.all([
       linkFull?.created_by
@@ -216,7 +246,7 @@ Deno.serve(async (req) => {
       payment_settings,
       promo,
       care_journey,
-      formulas: formulas ?? [],
+      formulas: hydratedFormulas,
       link: { prefix: link.token_prefix, expires_at: link.expires_at },
     });
   } catch (e) {

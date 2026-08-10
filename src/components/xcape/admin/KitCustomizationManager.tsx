@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import { FlaskConical, Plus, Trash2 } from 'lucide-react';
+import { AlertTriangle, FlaskConical, Plus, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -118,6 +118,15 @@ const KitCustomizationManager = () => {
   const deleteComponent = useDeleteKitComponent();
 
   const activeProducts = useMemo(() => products.filter((p) => p.active), [products]);
+
+  // Hard prerequisite: the real Delight Express Kit catalogue product (with
+  // its real image and price) must exist before any mapping can go active.
+  // We never seed or fake it — until then mappings stay drafts and formula
+  // approval/purchase remain blocked downstream.
+  const delightKitMissing = useMemo(
+    () => !products.some((p) => /delight\s*express/i.test(p.name ?? '')),
+    [products],
+  );
 
   const [drafts, setDrafts] = useState<Record<string, DraftMap>>({});
   const draftFor = (category: string): DraftMap =>

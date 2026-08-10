@@ -1,8 +1,19 @@
 import type { FormattedConcern } from '@/lib/reportConcernFormatter';
 import { BAND_TONE } from '@/lib/reportInterpretation';
+import type { ReportFormula } from '@/hooks/useReportPayload';
+import CustomizationFormulaCard from '@/components/report/CustomizationFormulaCard';
 
 interface Props {
   concern: FormattedConcern;
+  /** Report token (or "preview") — needed by the formula card's cart action. */
+  token: string;
+  /**
+   * The practitioner-approved XCAPE kit formula for this concern's category.
+   * When present it occupies the CUSTOMIZATION position; when absent the
+   * CUSTOMIZATION row is omitted entirely — generic framework copy (SPF,
+   * brightening routines, antioxidants) never renders there.
+   */
+  formula?: ReportFormula | null;
 }
 
 /**
@@ -24,7 +35,7 @@ const Row = ({ label, value }: { label: string; value: string }) => {
   );
 };
 
-const ConcernCard = ({ concern }: Props) => (
+const ConcernCard = ({ concern, token, formula }: Props) => (
   <article
     id={concern.anchorId}
     className="scroll-mt-24 rounded-3xl border border-bronze/15 bg-white/85 backdrop-blur p-4 sm:p-8 shadow-[0_1px_0_hsl(28_30%_60%_/_0.06)]"
@@ -61,7 +72,16 @@ const ConcernCard = ({ concern }: Props) => (
       <Row label="Analysis" value={concern.analysis} />
       <Row label="Impact" value={concern.impact} />
       <Row label="Call to action" value={concern.callToAction} />
-      <Row label="Customization" value={concern.customization} />
+      {formula ? (
+        <div className="grid grid-cols-1 sm:grid-cols-[160px_1fr] gap-2 sm:gap-6">
+          <div className="text-[10.5px] sm:text-[11px] font-semibold text-bronze uppercase tracking-[0.18em] pt-0.5">
+            Customization
+          </div>
+          <div className="min-w-0">
+            <CustomizationFormulaCard token={token} formula={formula} compact />
+          </div>
+        </div>
+      ) : null}
       {concern.aiObservation ? <Row label="AI observation" value={concern.aiObservation} /> : null}
     </div>
   </article>

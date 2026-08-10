@@ -130,7 +130,18 @@ describe('formatConcerns', () => {
       expect(c.impact).toBe(stage.impact);
       expect(c.callToAction).toBe(stage.call_to_action);
       expect(c.treatmentDirection).toBe(stage.treatment_direction);
-      expect(c.customization).toBe(stage.home_care_direction);
+    }
+  });
+
+  it('never exposes generic home-care copy as a customization field', () => {
+    // The CUSTOMIZATION position belongs to the practitioner-approved kit
+    // formula only. stage.home_care_direction (SPF, brightening routines,
+    // antioxidants…) must not leak into the formatted concern.
+    const concerns = formatConcerns(buildSkinAnalysis());
+    for (const c of concerns) {
+      expect('customization' in c).toBe(false);
+      const stage = stageFor(c.key, c.score);
+      expect(Object.values(c)).not.toContain(stage.home_care_direction);
     }
   });
 
@@ -258,16 +269,14 @@ describe('formatReport', () => {
     expect(hydration.impact).toMatch(/Minimal concern/);
     expect(hydration.callToAction).toMatch(/Continue prevention/);
     expect(hydration.treatmentDirection).toMatch(/Preventive hydration support only/);
-    expect(hydration.customization).toMatch(/Preventive hydration routine.*ceramides.*SPF/);
   });
 
-  it('CONCERN_FIELD_ORDER is fixed and complete', () => {
+  it('CONCERN_FIELD_ORDER is fixed and complete — with no customization slot', () => {
     expect(CONCERN_FIELD_ORDER.map((f) => f.key)).toEqual([
       'analysis',
       'impact',
       'callToAction',
       'treatmentDirection',
-      'customization',
       'aiObservation',
     ]);
   });

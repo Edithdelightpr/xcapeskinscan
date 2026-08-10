@@ -37,12 +37,16 @@ export interface FormattedConcern {
   band: ScoreBand;
   bandLabel: string;
   stageName: string;
-  /** Six required labelled fields — engine copy, never rewritten. */
+  /** Required labelled fields — engine copy, never rewritten. */
   analysis: string;
   impact: string;
   callToAction: string;
   treatmentDirection: string;
-  customization: string;
+  // NOTE: there is deliberately no `customization` engine-copy field. The
+  // client-facing CUSTOMIZATION position is reserved for the practitioner-
+  // approved XCAPE kit formula (see ConcernCard) — generic framework copy
+  // such as SPF/brightening routines must never appear there. Home-care
+  // guidance lives in its own dedicated report section.
   /** Optional. Only present when practitioner-approved AI reasons exist. */
   aiObservation: string | null;
   anchorId: string;
@@ -208,7 +212,6 @@ export function formatConcerns(skinAnalysis: unknown): FormattedConcern[] {
       impact: stage.impact ?? '',
       callToAction: stage.call_to_action ?? '',
       treatmentDirection: stage.treatment_direction ?? '',
-      customization: stage.home_care_direction ?? '',
       aiObservation: pickAiObservation(skinAnalysis, key),
       anchorId: `concern-${key.replace(/_/g, '-')}`,
     };
@@ -243,13 +246,14 @@ export function formatReport(input: FormatReportInput): FormattedReport {
   };
 }
 
-/** Six required fields, in the fixed display order. */
+/** Required fields, in the fixed display order. The CUSTOMIZATION position
+ *  is intentionally absent — it belongs to the practitioner-approved XCAPE
+ *  kit formula, injected by the renderer (never engine copy). */
 export const CONCERN_FIELD_ORDER = [
   { key: 'analysis', label: 'Analysis' },
   { key: 'impact', label: 'Impact' },
   { key: 'callToAction', label: 'Call to action' },
   { key: 'treatmentDirection', label: 'Treatment direction' },
-  { key: 'customization', label: 'Customization' },
   { key: 'aiObservation', label: 'AI observation' },
 ] as const;
 

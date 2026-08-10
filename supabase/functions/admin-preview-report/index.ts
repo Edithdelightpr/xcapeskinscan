@@ -128,6 +128,34 @@ Deno.serve(async (req) => {
       .eq('status', 'approved')
       .order('created_at', { ascending: true });
 
+    // Presentation-only hydration — identical to public-report-fetch so
+    // staff see exactly what the client sees. Snapshot name/price stay
+    // authoritative; only image/slug/short description come from the catalogue.
+    const kitIds = [...new Set(
+      (formulas ?? []).map((f: any) => f?.kit_product_id).filter(Boolean),
+    )] as string[];
+    // deno-lint-ignore no-explicit-any
+    let kitById = new Map<string, any>();
+    if (kitIds.length > 0) {
+      const { data: kitProducts } = await admin
+        .from('products')
+        .select('id, name, image_url, thumbnail_url, public_slug, short_description')
+        .in('id', kitIds);
+      // deno-lint-ignore no-explicit-any
+      kitById = new Map((kitProducts ?? []).map((p: any) => [p.id, p]));
+    }
+    // deno-lint-ignore no-explicit-any
+    const hydratedFormulas = (formulas ?? []).map((f: any) => {
+      const kit = f.kit_product_id ? kitById.get(f.kit_product_id) : null;
+      return {
+        ...f,
+        kit_name: f.kit_name ?? kit?.name ?? null,
+        kit_image_url: kit?.image_url ?? kit?.thumbnail_url ?? null,
+        kit_public_slug: kit?.public_slug ?? null,
+        kit_short_description: kit?.short_description ?? null,
+      };
+    });
+
     const recommended_sessions_by_service_id: Record<string, number> = {};
     if (Array.isArray(assessment.recommended_services)) {
       // deno-lint-ignore no-explicit-any
@@ -162,7 +190,7 @@ Deno.serve(async (req) => {
       treatment_plan,
       payment_settings,
       care_journey,
-      formulas: formulas ?? [],
+      formulas: hydratedFormulas,
       // Synthetic link stub — the shared renderer's inner components accept
       // a `token` + `link.prefix`. Preview links are non-functional; CTAs
       // that require a real token still render but are visually consistent.
