@@ -36,4 +36,40 @@ describe('reportConcernFormatter mirror parity', () => {
     );
     expect(mirror).toBe(canonical);
   });
+
+  it('neither copy exposes a customization field or leaks home_care_direction into formatted concerns', async () => {
+    // The CUSTOMIZATION position belongs to the practitioner-approved kit
+    // formula only — generic engine copy (SPF, brightening routines,
+    // antioxidants…) must never occupy it, in src OR in the edge mirror.
+    const { formatConcerns } = await import('./reportConcernFormatter');
+    const analysis = JSON.parse(
+      readFileSync(resolve(process.cwd(), 'src/lib/skinEngine.ts'), 'utf8')
+        .replace(/[\s\S]*?const ENGINE_DATA = /, '')
+        .replace(/;\s*export[\s\S]*$/, '')
+        .replace(/export default[\s\S]*$/, ''),
+    ) as {
+      hydration: { stages: Record<string, { home_care_direction: string }> };
+      pigmentation: { stages: Record<string, { home_care_direction: string }> };
+      firmness: { stages: Record<string, { home_care_direction: string }> };
+      oil: { stages: Record<string, { home_care_direction: string }> };
+    };
+    const directions = [analysis.hydration, analysis.pigmentation, analysis.firmness, analysis.oil]
+      .flatMap((v) => Object.values(v.stages).map((s) => s.home_care_direction));
+    const concerns = formatConcerns({
+      client_first_name: 'Ada',
+      skin_analysis: {
+        hydration: { score: 42 },
+        pigmentation: { score: 48 },
+        firmness: { score: 62 },
+        oil: { score: 54 },
+      },
+    });
+    expect(concerns).toHaveLength(4);
+    for (const c of concerns) {
+      expect('customization' in c).toBe(false);
+      for (const v of Object.values(c)) {
+        expect(directions).not.toContain(v);
+      }
+    }
+  });
 });
