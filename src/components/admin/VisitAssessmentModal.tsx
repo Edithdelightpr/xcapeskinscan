@@ -51,23 +51,6 @@ interface Props {
   onOutreachVisitClosed?: () => void;
 }
 
-/* ----- Preset option libraries (extendable per field via QuickPickField) ----- */
-const PRESETS = {
-  mainConcern: ['Hyperpigmentation', 'Acne breakouts', 'Dryness', 'Sensitivity', 'Dullness', 'Uneven tone', 'Texture', 'Fine lines', 'Anti-aging', 'Wellness', 'Body contouring', 'Weight management'],
-  clientGoal: ['Even skin tone and glow', 'Clearer skin in 8 weeks', 'Hydrated, plump skin', 'Reduce dark spots', 'Smoother texture', 'Anti-aging maintenance', 'Lose weight', 'Reduce waist circumference', 'Improve energy', 'Relaxation / wellness'],
-  redFlags: ['Pregnant', 'Breastfeeding', 'Recent peel (<2 weeks)', 'Active retinoid use', 'Active acne flare', 'Eczema flare', 'Sunburn', 'Open wound', 'Cold sore active', 'Recent filler', 'Recent Botox', 'Diabetic', 'Hypertension', 'Heart condition', 'On accutane', 'Photosensitising medication'],
-  skinType: ['Oily', 'Dry', 'Combination', 'Normal', 'Sensitive', 'Dehydrated', 'Acne-prone', 'Mature', 'Fitzpatrick IV', 'Fitzpatrick V', 'Fitzpatrick VI'],
-  mainVisibleConcern: ['Melasma forehead', 'Melasma cheeks', 'PIH from acne', 'Sun damage', 'Comedones nose', 'Cystic acne jawline', 'Dark under-eyes', 'Enlarged pores', 'Fine lines around eyes', 'Sagging jawline', 'Redness', 'Rough texture'],
-  targetBodyArea: ['Abdomen', 'Waist', 'Hips', 'Thighs', 'Arms', 'Back', 'Glutes', 'Chin / neck', 'Full body'],
-  bodyGoal: ['Reduce waist 4cm in 8 weeks', 'Lose 5kg in 12 weeks', 'Tone abdomen', 'Tone arms', 'Reduce cellulite', 'Lymphatic drainage', 'Postnatal toning', 'Maintain current weight'],
-  energyLevel: ['Low', 'Below normal', 'Normal', 'Above normal', 'High', 'Fatigued', 'Stressed'],
-  hydrationGoal: ['Drink 2L water daily', 'Drink 3L water daily', 'Add electrolytes', 'Reduce caffeine', 'Reduce alcohol', 'Daily greens'],
-  painTension: ['Lower back', 'Upper back', 'Neck / shoulders', 'Knees', 'Hips', 'Headaches', 'Period cramps', 'None reported'],
-  bodyContraindications: ['Pregnant', 'Breastfeeding', 'Pacemaker', 'Metal implants', 'Hypertension', 'Diabetic', 'Heart condition', 'Recent surgery', 'Active infection', 'Varicose veins (severe)'],
-  homeCare: ['Daily SPF 50', 'Gentle cleanser AM/PM', 'No actives for 48h', 'Vitamin C serum AM', 'Retinol 2-3x week PM', 'Hydrating moisturiser', 'Avoid hot showers 48h', 'No makeup 24h', 'Increase water intake', 'Niacinamide serum'],
-  followUp: ['Review pigmentation in 4 weeks', 'Repeat treatment in 2 weeks', 'Repeat treatment in 4 weeks', 'Repeat treatment in 6 weeks', 'Body measurement review in 4 weeks', 'Consultation review in 8 weeks', 'No follow-up needed'],
-} as const;
-
 const emptySkin = (): SkinAnalysisPayload => ({
   skin_type: null, main_visible_concern: null,
   observed_causes: [], machine_media_id: null, practitioner_interpretation: null,
