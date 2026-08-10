@@ -88,7 +88,7 @@ const SkinAnalysisAiPanel = ({
         });
         rows.push(row);
       }
-      setUploaded((prev) => [...prev, ...rows]);
+      setSessionUploaded((prev) => [...prev, ...rows]);
       toast.success(`${rows.length} image${rows.length === 1 ? '' : 's'} uploaded`);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Upload failed');
