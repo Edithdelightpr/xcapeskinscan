@@ -98,23 +98,21 @@ const GuidedFacialScan = ({ client, onUploaded, onComplete, onFallback }: Props)
   }, []);
 
   /** Draw the current video frame into a JPEG blob (original orientation). */
-  const grabFrame = useCallback((): Blob | null => {
+  const grabFrame = useCallback((): Promise<Blob | null> => {
     const video = camera.videoRef.current;
-    if (!video || video.videoWidth === 0) return null;
+    if (!video || video.videoWidth === 0) return Promise.resolve(null);
     const canvas = (captureCanvasRef.current ??= document.createElement('canvas'));
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
     const ctx = canvas.getContext('2d');
-    if (!ctx) return null;
+    if (!ctx) return Promise.resolve(null);
     ctx.drawImage(video, 0, 0);
-    let blob: Blob | null = null;
-    canvas.toBlob((b) => (blob = b), 'image/jpeg', 0.92);
-    return blob;
+    return new Promise((resolve) => canvas.toBlob((b) => resolve(b), 'image/jpeg', 0.92));
   }, [camera.videoRef]);
 
   const beginCapture = useCallback(
-    (view: ScanViewId) => {
-      const blob = grabFrame();
+    async (view: ScanViewId) => {
+      const blob = await grabFrame();
       if (!blob) {
         toast.error('Could not read the camera frame — try again.');
         return;
