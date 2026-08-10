@@ -193,7 +193,7 @@ const GuidedFacialScan = ({ client, onUploaded, onComplete, onFallback }: Props)
         setStability(p);
         if (p >= 1) {
           validSinceRef.current = null;
-          beginCapture(currentView);
+          void beginCapture(currentView);
         }
       } else {
         validSinceRef.current = null;
@@ -380,7 +380,7 @@ const GuidedFacialScan = ({ client, onUploaded, onComplete, onFallback }: Props)
           busy={modelLoading || camera.starting}
           busyLabel={camera.starting ? 'Starting the camera…' : 'Preparing alignment checks…'}
           reviewUrl={phase === 'review' ? pendingCapture?.url ?? null : null}
-          onManualCapture={() => beginCapture(currentView)}
+          onManualCapture={() => void beginCapture(currentView)}
           onToggleCamera={camera.toggleFacing}
           onCancel={handleCancelScan}
           onRetake={handleRetake}
