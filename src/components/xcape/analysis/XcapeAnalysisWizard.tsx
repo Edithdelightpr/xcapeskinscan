@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { Check, ChevronLeft, ChevronRight, RotateCcw } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -47,6 +47,9 @@ const WIP_KEY = 'xcape:analysis:wip';
 interface Wip {
   step?: number;
   clientId?: string | null;
+  /** Saved assessment identity — recorded so a refresh/resume lands back on
+   *  the exact same assessment (even once report_ready=true). */
+  assessmentId?: string | null;
 }
 
 const readWip = (): Wip => {
@@ -75,7 +78,19 @@ const XcapeAnalysisWizard = () => {
   const { data: clients = [] } = useRealClients();
   const client: RealClient | null = clients.find((c) => c.id === clientId) ?? null;
 
-  const [assessmentId, setAssessmentId] = useState<string | null>(null);
+  // Assessment identity lives in BOTH state (for rendering) and a ref that
+  // updates synchronously the moment a save returns. Concurrent autosave /
+  // manual save / preview / share calls in the same tick then UPDATE the same
+  // row instead of inserting duplicate standalone assessments before React
+  // state catches up.
+  const [assessmentId, setAssessmentIdState] = useState<string | null>(
+    wip.clientId && wip.assessmentId ? wip.assessmentId : null,
+  );
+  const assessmentIdRef = useRef<string | null>(assessmentId);
+  const setAssessmentId = useCallback((id: string | null) => {
+    assessmentIdRef.current = id;
+    setAssessmentIdState(id);
+  }, []);
   const [resumedAt, setResumedAt] = useState<string | null>(null);
   const [skin, setSkin] = useState<SkinAnalysisPayload>(emptySkin);
   const [recServices, setRecServices] = useState<RecommendedService[]>([]);
@@ -106,8 +121,12 @@ const XcapeAnalysisWizard = () => {
     setMedia([]);
   };
 
-  // Resume the latest standalone draft (not a finished report, not tied to a
-  // MedSpa visit/appointment) when a client is selected.
+  // Resume the in-progress assessment when a client is selected:
+  //   1. The exact WIP assessment recorded in the session — even when it is
+  //      already report_ready (a practitioner mid-report must land back on
+  //      the same assessment, never on a fresh duplicate).
+  //   2. Otherwise the latest standalone draft (not a finished report, not
+  //      tied to a MedSpa visit/appointment) — the existing behaviour.
   useEffect(() => {
     if (!clientId) {
       hydratedFor.current = null;
@@ -116,8 +135,15 @@ const XcapeAnalysisWizard = () => {
     }
     if (hydratedFor.current === clientId) return;
     if (assessmentsLoading) return;
+    const wipNow = readWip();
+    const wipRow =
+      wipNow.clientId === clientId && wipNow.assessmentId
+        ? assessments.find((a) => a.id === wipNow.assessmentId) ?? null
+        : null;
     const draftRow =
-      assessments.find((a) => !a.report_ready && !a.visit_id && !a.appointment_id) ?? null;
+      wipRow ??
+      assessments.find((a) => !a.report_ready && !a.visit_id && !a.appointment_id) ??
+      null;
     if (draftRow) {
       setAssessmentId(draftRow.id);
       setResumedAt(draftRow.updated_at ?? draftRow.created_at);
@@ -136,12 +162,13 @@ const XcapeAnalysisWizard = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clientId, assessmentsLoading]);
 
-  // Persist position so a refresh returns to the same step and client.
+  // Persist position + assessment identity so a refresh returns to the same
+  // step, client and exact assessment.
   useEffect(() => {
     try {
-      window.sessionStorage.setItem(WIP_KEY, JSON.stringify({ step, clientId }));
+      window.sessionStorage.setItem(WIP_KEY, JSON.stringify({ step, clientId, assessmentId }));
     } catch { /* noop */ }
-  }, [step, clientId]);
+  }, [step, clientId, assessmentId]);
 
   // Scroll back to the top whenever the step changes (long steps, tablets).
   useEffect(() => {
@@ -173,16 +200,28 @@ const XcapeAnalysisWizard = () => {
   const readiness = computeReportReadiness(draft);
 
   /** Save the assessment through the existing mutation. First save inserts,
-   *  subsequent saves update the same row (draft identity is kept here). */
+   *  subsequent saves update the same row. The identity ref is updated
+   *  synchronously and recorded in the WIP session record immediately, so
+   *  concurrent save/preview/share calls and refreshes all converge on the
+   *  same assessment row. The saved engine payload is passed through
+   *  untouched — never recomputed here. */
   const ensureSaved = async (): Promise<VisitAssessment> => {
     if (!clientId) throw new Error('Select a client first');
+    const currentId = assessmentIdRef.current;
     const saved = await saveMut.mutateAsync({
-      ...(assessmentId ? { id: assessmentId } : {}),
+      ...(currentId ? { id: currentId } : {}),
       ...draft,
       client_id: clientId,
       report_ready: readiness.ready,
     } as Parameters<typeof saveMut.mutateAsync>[0]);
-    setAssessmentId(saved.id);
+    assessmentIdRef.current = saved.id;
+    setAssessmentIdState(saved.id);
+    try {
+      window.sessionStorage.setItem(
+        WIP_KEY,
+        JSON.stringify({ ...readWip(), step, clientId, assessmentId: saved.id }),
+      );
+    } catch { /* noop */ }
     return saved;
   };
 
@@ -214,6 +253,10 @@ const XcapeAnalysisWizard = () => {
   const startFresh = () => {
     resetFields();
     hydratedFor.current = clientId; // don't immediately re-hydrate the old draft
+    // Clear the persisted identity too — a fresh analysis must not resume or
+    // overwrite the previous assessment. The persist effect re-writes the
+    // cleared record on the next render.
+    try { window.sessionStorage.removeItem(WIP_KEY); } catch { /* noop */ }
     setStep(0);
     setMaxStep(0);
   };
