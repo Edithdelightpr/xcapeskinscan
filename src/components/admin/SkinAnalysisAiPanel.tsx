@@ -29,6 +29,12 @@ interface Props {
   current: AiAssistPayload | null | undefined;
   /** Existing engine variables the practitioner may have already entered. */
   currentEngine?: EnginePayload | null;
+  /**
+   * Images already uploaded earlier in the flow (e.g. the XCAPE wizard's
+   * Images step). Merged with anything uploaded directly from this panel —
+   * optional, existing callers are unaffected.
+   */
+  externalMedia?: ClientMedia[];
   onChange: (next: AiAssistPayload | null) => void;
   /**
    * Called with a fully-finalized engine payload after Apply. The panel now
@@ -43,14 +49,23 @@ interface Props {
 type SuggestedMap = NonNullable<AiAssistPayload['suggested_scores']>;
 
 const SkinAnalysisAiPanel = ({
-  clientId, visitId, current, currentEngine,
+  clientId, visitId, current, currentEngine, externalMedia,
   onChange, onApplyAiEngine, onRefineInEngine,
 }: Props) => {
   const uploadMut = useUploadClientMedia();
   const { user } = useAuth();
   const [uploading, setUploading] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
-  const [uploaded, setUploaded] = useState<ClientMedia[]>([]);
+  const [sessionUploaded, setSessionUploaded] = useState<ClientMedia[]>([]);
+
+  // Externally supplied images (uploaded earlier in the flow) take the first
+  // slots; images uploaded from this panel fill the rest, up to the 4 max.
+  const uploaded = useMemo(() => {
+    const map = new Map<string, ClientMedia>();
+    (externalMedia ?? []).forEach((m) => map.set(m.id, m));
+    sessionUploaded.forEach((m) => map.set(m.id, m));
+    return Array.from(map.values()).slice(0, 4);
+  }, [externalMedia, sessionUploaded]);
 
   const usable = current?.image_quality?.usable !== false;
   const suggested: SuggestedMap = current?.suggested_scores ?? {};
@@ -73,7 +88,7 @@ const SkinAnalysisAiPanel = ({
         });
         rows.push(row);
       }
-      setUploaded((prev) => [...prev, ...rows]);
+      setSessionUploaded((prev) => [...prev, ...rows]);
       toast.success(`${rows.length} image${rows.length === 1 ? '' : 's'} uploaded`);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Upload failed');
