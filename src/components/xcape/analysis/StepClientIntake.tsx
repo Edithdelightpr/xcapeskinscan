@@ -120,17 +120,18 @@ const StepClientIntake = ({ client, onPick }: Props) => {
                 <Input
                   id="xc-name"
                   value={form.full_name}
+                  maxLength={100}
                   onChange={(e) => setForm((f) => ({ ...f, full_name: e.target.value }))}
                   className="bg-surface border-border/60"
                 />
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="xc-phone" className="text-xs">Phone</Label>
-                <Input
+                <PhoneInput
                   id="xc-phone"
                   value={form.phone}
-                  onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
-                  className="bg-surface border-border/60"
+                  onChange={(v) => setForm((f) => ({ ...f, phone: v }))}
+                  inputClassName="bg-surface border-border/60"
                 />
               </div>
               <div className="space-y-1.5">
@@ -139,6 +140,8 @@ const StepClientIntake = ({ client, onPick }: Props) => {
                   id="xc-email"
                   type="email"
                   value={form.email}
+                  maxLength={255}
+                  placeholder="name@example.com"
                   onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
                   className="bg-surface border-border/60"
                 />
@@ -148,6 +151,7 @@ const StepClientIntake = ({ client, onPick }: Props) => {
                 <Input
                   id="xc-location"
                   value={form.location}
+                  maxLength={120}
                   onChange={(e) => setForm((f) => ({ ...f, location: e.target.value }))}
                   className="bg-surface border-border/60"
                 />
