@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import logo from "@/assets/tropics-logo.jpeg";
+
 
 // Managed Supabase OAuth 2.1 consent screen. Users land here when an external
 // MCP client (ChatGPT, Claude, Codex, Cursor, …) starts an authorization.
@@ -92,12 +92,14 @@ export default function OAuthConsent() {
     <div className="min-h-screen gradient-primary flex items-center justify-center px-4">
       <div className="glass-strong rounded-2xl p-8 w-full max-w-md space-y-6 glow-primary-soft">
         <div className="flex flex-col items-center space-y-3">
-          <img src={logo} alt="Tropics MedSpa" className="w-16 h-16 rounded-full object-cover ring-2 ring-accent/40" />
+          <div className="w-16 h-16 rounded-2xl bg-primary/15 ring-2 ring-accent/40 flex items-center justify-center">
+            <span className="font-display font-bold text-2xl text-foreground">X</span>
+          </div>
           <h1 className="text-xl font-display font-bold text-foreground text-center">
-            Connect {clientName} to Tropics MedSpa
+            Connect {clientName} to XCAPE
           </h1>
           <p className="text-xs text-muted-foreground text-center">
-            This will let {clientName} use Tropics MedSpa tools as you. It respects your staff role
+            This will let {clientName} use XCAPE tools as you. It respects your staff role
             and all row-level permissions — it cannot see or change anything you can't already access.
           </p>
         </div>

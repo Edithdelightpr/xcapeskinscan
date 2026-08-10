@@ -110,13 +110,13 @@ const PractitionerNoteCard = ({
 
         <div className="mt-7 pt-5 border-t border-bronze/15 flex items-center gap-3">
           <div className="w-9 h-9 rounded-full bg-bronze/15 text-bronze flex items-center justify-center font-display text-[13px] font-semibold">
-            {(practitionerName?.trim()?.[0] ?? 'T').toUpperCase()}
+            {(practitionerName?.trim()?.[0] ?? 'X').toUpperCase()}
           </div>
           <div className="leading-tight">
             <div className="text-[13.5px] text-cocoa font-medium">
-              {practitionerName?.trim() || 'Your Tropics practitioner'}
+              {practitionerName?.trim() || 'Your XCAPE practitioner'}
             </div>
-            <div className="text-[11.5px] text-cocoa/55">Tropics MedSpa</div>
+            <div className="text-[11.5px] text-cocoa/55">XCAPE</div>
           </div>
         </div>
       </article>

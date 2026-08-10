@@ -42,6 +42,22 @@ import NavStatePersistor from "./components/NavStatePersistor";
 import ReferralAttribution from "./components/ReferralAttribution";
 import ReferralBounce from "./pages/ReferralBounce";
 import DiscountPopup from "./components/public/DiscountPopup";
+import XcapeShell from "./components/xcape/XcapeShell";
+import XcapeAdminGate from "./components/xcape/XcapeAdminGate";
+import XcapeNewAnalysis from "./pages/xcape/XcapeNewAnalysis";
+import XcapeClients from "./pages/xcape/XcapeClients";
+import XcapeReports from "./pages/xcape/XcapeReports";
+import XcapeHistory from "./pages/xcape/XcapeHistory";
+import XcapeProtocols from "./pages/xcape/XcapeProtocols";
+import XcapeAccount from "./pages/xcape/XcapeAccount";
+import XcapeAdminAccess from "./pages/xcape/admin/XcapeAdminAccess";
+import XcapeAdminPractitioners from "./pages/xcape/admin/XcapeAdminPractitioners";
+import XcapeAdminScoring from "./pages/xcape/admin/XcapeAdminScoring";
+import XcapeAdminProtocolLibrary from "./pages/xcape/admin/XcapeAdminProtocolLibrary";
+import XcapeAdminProducts from "./pages/xcape/admin/XcapeAdminProducts";
+import XcapeAdminContraindications from "./pages/xcape/admin/XcapeAdminContraindications";
+import XcapeAdminReportTemplates from "./pages/xcape/admin/XcapeAdminReportTemplates";
+import XcapeAdminSystem from "./pages/xcape/admin/XcapeAdminSystem";
 
 const queryClient = new QueryClient();
 
@@ -112,6 +128,29 @@ const App = () => (
               path="/admin/clients/:id/report-preview"
               element={<AuthGuard><AdminReportPreview /></AuthGuard>}
             />
+            {/* ==================== XCAPE SHELL ====================
+                Standalone tropical-skin analysis product. Reuses the existing
+                assessment workflow and admin modules; MedSpa operational
+                routes above remain intact at their original paths. */}
+            <Route path="/xcape" element={<AuthGuard><XcapeShell /></AuthGuard>}>
+              <Route index element={<Navigate to="/xcape/analysis" replace />} />
+              <Route path="analysis" element={<XcapeNewAnalysis />} />
+              <Route path="clients" element={<XcapeClients />} />
+              <Route path="reports" element={<XcapeReports />} />
+              <Route path="history" element={<XcapeHistory />} />
+              <Route path="protocols" element={<XcapeProtocols />} />
+              <Route path="account" element={<XcapeAccount />} />
+              <Route path="admin" element={<XcapeAdminGate />}>
+                <Route path="access" element={<XcapeAdminAccess />} />
+                <Route path="practitioners" element={<XcapeAdminPractitioners />} />
+                <Route path="scoring-standard" element={<XcapeAdminScoring />} />
+                <Route path="protocol-library" element={<XcapeAdminProtocolLibrary />} />
+                <Route path="products" element={<XcapeAdminProducts />} />
+                <Route path="contraindications" element={<XcapeAdminContraindications />} />
+                <Route path="report-templates" element={<XcapeAdminReportTemplates />} />
+                <Route path="system" element={<XcapeAdminSystem />} />
+              </Route>
+            </Route>
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>

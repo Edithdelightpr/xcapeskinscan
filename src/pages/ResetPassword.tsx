@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import logo from '@/assets/tropics-logo.jpeg';
+
 
 const ResetPassword = () => {
   const navigate = useNavigate();
@@ -37,14 +37,16 @@ const ResetPassword = () => {
     setSubmitting(false);
     if (error) return setError(error.message);
     toast.success('Password updated. Signing you in…');
-    navigate('/admin', { replace: true });
+    navigate('/xcape', { replace: true });
   };
 
   return (
     <div className="min-h-screen gradient-primary flex items-center justify-center px-4">
       <div className="glass-strong rounded-2xl p-8 w-full max-w-md space-y-6 glow-primary-soft">
         <div className="flex flex-col items-center space-y-3">
-          <img src={logo} alt="Tropics MedSpa" className="w-16 h-16 rounded-full object-cover ring-2 ring-accent/40" />
+          <div className="w-16 h-16 rounded-2xl bg-primary/15 ring-2 ring-accent/40 flex items-center justify-center">
+            <span className="font-display font-bold text-2xl text-foreground">X</span>
+          </div>
           <h1 className="text-2xl font-display font-bold text-foreground">Set a new password</h1>
           <p className="text-xs text-muted-foreground text-center">
             {ready ? 'Choose a new password for your staff account.' : 'Validating your recovery link…'}

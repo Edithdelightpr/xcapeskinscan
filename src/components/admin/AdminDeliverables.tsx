@@ -50,7 +50,7 @@ const STATUS_ICON: Record<DeliverableStatus, typeof Circle> = {
 
 const FREEFORM_SAMPLE = `DELIVERABLES THIS WEEK
 
-EDITH
+AMARA
 - Finish sample formulation for TROPICLEAN
 - Finish samples for TROPIXA
 
@@ -272,7 +272,7 @@ const AdminDeliverables = () => {
 
         {mode === 'freeform' ? (
           <div className="text-[11px] text-muted-foreground bg-surface/50 rounded-md p-3 leading-relaxed">
-            Write each owner's name on its own line (e.g. <span className="text-accent">EDITH</span> or <span className="text-accent">Edith:</span>),
+            Write each owner's name on its own line (e.g. <span className="text-accent">AMARA</span> or <span className="text-accent">Amara:</span>),
             then list their tasks with bullets (<span className="text-foreground">- task</span> or <span className="text-foreground">• task</span>).
             Headings like "DELIVERABLES THIS WEEK" are ignored.
           </div>

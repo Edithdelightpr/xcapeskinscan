@@ -1,6 +1,5 @@
 import { Download } from 'lucide-react';
-import tropicsLogo from '@/assets/tropics-logo.jpeg';
-import { BRAND } from '@/lib/brand';
+
 
 interface Props {
   /** Pre-formatted greeting from the shared report formatter (e.g. "Welcome, Ada"). */
@@ -56,10 +55,12 @@ const ReportHeader = ({
       <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-6 sm:pt-8 pb-8 sm:pb-14">
         <div className="flex items-start justify-between gap-4">
           <div className="flex items-center gap-3">
-            <img src={tropicsLogo} alt={BRAND.name} className="h-11 w-11 rounded-lg object-cover ring-1 ring-bronze/30" />
+            <div className="h-11 w-11 rounded-xl bg-bronze/10 ring-1 ring-bronze/30 flex items-center justify-center">
+              <span className="font-display text-[17px] text-cocoa font-bold">X</span>
+            </div>
             <div className="leading-tight">
               <div className="text-[10.5px] uppercase tracking-[0.22em] text-bronze font-semibold">Personal Report</div>
-              <div className="font-display text-[15px] text-cocoa font-semibold">{BRAND.name}</div>
+              <div className="font-display text-[15px] text-cocoa font-semibold tracking-[0.22em]">XCAPE</div>
             </div>
           </div>
           <button

@@ -77,7 +77,7 @@ export const buildShareMessage = (opts: {
   referralLink: string | null;
 }) => {
   const lines: string[] = [
-    `Hi ${opts.first}, here is your Tropics MedSpa skin analysis report:`,
+    `Hi ${opts.first}, here is your XCAPE skin analysis report:`,
     opts.reportUrl,
     `Visit us at ${BRAND.address.line1}, ${BRAND.address.city}. Call ${BRAND.phone}.`,
   ];

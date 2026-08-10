@@ -63,7 +63,7 @@ const AdminProducts = () => {
   const exportPdf = () => {
     const doc = new jsPDF();
     doc.setFontSize(16);
-    doc.text('Tropics MedSpa — Product Performance', 14, 18);
+    doc.text('XCAPE — Product Performance', 14, 18);
     doc.setFontSize(10);
     doc.text(new Date().toLocaleString(), 14, 25);
     autoTable(doc, {

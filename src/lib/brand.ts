@@ -64,7 +64,7 @@ export const BRAND: BrandConfig = {
     instagram: { handle: '@tropicsderma', url: 'https://tr.ee/LK6zQevONu' },
     tiktok:    { handle: '@tropicsmedspa', url: 'https://tr.ee/ZtZBhBT2Qb' },
     facebook:  { handle: 'Tropics MedSpa', url: 'https://tr.ee/qUcwwqggrB' },
-    youtube:   { handle: '@edithdelightpr', url: 'https://youtube.com/@edithdelightpr' },
+    youtube:   { handle: '@edithdelightpr', url: 'https://youtube.com/@edithdelightpr', hidden: true },
     x:         { handle: '@tropicsmedspa', url: 'https://x.com/tropicsmedspa', hidden: true },
     website:   { handle: 'tropicsmedspa.com', url: 'https://tropicsmedspa.com' },
   },

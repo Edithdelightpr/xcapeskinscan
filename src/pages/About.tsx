@@ -205,7 +205,7 @@ const About = () => {
               {aboutVideos.openingStory ? (
                 <AboutVideoBlock
                   id="opening-story"
-                  title="A Message From Dr. Edith"
+                  title="A Message From Our Clinical Team"
                   description="Who we are, the research we are doing across Nigeria, and why African skin in tropical environments deserves dedicated study."
                   youtubeUrl={aboutVideos.openingStory}
                   autoplay

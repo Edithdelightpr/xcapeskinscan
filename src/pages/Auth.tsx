@@ -8,7 +8,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { lovable } from '@/integrations/lovable';
 import { toast } from 'sonner';
-import logo from '@/assets/tropics-logo.jpeg';
+
 
 const Auth = () => {
   const { user, signIn, signUp, loading } = useAuth();
@@ -18,7 +18,7 @@ const Auth = () => {
   // MCP OAuth flows return to consent instead of dropping the user on /admin.
   const rawNext = searchParams.get('next');
   const nextPath = rawNext && rawNext.startsWith('/') && !rawNext.startsWith('//') ? rawNext : null;
-  const redirectAfterAuth = nextPath ?? '/admin';
+  const redirectAfterAuth = nextPath ?? '/xcape';
   const [mode, setMode] = useState<'signin' | 'signup' | 'forgot'>('signin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -113,9 +113,11 @@ const Auth = () => {
     <div className="min-h-screen gradient-primary flex items-center justify-center px-4">
       <div className="glass-strong rounded-2xl p-8 w-full max-w-md space-y-6 glow-primary-soft">
         <div className="flex flex-col items-center space-y-3">
-          <img src={logo} alt="Tropics MedSpa" className="w-16 h-16 rounded-full object-cover ring-2 ring-accent/40" />
-          <h1 className="text-2xl font-display font-bold text-foreground">Staff Portal</h1>
-          <p className="text-xs text-muted-foreground tracking-wider uppercase">Tropics MedSpa OS</p>
+          <div className="w-16 h-16 rounded-2xl bg-primary/15 ring-2 ring-accent/40 flex items-center justify-center">
+            <span className="font-display font-bold text-2xl text-foreground">X</span>
+          </div>
+          <h1 className="text-2xl font-display font-bold text-foreground tracking-[0.25em]">XCAPE</h1>
+          <p className="text-xs text-muted-foreground tracking-wider uppercase">Tropical Skin Analysis — Staff Portal</p>
         </div>
 
         <div className="grid grid-cols-2 gap-1 p-1 bg-surface rounded-lg">
