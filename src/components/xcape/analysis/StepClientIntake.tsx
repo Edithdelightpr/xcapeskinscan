@@ -8,8 +8,12 @@ import { useCreateRealClient, type RealClient } from '@/hooks/useRealClients';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import PhoneInput from '@/components/ui/PhoneInput';
+import { isValidE164 } from '@/lib/phone';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 interface Props {
   client: RealClient | null;
