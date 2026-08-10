@@ -8,8 +8,12 @@ import { useCreateRealClient, type RealClient } from '@/hooks/useRealClients';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import PhoneInput from '@/components/ui/PhoneInput';
+import { isValidE164 } from '@/lib/phone';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 interface Props {
   client: RealClient | null;
@@ -38,15 +42,30 @@ const StepClientIntake = ({ client, onPick }: Props) => {
   const latest = intakes[0] ?? null;
 
   const handleCreate = async () => {
-    if (!form.full_name.trim()) {
+    const fullName = form.full_name.trim();
+    const phone = form.phone.trim();
+    const email = form.email.trim();
+    if (!fullName) {
       toast.error('Client name is required');
+      return;
+    }
+    if (phone && !isValidE164(phone)) {
+      toast.error('Enter a valid phone number', {
+        description: 'Pick the country code, then type the number without the leading 0.',
+      });
+      return;
+    }
+    if (email && !EMAIL_RE.test(email)) {
+      toast.error('Enter a valid email address', {
+        description: 'Example: name@example.com',
+      });
       return;
     }
     try {
       const created = await createMut.mutateAsync({
-        full_name: form.full_name.trim(),
-        phone: form.phone.trim() || null,
-        email: form.email.trim() || null,
+        full_name: fullName,
+        phone: phone || null,
+        email: email || null,
         location: form.location.trim() || null,
         source_type: null,
         attributed_staff_id: user?.id ?? null,
@@ -101,17 +120,18 @@ const StepClientIntake = ({ client, onPick }: Props) => {
                 <Input
                   id="xc-name"
                   value={form.full_name}
+                  maxLength={100}
                   onChange={(e) => setForm((f) => ({ ...f, full_name: e.target.value }))}
                   className="bg-surface border-border/60"
                 />
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="xc-phone" className="text-xs">Phone</Label>
-                <Input
+                <PhoneInput
                   id="xc-phone"
                   value={form.phone}
-                  onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
-                  className="bg-surface border-border/60"
+                  onChange={(v) => setForm((f) => ({ ...f, phone: v }))}
+                  inputClassName="bg-surface border-border/60"
                 />
               </div>
               <div className="space-y-1.5">
@@ -120,6 +140,8 @@ const StepClientIntake = ({ client, onPick }: Props) => {
                   id="xc-email"
                   type="email"
                   value={form.email}
+                  maxLength={255}
+                  placeholder="name@example.com"
                   onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
                   className="bg-surface border-border/60"
                 />
@@ -129,6 +151,7 @@ const StepClientIntake = ({ client, onPick }: Props) => {
                 <Input
                   id="xc-location"
                   value={form.location}
+                  maxLength={120}
                   onChange={(e) => setForm((f) => ({ ...f, location: e.target.value }))}
                   className="bg-surface border-border/60"
                 />
