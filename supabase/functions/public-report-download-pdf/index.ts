@@ -75,6 +75,7 @@ async function buildPdf(payload: {
   services: Array<{ name: string; description?: string | null; price_per_session?: number | null }>;
   products: Array<{ name: string; short_description?: string | null; selling_price?: number | null }>;
   formulas: Array<{
+    category?: string | null;
     kit_name?: string | null;
     kit_unit_price?: number | null;
     base_product_name?: string | null;
@@ -173,8 +174,54 @@ async function buildPdf(payload: {
       });
       y -= 14;
 
-      // Six required labelled fields in fixed order.
+      // The practitioner-approved XCAPE kit formula for this concern's
+      // category — occupies the CUSTOMIZATION position. When no approved
+      // formula exists, that position is omitted entirely; generic engine
+      // copy (SPF, brightening routines…) never prints there.
+      const formula = payload.formulas.find((f) => f.category === c.key) ?? null;
+
+      // Required labelled fields in fixed order. The CUSTOMIZATION block is
+      // injected where the customization slot used to sit — just before the
+      // optional AI observation line.
       for (const field of CONCERN_FIELD_ORDER) {
+        if (field.key === 'aiObservation' && formula) {
+          drawText('Customization:', { size: 10.5, bold: true, color: COCOA });
+          drawText(
+            `${formula.kit_name ?? 'Customized kit'}${formula.kit_unit_price ? `  —  ₦${Number(formula.kit_unit_price).toLocaleString()}` : ''}`,
+            { size: 11, bold: true, color: COCOA, x: MARGIN + 12, maxWidth: CONTENT_W - 12 },
+          );
+          if (formula.base_product_name) {
+            drawText(`Customized product: ${formula.base_product_name}`, {
+              size: 10.5, color: COCOA_SOFT, x: MARGIN + 12, maxWidth: CONTENT_W - 12,
+            });
+          }
+          if (formula.active_name) {
+            drawText(
+              `Active solution: ${formula.active_name}${formula.dose_ml != null ? ` — ${formula.dose_ml} ml` : ''}`,
+              { size: 10.5, color: COCOA_SOFT, x: MARGIN + 12, maxWidth: CONTENT_W - 12 },
+            );
+          }
+          if (formula.companion_name) {
+            drawText(
+              `Required companion: ${formula.companion_name}${formula.companion_dose_ml != null ? ` — ${formula.companion_dose_ml} ml` : ''}`,
+              { size: 10.5, color: COCOA_SOFT, x: MARGIN + 12, maxWidth: CONTENT_W - 12 },
+            );
+          }
+          drawText('Prepared by XCAPE within this one kit — nothing to buy or mix separately.', {
+            size: 10, italic: true, color: COCOA_SOFT, x: MARGIN + 12, maxWidth: CONTENT_W - 12,
+          });
+          if (formula.instructions) {
+            drawText(formula.instructions, {
+              size: 10.5, italic: true, color: COCOA_SOFT, x: MARGIN + 12, maxWidth: CONTENT_W - 12,
+            });
+          }
+          for (const w of formula.warnings ?? []) {
+            drawText(`Warning: ${w}`, {
+              size: 10, color: BAND_COLOR.low, x: MARGIN + 12, maxWidth: CONTENT_W - 12,
+            });
+          }
+          y -= 2;
+        }
         const value = c[field.key];
         if (typeof value !== 'string' || !value.trim()) continue;
         drawText(`${field.label}:`, { size: 10.5, bold: true, color: COCOA });
@@ -238,49 +285,9 @@ async function buildPdf(payload: {
     y -= 4;
   }
 
-  // Customized XCAPE formulas — practitioner-approved immutable snapshots.
-  // Rendered verbatim; the client never constructs a formula.
-  if (payload.formulas.length > 0) {
-    ensure(30);
-    drawText('Your customized formula', { size: 12, bold: true, color: BRONZE });
-    y -= 2;
-    for (const f of payload.formulas) {
-      ensure(70);
-      drawText(
-        `• ${f.kit_name ?? 'Customized kit'}${f.kit_unit_price ? `  —  ₦${Number(f.kit_unit_price).toLocaleString()}` : ''}`,
-        { size: 11, bold: true, color: COCOA },
-      );
-      if (f.base_product_name) {
-        drawText(`Customized product: ${f.base_product_name}`, {
-          size: 10.5, color: COCOA_SOFT, x: MARGIN + 12, maxWidth: CONTENT_W - 12,
-        });
-      }
-      if (f.active_name) {
-        drawText(
-          `Active solution: ${f.active_name}${f.dose_ml != null ? ` — ${f.dose_ml} ml` : ''}`,
-          { size: 10.5, color: COCOA_SOFT, x: MARGIN + 12, maxWidth: CONTENT_W - 12 },
-        );
-      }
-      if (f.companion_name) {
-        drawText(
-          `Companion solution: ${f.companion_name}${f.companion_dose_ml != null ? ` — ${f.companion_dose_ml} ml` : ''}`,
-          { size: 10.5, color: COCOA_SOFT, x: MARGIN + 12, maxWidth: CONTENT_W - 12 },
-        );
-      }
-      if (f.instructions) {
-        drawText(f.instructions, {
-          size: 10.5, italic: true, color: COCOA_SOFT, x: MARGIN + 12, maxWidth: CONTENT_W - 12,
-        });
-      }
-      for (const w of f.warnings ?? []) {
-        drawText(`Warning: ${w}`, {
-          size: 10, color: BAND_COLOR.low, x: MARGIN + 12, maxWidth: CONTENT_W - 12,
-        });
-      }
-      y -= 4;
-    }
-    y -= 4;
-  }
+  // NOTE: approved XCAPE kit formulas are rendered INSIDE their matching
+  // concern's Customization position above — a separate duplicate formula
+  // section is intentionally not printed here.
 
   // Footer note on every page
   const totalPages = pdf.getPageCount();
@@ -343,7 +350,7 @@ Deno.serve(async (req) => {
       svcIds.length ? admin.from('services').select('id, name, description, price_per_session').in('id', svcIds) : Promise.resolve({ data: [] as any[] }),
       prodIds.length ? admin.from('products').select('id, name, short_description, selling_price').in('id', prodIds) : Promise.resolve({ data: [] as any[] }),
       admin.from('xcape_formula_snapshots')
-        .select('kit_name, kit_unit_price, base_product_name, active_name, dose_ml, companion_name, companion_dose_ml, instructions, warnings')
+        .select('category, kit_name, kit_unit_price, base_product_name, active_name, dose_ml, companion_name, companion_dose_ml, instructions, warnings')
         .eq('assessment_id', assessment.id)
         .eq('status', 'approved')
         .eq('is_demo', false)

@@ -176,6 +176,12 @@ export interface ReportFormula {
   rule_version: number | null;
   approved_at: string | null;
   is_demo?: boolean;
+  /** Presentation-only hydration from the catalogue (edge function). The
+   *  snapshot's own name/price stay authoritative — these never overwrite
+   *  them, they only supply image/slug/description for display + cart. */
+  kit_image_url?: string | null;
+  kit_public_slug?: string | null;
+  kit_short_description?: string | null;
 }
 
 export interface ReportPayload {
