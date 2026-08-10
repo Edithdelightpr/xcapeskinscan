@@ -154,7 +154,7 @@ describe('purchase isolation — mock data can never become a cart line', () => 
 
 describe('public surface isolation', () => {
   const funcSrc = (name: string): string => {
-    const dir = fileURLToPath(new URL(`../../../supabase/functions/${name}/`, import.meta.url));
+    const dir = join(process.cwd(), 'supabase', 'functions', name);
     return readdirSync(dir)
       .filter((f) => f.endsWith('.ts') || f.endsWith('.tsx'))
       .map((f) => readFileSync(join(dir, f), 'utf8'))
