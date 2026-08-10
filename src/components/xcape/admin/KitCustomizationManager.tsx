@@ -20,6 +20,7 @@ import {
   CUSTOMIZATION_CATEGORIES,
   type CategoryCustomization,
 } from '@/lib/xcapeRules/customization';
+import DelightExpressMockup from '@/components/xcape/admin/DelightExpressMockup';
 
 /**
  * XCAPE kit & customization mapping — the admin-maintained link between the
@@ -209,6 +210,11 @@ const KitCustomizationManager = () => {
 
   return (
     <div className="space-y-6">
+      {/* Admin-only design preview — draft mock configuration, never live. */}
+      <DelightExpressMockup />
+
+      <hr className="border-border/50" />
+
       <div className="rounded-lg border border-border/50 bg-surface/30 p-3">
         <p className="text-[11px] text-muted-foreground">
           These mappings connect the customization protocol to the catalogue above. Kits, base
