@@ -12,6 +12,13 @@ interface Props {
   /** Compact layout for rendering inline inside a concern card's
    *  CUSTOMIZATION position (no standalone card chrome). */
   compact?: boolean;
+  /** Admin mockup preview mode: renders the card exactly as it would appear
+   *  in a report, but add-to-cart and event logging are hard-disabled —
+   *  regardless of any price or product-like values entered in the mockup.
+   *  The CTA renders visibly disabled with a "not purchasable" notice. */
+  mock?: boolean;
+  /** Optional CTA label override (used by the admin mockup preview). */
+  ctaLabel?: string;
 }
 
 /**
@@ -23,14 +30,15 @@ interface Props {
  * fulfilment sees the same formula. Base/active/companion components are
  * prepared by XCAPE within the kit and are never sold separately here.
  */
-const CustomizationFormulaCard = ({ token, formula, compact = false }: Props) => {
+const CustomizationFormulaCard = ({ token, formula, compact = false, mock = false, ctaLabel }: Props) => {
   const cartItems = useCartStore((s) => s.items);
   const addItem = useCartStore((s) => s.addItem);
 
   const categoryLabel =
     CUSTOMIZATION_CATEGORIES.find((c) => c.key === formula.category)?.label ?? formula.category;
 
-  const cartItem = buildFormulaCartItem(formula);
+  // Mock mode never builds a cart line — the formula preview is display-only.
+  const cartItem = mock ? null : buildFormulaCartItem(formula);
   const purchasable = cartItem != null;
   const inCart =
     purchasable &&
@@ -39,7 +47,7 @@ const CustomizationFormulaCard = ({ token, formula, compact = false }: Props) =>
     );
 
   const onAdd = () => {
-    if (!cartItem) return;
+    if (mock || !cartItem) return;
     addItem(cartItem, 1);
     logReportEvent(token, 'formula_interest', {
       formula_snapshot_id: formula.id,
