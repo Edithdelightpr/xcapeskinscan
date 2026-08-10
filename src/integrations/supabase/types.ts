@@ -9548,6 +9548,358 @@ export type Database = {
         }
         Relationships: []
       }
+      xcape_contraindications: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          is_demo: boolean
+          message: string
+          name: string
+          severity: string
+          status: string
+          target_id: string | null
+          target_kind: string
+          target_name: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_demo?: boolean
+          message: string
+          name: string
+          severity?: string
+          status?: string
+          target_id?: string | null
+          target_kind?: string
+          target_name?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_demo?: boolean
+          message?: string
+          name?: string
+          severity?: string
+          status?: string
+          target_id?: string | null
+          target_kind?: string
+          target_name?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      xcape_protocols: {
+        Row: {
+          category: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          duration: string | null
+          follow_up_weeks: number | null
+          frequency: string | null
+          home_care: string | null
+          id: string
+          is_demo: boolean
+          linked_product_ids: string[]
+          linked_service_ids: string[]
+          name: string
+          sessions: number | null
+          status: string
+          steps: Json
+          updated_at: string
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          duration?: string | null
+          follow_up_weeks?: number | null
+          frequency?: string | null
+          home_care?: string | null
+          id?: string
+          is_demo?: boolean
+          linked_product_ids?: string[]
+          linked_service_ids?: string[]
+          name: string
+          sessions?: number | null
+          status?: string
+          steps?: Json
+          updated_at?: string
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          duration?: string | null
+          follow_up_weeks?: number | null
+          frequency?: string | null
+          home_care?: string | null
+          id?: string
+          is_demo?: boolean
+          linked_product_ids?: string[]
+          linked_service_ids?: string[]
+          name?: string
+          sessions?: number | null
+          status?: string
+          steps?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      xcape_recommendation_proposals: {
+        Row: {
+          assessment_id: string
+          client_id: string
+          created_at: string
+          created_by: string | null
+          decided_at: string | null
+          decided_by: string | null
+          decision_reason: string | null
+          engine_version: string | null
+          final_result: Json | null
+          id: string
+          matched_reasons: Json
+          proposal: Json
+          rule_id: string | null
+          rule_name: string | null
+          rule_version: number | null
+          rule_version_id: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          assessment_id: string
+          client_id: string
+          created_at?: string
+          created_by?: string | null
+          decided_at?: string | null
+          decided_by?: string | null
+          decision_reason?: string | null
+          engine_version?: string | null
+          final_result?: Json | null
+          id?: string
+          matched_reasons?: Json
+          proposal: Json
+          rule_id?: string | null
+          rule_name?: string | null
+          rule_version?: number | null
+          rule_version_id?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          assessment_id?: string
+          client_id?: string
+          created_at?: string
+          created_by?: string | null
+          decided_at?: string | null
+          decided_by?: string | null
+          decision_reason?: string | null
+          engine_version?: string | null
+          final_result?: Json | null
+          id?: string
+          matched_reasons?: Json
+          proposal?: Json
+          rule_id?: string | null
+          rule_name?: string | null
+          rule_version?: number | null
+          rule_version_id?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "xcape_recommendation_proposals_assessment_id_fkey"
+            columns: ["assessment_id"]
+            isOneToOne: false
+            referencedRelation: "client_visit_assessments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "xcape_recommendation_proposals_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "client_media_usage"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "xcape_recommendation_proposals_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "xcape_recommendation_proposals_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "member_spend_monthly"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "xcape_recommendation_proposals_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "membership_lifecycle_status"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "xcape_recommendation_proposals_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "stale_leads_view"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "xcape_recommendation_proposals_rule_id_fkey"
+            columns: ["rule_id"]
+            isOneToOne: false
+            referencedRelation: "xcape_recommendation_rules"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "xcape_recommendation_proposals_rule_version_id_fkey"
+            columns: ["rule_version_id"]
+            isOneToOne: false
+            referencedRelation: "xcape_rule_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      xcape_recommendation_rules: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          current_version: number
+          description: string | null
+          draft_conditions: Json
+          draft_outputs: Json
+          id: string
+          is_demo: boolean
+          name: string
+          priority: number
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          current_version?: number
+          description?: string | null
+          draft_conditions?: Json
+          draft_outputs?: Json
+          id?: string
+          is_demo?: boolean
+          name: string
+          priority?: number
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          current_version?: number
+          description?: string | null
+          draft_conditions?: Json
+          draft_outputs?: Json
+          id?: string
+          is_demo?: boolean
+          name?: string
+          priority?: number
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      xcape_rule_audit: {
+        Row: {
+          action: string
+          actor: string | null
+          created_at: string
+          id: string
+          rule_id: string
+          snapshot: Json | null
+        }
+        Insert: {
+          action: string
+          actor?: string | null
+          created_at?: string
+          id?: string
+          rule_id: string
+          snapshot?: Json | null
+        }
+        Update: {
+          action?: string
+          actor?: string | null
+          created_at?: string
+          id?: string
+          rule_id?: string
+          snapshot?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "xcape_rule_audit_rule_id_fkey"
+            columns: ["rule_id"]
+            isOneToOne: false
+            referencedRelation: "xcape_recommendation_rules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      xcape_rule_versions: {
+        Row: {
+          change_note: string | null
+          conditions: Json
+          created_at: string
+          id: string
+          outputs: Json
+          published_at: string
+          published_by: string | null
+          rule_id: string
+          status: string
+          version: number
+        }
+        Insert: {
+          change_note?: string | null
+          conditions: Json
+          created_at?: string
+          id?: string
+          outputs: Json
+          published_at?: string
+          published_by?: string | null
+          rule_id: string
+          status?: string
+          version: number
+        }
+        Update: {
+          change_note?: string | null
+          conditions?: Json
+          created_at?: string
+          id?: string
+          outputs?: Json
+          published_at?: string
+          published_by?: string | null
+          rule_id?: string
+          status?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "xcape_rule_versions_rule_id_fkey"
+            columns: ["rule_id"]
+            isOneToOne: false
+            referencedRelation: "xcape_recommendation_rules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       bottleneck_view: {

@@ -99,8 +99,11 @@ const Auth = () => {
   const handleGoogle = async () => {
     setError('');
     // Forward the intended `next` path through the Google round-trip so MCP
-    // OAuth consent works after social sign-in.
-    const redirectBase = window.location.origin + (nextPath ? '/auth?next=' + encodeURIComponent(nextPath) : '');
+    // OAuth consent works after social sign-in. When no explicit destination
+    // is set, staff always land in the XCAPE workspace — never the public
+    // marketing landing page.
+    const redirectBase =
+      window.location.origin + '/auth?next=' + encodeURIComponent(nextPath ?? '/xcape');
     const result = await lovable.auth.signInWithOAuth('google', {
       redirect_uri: redirectBase || window.location.origin,
     });

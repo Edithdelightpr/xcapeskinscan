@@ -3,7 +3,7 @@ import { Helmet } from 'react-helmet-async';
 import {
   ScanFace, Users, FileText, History, BookOpen, UserCircle,
   ShieldCheck, Stethoscope, Gauge, LibraryBig, Package, AlertTriangle,
-  LayoutTemplate, Activity, LogOut, ExternalLink,
+  LayoutTemplate, Activity, LogOut, ExternalLink, SlidersHorizontal,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useAuth, APP_ROLE_LABELS } from '@/hooks/useAuth';
@@ -35,6 +35,8 @@ const ADMIN_NAV: NavItem[] = [
   { title: 'Practitioners', url: '/xcape/admin/practitioners', icon: Stethoscope },
   { title: 'XCAPE Scoring Standard', url: '/xcape/admin/scoring-standard', icon: Gauge },
   { title: 'Protocol Library', url: '/xcape/admin/protocol-library', icon: LibraryBig },
+  { title: 'Recommendation Rules', url: '/xcape/admin/rules', icon: SlidersHorizontal },
+  { title: 'Rule Versions', url: '/xcape/admin/rule-versions', icon: History },
   { title: 'Products & Ingredients', url: '/xcape/admin/products', icon: Package },
   { title: 'Contraindications', url: '/xcape/admin/contraindications', icon: AlertTriangle },
   { title: 'Report Templates', url: '/xcape/admin/report-templates', icon: LayoutTemplate },

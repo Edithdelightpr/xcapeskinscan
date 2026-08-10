@@ -4,6 +4,7 @@ import { Calendar, Lock, Menu, X } from 'lucide-react';
 import tropicsLogo from '@/assets/tropics-logo.jpeg';
 import { cn } from '@/lib/utils';
 import { useReferralSlug, withReferral } from '@/hooks/useReferralSlug';
+import { useAuth } from '@/hooks/useAuth';
 import CartIcon from '@/components/public/cart/CartIcon';
 
 const links = [
@@ -23,6 +24,10 @@ const PublicTopNav = () => {
   const [open, setOpen] = useState(false);
   const { pathname } = useLocation();
   const { slug } = useReferralSlug();
+  const { user } = useAuth();
+  // Signed-in staff go straight to the XCAPE workspace; visitors see Staff Login.
+  const staffHref = user ? '/xcape' : '/auth';
+  const staffLabel = user ? 'XCAPE Workspace' : 'Staff Login';
   // Append ?ref=<slug> to every nav link so attribution survives a detour
   // through Home / About / Menu / etc.
   const ref = (path: string) => withReferral(path, slug);
@@ -69,11 +74,11 @@ const PublicTopNav = () => {
             <span className="hidden sm:inline">Book</span>
           </Link>
           <Link
-            to="/admin"
+            to={staffHref}
             className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-medium uppercase tracking-wider text-muted-foreground hover:text-foreground hover:bg-surface transition-all border border-border/40"
           >
             <Lock className="w-3 h-3" />
-            Staff Login
+            {staffLabel}
           </Link>
           <button
             type="button"
@@ -109,11 +114,11 @@ const PublicTopNav = () => {
               );
             })}
             <Link
-              to="/admin"
+              to={staffHref}
               onClick={() => setOpen(false)}
               className="mt-2 inline-flex items-center gap-1.5 px-3 py-2 rounded-md text-xs font-medium uppercase tracking-wider text-muted-foreground border border-border/40"
             >
-              <Lock className="w-3 h-3" /> Staff Login
+              <Lock className="w-3 h-3" /> {staffLabel}
             </Link>
           </div>
         </div>

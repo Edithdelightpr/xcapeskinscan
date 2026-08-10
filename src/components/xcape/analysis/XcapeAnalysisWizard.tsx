@@ -313,6 +313,12 @@ const XcapeAnalysisWizard = () => {
       )}
       {step === 4 && client && (
         <StepRecommendations
+          clientId={client.id}
+          assessmentId={assessmentId}
+          ensureSaved={ensureSaved}
+          skin={skin}
+          redFlags={redFlags}
+          observation={observation}
           recServices={recServices}
           setRecServices={setRecServices}
           recProducts={recProducts}
@@ -332,6 +338,7 @@ const XcapeAnalysisWizard = () => {
           ensureSaved={ensureSaved}
           savePending={saveMut.isPending}
           assessments={assessments}
+          assessmentId={assessmentId}
         />
       )}
 

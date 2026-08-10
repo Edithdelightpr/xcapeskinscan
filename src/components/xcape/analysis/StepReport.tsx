@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import type { RealClient } from '@/hooks/useRealClients';
 import type { VisitAssessment } from '@/hooks/useVisitAssessments';
+import { useAssessmentProposals } from '@/hooks/useXcapeProposals';
 
 interface Props {
   client: RealClient;
@@ -17,18 +18,25 @@ interface Props {
   ensureSaved: () => Promise<VisitAssessment>;
   savePending: boolean;
   assessments: VisitAssessment[];
+  /** Current draft assessment — used to gate on undecided XCAPE proposals. */
+  assessmentId: string | null;
 }
 
 /**
  * Step 6 — Report. Existing readiness rules gate generation; the existing
- * ShareReportDialog mints and manages secure report links. History and the
- * staff report preview stay on their current routes.
+ * ShareReportDialog mints and manages secure report links. Reports may only
+ * be shared once every generated XCAPE proposal has been decided — accepted
+ * proposals feed the recommendations; pending ones block sharing so an
+ * unreviewed suggestion never reaches a client report.
  */
-const StepReport = ({ client, readiness, ensureSaved, savePending, assessments }: Props) => {
+const StepReport = ({ client, readiness, ensureSaved, savePending, assessments, assessmentId }: Props) => {
   const [sharing, setSharing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
   const [shareAssessment, setShareAssessment] = useState<VisitAssessment | null>(null);
+  const { data: proposals = [] } = useAssessmentProposals(assessmentId);
+  const pendingProposals = proposals.filter((p) => p.status === 'proposed').length;
+  const blockedByProposals = pendingProposals > 0;
 
   const past = assessments.filter((a) => a.report_ready).slice(0, 5);
 
@@ -47,6 +55,12 @@ const StepReport = ({ client, readiness, ensureSaved, savePending, assessments }
   const handleShare = async () => {
     if (!readiness.ready) {
       toast.error(readiness.missing[0] ?? 'Complete the XCAPE scores first');
+      return;
+    }
+    if (blockedByProposals) {
+      toast.error(
+        `${pendingProposals} XCAPE proposal(s) are still awaiting a decision — accept, edit or reject each one in the Recommendations step before sharing.`,
+      );
       return;
     }
     setSharing(true);
@@ -92,6 +106,15 @@ const StepReport = ({ client, readiness, ensureSaved, savePending, assessments }
           </p>
         )}
 
+        {blockedByProposals && (
+          <div className="rounded-lg border border-amber-500/40 bg-amber-500/5 p-3">
+            <p className="text-[11px] text-amber-300">
+              {pendingProposals} XCAPE proposal(s) awaiting your decision. Reports are generated only
+              from practitioner-approved recommendations — accept, edit or reject each proposal in the
+              Recommendations step before sharing.
+            </p>
+          </div>
+        )}
         <div className="flex flex-wrap gap-2 pt-1">
           <Button
             type="button"
@@ -110,8 +133,8 @@ const StepReport = ({ client, readiness, ensureSaved, savePending, assessments }
           <Button
             type="button"
             onClick={handleShare}
-            disabled={savePending || sharing || !readiness.ready}
-            title={readiness.ready ? 'Save and share a secure report link with the client' : (readiness.missing[0] ?? 'Complete the required readings first')}
+            disabled={savePending || sharing || !readiness.ready || blockedByProposals}
+            title={blockedByProposals ? 'Decide on all XCAPE proposals first' : readiness.ready ? 'Save and share a secure report link with the client' : (readiness.missing[0] ?? 'Complete the required readings first')}
             className="glow-primary"
           >
             {sharing ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <Share2 className="w-4 h-4 mr-1.5" />}
