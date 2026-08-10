@@ -1,4 +1,4 @@
-import { AlertTriangle, Check, FlaskConical, ShoppingBag } from 'lucide-react';
+import { AlertTriangle, Check, FlaskConical, Image as ImageIcon, ShoppingBag } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatNaira } from '@/lib/serviceDiscount';
 import { CUSTOMIZATION_CATEGORIES } from '@/lib/xcapeRules/customization';
@@ -110,7 +110,22 @@ const CustomizationFormulaCard = ({ token, formula, compact = false, mock = fals
         XCAPE prepares the customized base, active and companion inside this one kit, exactly
         to your practitioner's specification — nothing to buy, measure or mix separately.
       </p>
-      {purchasable && (
+      {mock ? (
+        <div className="flex flex-col items-end gap-1">
+          <button
+            type="button"
+            disabled
+            title="Mockup only — not purchasable"
+            className="inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-[12.5px] font-medium bg-cocoa/30 text-white/70 cursor-not-allowed"
+          >
+            <ShoppingBag className="w-3.5 h-3.5" strokeWidth={1.8} />{' '}
+            {ctaLabel ?? 'Add customized kit to cart'}
+          </button>
+          <span className="text-[10px] uppercase tracking-[0.14em] text-bronze font-medium">
+            Mockup only — not purchasable
+          </span>
+        </div>
+      ) : purchasable ? (
         <button
           type="button"
           onClick={onAdd}
@@ -132,7 +147,7 @@ const CustomizationFormulaCard = ({ token, formula, compact = false, mock = fals
             </>
           )}
         </button>
-      )}
+      ) : null}
     </div>
   );
 
