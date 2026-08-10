@@ -54,6 +54,8 @@ import XcapeAdminAccess from "./pages/xcape/admin/XcapeAdminAccess";
 import XcapeAdminPractitioners from "./pages/xcape/admin/XcapeAdminPractitioners";
 import XcapeAdminScoring from "./pages/xcape/admin/XcapeAdminScoring";
 import XcapeAdminProtocolLibrary from "./pages/xcape/admin/XcapeAdminProtocolLibrary";
+import XcapeAdminRules from "./pages/xcape/admin/XcapeAdminRules";
+import XcapeAdminRuleVersions from "./pages/xcape/admin/XcapeAdminRuleVersions";
 import XcapeAdminProducts from "./pages/xcape/admin/XcapeAdminProducts";
 import XcapeAdminContraindications from "./pages/xcape/admin/XcapeAdminContraindications";
 import XcapeAdminReportTemplates from "./pages/xcape/admin/XcapeAdminReportTemplates";
@@ -145,6 +147,8 @@ const App = () => (
                 <Route path="practitioners" element={<XcapeAdminPractitioners />} />
                 <Route path="scoring-standard" element={<XcapeAdminScoring />} />
                 <Route path="protocol-library" element={<XcapeAdminProtocolLibrary />} />
+                <Route path="rules" element={<XcapeAdminRules />} />
+                <Route path="rule-versions" element={<XcapeAdminRuleVersions />} />
                 <Route path="products" element={<XcapeAdminProducts />} />
                 <Route path="contraindications" element={<XcapeAdminContraindications />} />
                 <Route path="report-templates" element={<XcapeAdminReportTemplates />} />
