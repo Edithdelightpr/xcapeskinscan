@@ -29,6 +29,12 @@ interface Props {
   current: AiAssistPayload | null | undefined;
   /** Existing engine variables the practitioner may have already entered. */
   currentEngine?: EnginePayload | null;
+  /**
+   * Images already uploaded earlier in the flow (e.g. the XCAPE wizard's
+   * Images step). Merged with anything uploaded directly from this panel —
+   * optional, existing callers are unaffected.
+   */
+  externalMedia?: ClientMedia[];
   onChange: (next: AiAssistPayload | null) => void;
   /**
    * Called with a fully-finalized engine payload after Apply. The panel now
