@@ -42,15 +42,30 @@ const StepClientIntake = ({ client, onPick }: Props) => {
   const latest = intakes[0] ?? null;
 
   const handleCreate = async () => {
-    if (!form.full_name.trim()) {
+    const fullName = form.full_name.trim();
+    const phone = form.phone.trim();
+    const email = form.email.trim();
+    if (!fullName) {
       toast.error('Client name is required');
+      return;
+    }
+    if (phone && !isValidE164(phone)) {
+      toast.error('Enter a valid phone number', {
+        description: 'Pick the country code, then type the number without the leading 0.',
+      });
+      return;
+    }
+    if (email && !EMAIL_RE.test(email)) {
+      toast.error('Enter a valid email address', {
+        description: 'Example: name@example.com',
+      });
       return;
     }
     try {
       const created = await createMut.mutateAsync({
-        full_name: form.full_name.trim(),
-        phone: form.phone.trim() || null,
-        email: form.email.trim() || null,
+        full_name: fullName,
+        phone: phone || null,
+        email: email || null,
         location: form.location.trim() || null,
         source_type: null,
         attributed_staff_id: user?.id ?? null,
