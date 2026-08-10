@@ -14,6 +14,9 @@ interface Props {
   canSwitch: boolean;
   reducedMotion: boolean;
   detecting: boolean;
+  /** Camera/model startup — shown as an overlay, video stays mounted. */
+  busy: boolean;
+  busyLabel: string;
   /** When set, the captured still is shown over the live video for review. */
   reviewUrl: string | null;
   onManualCapture: () => void;
@@ -40,6 +43,8 @@ const ScanStage = ({
   canSwitch,
   reducedMotion,
   detecting,
+  busy,
+  busyLabel,
   reviewUrl,
   onManualCapture,
   onToggleCamera,
