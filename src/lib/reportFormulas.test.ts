@@ -12,7 +12,7 @@ import type { ReportFormula } from '@/hooks/useReportPayload';
 
 const formula = (over: Partial<ReportFormula>): ReportFormula => ({
   id: 'snap-1',
-  category: 'pigmentation',
+  category: 'pigmentation_stability',
   score: 48,
   kit_product_id: 'kit-1',
   kit_name: 'Delight Express Kit',
@@ -36,7 +36,7 @@ const formula = (over: Partial<ReportFormula>): ReportFormula => ({
 describe('formulasByCategory', () => {
   it('matches an approved formula to its concern category', () => {
     const map = formulasByCategory([formula({})]);
-    expect(map.get('pigmentation')?.id).toBe('snap-1');
+    expect(map.get('pigmentation_stability')?.id).toBe('snap-1');
   });
 
   it('every approved formula occupies its concern — purchasability is enforced at the cart layer, not here', () => {
@@ -45,7 +45,7 @@ describe('formulasByCategory', () => {
     // drops a practitioner decision; only the cart refuses the line.
     const unmapped = formula({ kit_product_id: null });
     const map = formulasByCategory([unmapped]);
-    expect(map.get('pigmentation')?.id).toBe('snap-1');
+    expect(map.get('pigmentation_stability')?.id).toBe('snap-1');
     expect(buildFormulaCartItem(unmapped)).toBeNull();
   });
 
@@ -54,17 +54,17 @@ describe('formulasByCategory', () => {
       formula({ id: 'first', kit_unit_price: 95000 }),
       formula({ id: 'second', kit_unit_price: 80000 }),
     ]);
-    expect(map.get('pigmentation')?.id).toBe('first');
+    expect(map.get('pigmentation_stability')?.id).toBe('first');
     expect(map.size).toBe(1);
   });
 
   it('keeps different categories independent', () => {
     const map = formulasByCategory([
-      formula({ id: 'a', category: 'pigmentation' }),
-      formula({ id: 'b', category: 'oil' }),
+      formula({ id: 'a', category: 'pigmentation_stability' }),
+      formula({ id: 'b', category: 'oil_congestion_balance' }),
     ]);
-    expect(map.get('pigmentation')?.id).toBe('a');
-    expect(map.get('oil')?.id).toBe('b');
+    expect(map.get('pigmentation_stability')?.id).toBe('a');
+    expect(map.get('oil_congestion_balance')?.id).toBe('b');
   });
 
   it('handles empty input', () => {

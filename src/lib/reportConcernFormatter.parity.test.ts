@@ -51,12 +51,19 @@ describe('reportConcernFormatter mirror parity', () => {
       }
     }
     const concerns = formatConcerns({
-      client_first_name: 'Ada',
-      skin_analysis: {
-        hydration: { score: 42 },
-        pigmentation: { score: 48 },
-        firmness: { score: 62 },
-        oil: { score: 54 },
+      engine: {
+        priority_order: [
+          'barrier_surface_hydration',
+          'pigmentation_stability',
+          'firmness_skin_support',
+          'oil_congestion_balance',
+        ],
+        variables: {
+          barrier_surface_hydration: { practitioner_score: 42 },
+          pigmentation_stability: { practitioner_score: 48 },
+          firmness_skin_support: { practitioner_score: 62 },
+          oil_congestion_balance: { practitioner_score: 54 },
+        },
       },
     });
     expect(concerns).toHaveLength(4);
