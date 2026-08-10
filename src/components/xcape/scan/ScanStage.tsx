@@ -95,6 +95,14 @@ const ScanStage = ({
           className={cn('absolute inset-0 h-full w-full object-cover', mirrored && '-scale-x-100')}
         />
 
+        {/* Startup overlay — the video stays mounted so the stream binding is never lost */}
+        {busy && (
+          <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-background/70 backdrop-blur-sm">
+            <Loader2 className="h-6 w-6 animate-spin text-primary" aria-hidden />
+            <p className="text-xs text-muted-foreground">{busyLabel}</p>
+          </div>
+        )}
+
         {/* Face oval guide */}
         <svg
           className="pointer-events-none absolute inset-0 h-full w-full"
