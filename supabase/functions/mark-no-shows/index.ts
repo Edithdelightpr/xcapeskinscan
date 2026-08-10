@@ -17,14 +17,18 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
   try {
     // Restrict invocation to trusted callers (scheduled jobs / service role).
-    const cronSecret = Deno.env.get('CRON_SECRET');
+    // The cron secret is verified against the vault-stored value.
     const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
     const auth = req.headers.get('authorization') ?? '';
     const bearer = auth.toLowerCase().startsWith('bearer ') ? auth.slice(7).trim() : '';
     const providedCron = req.headers.get('x-cron-secret') ?? '';
-    const allowed =
-      (cronSecret && providedCron && providedCron === cronSecret) ||
-      (serviceKey && bearer && bearer === serviceKey);
+    let allowed = !!(serviceKey && bearer && bearer === serviceKey);
+    if (!allowed && providedCron) {
+      const gate = createClient(Deno.env.get('SUPABASE_URL')!, serviceKey);
+      const { data: cronOk, error: cronErr } = await gate.rpc('verify_cron_secret', { candidate: providedCron });
+      if (cronErr) console.error('verify_cron_secret rpc error', JSON.stringify(cronErr));
+      allowed = cronOk === true;
+    }
     if (!allowed) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },

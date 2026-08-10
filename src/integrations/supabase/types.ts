@@ -11633,6 +11633,7 @@ export type Database = {
           visit_id: string
         }[]
       }
+      verify_cron_secret: { Args: { candidate: string }; Returns: boolean }
       visit_finance_netting: { Args: { p_visit_id: string }; Returns: Json }
     }
     Enums: {

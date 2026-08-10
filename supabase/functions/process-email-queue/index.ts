@@ -91,27 +91,29 @@ Deno.serve(async (req) => {
     )
   }
 
+  const supabase: any = createClient(supabaseUrl, supabaseServiceKey)
+
+  // Defense in depth: accept either a service-role JWT (legacy/manual
+  // invocation) or the shared cron secret sent by pg_cron as x-cron-secret,
+  // verified against the vault-stored value.
   const authHeader = req.headers.get('Authorization')
-  if (!authHeader?.startsWith('Bearer ')) {
+  const providedCron = req.headers.get('x-cron-secret') ?? ''
+  let authorized = false
+  if (authHeader?.startsWith('Bearer ')) {
+    const token = authHeader.slice('Bearer '.length).trim()
+    const claims = parseJwtClaims(token)
+    if (claims?.role === 'service_role') authorized = true
+  }
+  if (!authorized && providedCron) {
+    const { data: cronOk } = await supabase.rpc('verify_cron_secret', { candidate: providedCron })
+    authorized = cronOk === true
+  }
+  if (!authorized) {
     return new Response(
       JSON.stringify({ error: 'Unauthorized' }),
       { status: 401, headers: { 'Content-Type': 'application/json' } }
     )
   }
-
-  // Defense in depth: verify_jwt=true already requires a valid JWT at the
-  // gateway layer. This adds an explicit role check so only service-role
-  // callers can trigger queue processing.
-  const token = authHeader.slice('Bearer '.length).trim()
-  const claims = parseJwtClaims(token)
-  if (claims?.role !== 'service_role') {
-    return new Response(
-      JSON.stringify({ error: 'Forbidden' }),
-      { status: 403, headers: { 'Content-Type': 'application/json' } }
-    )
-  }
-
-  const supabase: any = createClient(supabaseUrl, supabaseServiceKey)
 
   // 1. Check rate-limit cooldown and read queue config
   const { data: state } = await supabase
