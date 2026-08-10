@@ -213,7 +213,12 @@ const Checkout = () => {
           : null;
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const rpcArgs: any = {
-        _items: items.map((i) => ({ product_id: i.product_id, quantity: i.quantity })),
+        _items: items.map((i) => ({
+          product_id: i.product_id,
+          quantity: i.quantity,
+          formula_snapshot_id: i.formula_snapshot_id ?? null,
+          formula_label: i.formula_label ?? null,
+        })),
         _customer_phone: phone,
         _customer_name: customerName,
         _customer_email: email.trim() || null,

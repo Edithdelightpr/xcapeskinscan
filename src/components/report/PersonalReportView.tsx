@@ -11,6 +11,7 @@ import ConcernCard from '@/components/report/ConcernCard';
 import HomeCareRoutine from '@/components/report/HomeCareRoutine';
 import RecommendedTreatments from '@/components/report/RecommendedTreatments';
 import RecommendedProducts from '@/components/report/RecommendedProducts';
+import CustomizationFormulaCard from '@/components/report/CustomizationFormulaCard';
 import YourTreatmentPlan from '@/components/report/YourTreatmentPlan';
 import NextStepCard from '@/components/report/NextStepCard';
 import PaymentActionCard from '@/components/report/PaymentActionCard';
@@ -96,6 +97,27 @@ const PersonalReportView = ({ data, token, onDownloadPdf, downloadDisabled }: Pr
               />
             </div>
           </>
+        )}
+        {(data.formulas?.length ?? 0) > 0 && (
+          <section aria-labelledby="customized-formula" className="space-y-4 sm:space-y-5 scroll-mt-24">
+            <div>
+              <div className="text-[10.5px] uppercase tracking-[0.22em] text-bronze font-semibold">
+                Made for your skin
+              </div>
+              <h2 id="customized-formula" className="mt-1 font-display text-xl sm:text-3xl text-cocoa tracking-tight">
+                Your customized formula
+              </h2>
+              <p className="mt-2 text-[13px] text-cocoa/70 max-w-2xl leading-relaxed">
+                Prepared exactly to your practitioner's specification from your analysis — the
+                formula below is fixed for you.
+              </p>
+            </div>
+            <div className="space-y-4 sm:space-y-5">
+              {data.formulas!.map((f) => (
+                <CustomizationFormulaCard key={f.id} token={token} formula={f} />
+              ))}
+            </div>
+          </section>
         )}
         <div id="recommended-products" className="scroll-mt-24">
           <RecommendedProducts token={token} products={data.recommended_products} />

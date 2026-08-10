@@ -60,6 +60,29 @@ export interface RuleOutputProduct {
   note?: string | null;
 }
 
+/** One provisional dose tier: a score range mapped to an active dose in ml. */
+export interface DoseTier {
+  score_min: number;
+  score_max: number;
+  dose_ml: number;
+}
+
+/**
+ * Formula customization output — when a rule matches, this tells the
+ * evaluator to resolve a concrete XCAPE customization formula for one of
+ * the four analysis categories. The kit, base product, active solution and
+ * companion come from the admin-maintained category mapping (never from
+ * free text); the dose comes from these versioned tiers. Tiers remain
+ * draft/inactive with the rule until clinically confirmed.
+ */
+export interface RuleCustomization {
+  /** One of the four XCAPE score keys (ENGINE_SCORE_KEYS). */
+  category: string;
+  dose_tiers: DoseTier[];
+  instructions?: string | null;
+  warnings?: string[];
+}
+
 export interface RuleOutputs {
   protocol_ids?: string[];
   protocols_text?: { name: string; note?: string | null }[];
@@ -74,6 +97,7 @@ export interface RuleOutputs {
   alternatives?: string[];
   requires_human_review?: boolean;
   rationale?: string | null;
+  customization?: RuleCustomization | null;
 }
 
 export interface XcapeRule {

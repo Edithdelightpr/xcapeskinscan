@@ -5870,6 +5870,8 @@ export type Database = {
           delivery_fee: number
           delivery_method: string | null
           delivery_settings_snapshot: Json | null
+          formula_snapshot_id: string | null
+          formula_summary: Json | null
           id: string
           notes: string | null
           order_ref: string | null
@@ -5903,6 +5905,8 @@ export type Database = {
           delivery_fee?: number
           delivery_method?: string | null
           delivery_settings_snapshot?: Json | null
+          formula_snapshot_id?: string | null
+          formula_summary?: Json | null
           id?: string
           notes?: string | null
           order_ref?: string | null
@@ -5936,6 +5940,8 @@ export type Database = {
           delivery_fee?: number
           delivery_method?: string | null
           delivery_settings_snapshot?: Json | null
+          formula_snapshot_id?: string | null
+          formula_summary?: Json | null
           id?: string
           notes?: string | null
           order_ref?: string | null
@@ -5988,6 +5994,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "stale_leads_view"
             referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "pending_outreach_orders_formula_snapshot_id_fkey"
+            columns: ["formula_snapshot_id"]
+            isOneToOne: false
+            referencedRelation: "xcape_formula_snapshots"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "pending_outreach_orders_outreach_id_fkey"
@@ -9548,6 +9561,145 @@ export type Database = {
         }
         Relationships: []
       }
+      xcape_category_customization: {
+        Row: {
+          active_product_id: string | null
+          aggressiveness: string
+          base_product_id: string | null
+          category: string
+          companion_product_id: string | null
+          companion_ratio: number
+          created_at: string
+          created_by: string | null
+          id: string
+          instructions: string | null
+          is_demo: boolean
+          kit_product_id: string | null
+          status: string
+          updated_at: string
+          warnings: Json
+        }
+        Insert: {
+          active_product_id?: string | null
+          aggressiveness?: string
+          base_product_id?: string | null
+          category: string
+          companion_product_id?: string | null
+          companion_ratio?: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          instructions?: string | null
+          is_demo?: boolean
+          kit_product_id?: string | null
+          status?: string
+          updated_at?: string
+          warnings?: Json
+        }
+        Update: {
+          active_product_id?: string | null
+          aggressiveness?: string
+          base_product_id?: string | null
+          category?: string
+          companion_product_id?: string | null
+          companion_ratio?: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          instructions?: string | null
+          is_demo?: boolean
+          kit_product_id?: string | null
+          status?: string
+          updated_at?: string
+          warnings?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "xcape_category_customization_active_product_id_fkey"
+            columns: ["active_product_id"]
+            isOneToOne: false
+            referencedRelation: "product_performance"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "xcape_category_customization_active_product_id_fkey"
+            columns: ["active_product_id"]
+            isOneToOne: false
+            referencedRelation: "product_performance_v2"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "xcape_category_customization_active_product_id_fkey"
+            columns: ["active_product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "xcape_category_customization_base_product_id_fkey"
+            columns: ["base_product_id"]
+            isOneToOne: false
+            referencedRelation: "product_performance"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "xcape_category_customization_base_product_id_fkey"
+            columns: ["base_product_id"]
+            isOneToOne: false
+            referencedRelation: "product_performance_v2"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "xcape_category_customization_base_product_id_fkey"
+            columns: ["base_product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "xcape_category_customization_companion_product_id_fkey"
+            columns: ["companion_product_id"]
+            isOneToOne: false
+            referencedRelation: "product_performance"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "xcape_category_customization_companion_product_id_fkey"
+            columns: ["companion_product_id"]
+            isOneToOne: false
+            referencedRelation: "product_performance_v2"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "xcape_category_customization_companion_product_id_fkey"
+            columns: ["companion_product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "xcape_category_customization_kit_product_id_fkey"
+            columns: ["kit_product_id"]
+            isOneToOne: false
+            referencedRelation: "product_performance"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "xcape_category_customization_kit_product_id_fkey"
+            columns: ["kit_product_id"]
+            isOneToOne: false
+            referencedRelation: "product_performance_v2"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "xcape_category_customization_kit_product_id_fkey"
+            columns: ["kit_product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       xcape_contraindications: {
         Row: {
           created_at: string
@@ -9592,6 +9744,324 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      xcape_formula_snapshots: {
+        Row: {
+          active_name: string | null
+          active_product_id: string | null
+          approved_at: string | null
+          approved_by: string | null
+          assessment_id: string
+          base_product_id: string | null
+          base_product_name: string | null
+          category: string
+          client_id: string
+          companion_dose_ml: number | null
+          companion_name: string | null
+          companion_product_id: string | null
+          created_at: string
+          created_by: string | null
+          decision_reason: string | null
+          dose_ml: number | null
+          dose_tier: Json | null
+          id: string
+          instructions: string | null
+          is_demo: boolean
+          kit_name: string | null
+          kit_product_id: string | null
+          kit_unit_price: number | null
+          override_note: string | null
+          proposal_id: string | null
+          rule_id: string | null
+          rule_version: number | null
+          rule_version_id: string | null
+          score: number | null
+          status: string
+          updated_at: string
+          warnings: Json
+        }
+        Insert: {
+          active_name?: string | null
+          active_product_id?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          assessment_id: string
+          base_product_id?: string | null
+          base_product_name?: string | null
+          category: string
+          client_id: string
+          companion_dose_ml?: number | null
+          companion_name?: string | null
+          companion_product_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          decision_reason?: string | null
+          dose_ml?: number | null
+          dose_tier?: Json | null
+          id?: string
+          instructions?: string | null
+          is_demo?: boolean
+          kit_name?: string | null
+          kit_product_id?: string | null
+          kit_unit_price?: number | null
+          override_note?: string | null
+          proposal_id?: string | null
+          rule_id?: string | null
+          rule_version?: number | null
+          rule_version_id?: string | null
+          score?: number | null
+          status?: string
+          updated_at?: string
+          warnings?: Json
+        }
+        Update: {
+          active_name?: string | null
+          active_product_id?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          assessment_id?: string
+          base_product_id?: string | null
+          base_product_name?: string | null
+          category?: string
+          client_id?: string
+          companion_dose_ml?: number | null
+          companion_name?: string | null
+          companion_product_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          decision_reason?: string | null
+          dose_ml?: number | null
+          dose_tier?: Json | null
+          id?: string
+          instructions?: string | null
+          is_demo?: boolean
+          kit_name?: string | null
+          kit_product_id?: string | null
+          kit_unit_price?: number | null
+          override_note?: string | null
+          proposal_id?: string | null
+          rule_id?: string | null
+          rule_version?: number | null
+          rule_version_id?: string | null
+          score?: number | null
+          status?: string
+          updated_at?: string
+          warnings?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "xcape_formula_snapshots_active_product_id_fkey"
+            columns: ["active_product_id"]
+            isOneToOne: false
+            referencedRelation: "product_performance"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "xcape_formula_snapshots_active_product_id_fkey"
+            columns: ["active_product_id"]
+            isOneToOne: false
+            referencedRelation: "product_performance_v2"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "xcape_formula_snapshots_active_product_id_fkey"
+            columns: ["active_product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "xcape_formula_snapshots_assessment_id_fkey"
+            columns: ["assessment_id"]
+            isOneToOne: false
+            referencedRelation: "client_visit_assessments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "xcape_formula_snapshots_base_product_id_fkey"
+            columns: ["base_product_id"]
+            isOneToOne: false
+            referencedRelation: "product_performance"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "xcape_formula_snapshots_base_product_id_fkey"
+            columns: ["base_product_id"]
+            isOneToOne: false
+            referencedRelation: "product_performance_v2"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "xcape_formula_snapshots_base_product_id_fkey"
+            columns: ["base_product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "xcape_formula_snapshots_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "client_media_usage"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "xcape_formula_snapshots_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "xcape_formula_snapshots_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "member_spend_monthly"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "xcape_formula_snapshots_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "membership_lifecycle_status"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "xcape_formula_snapshots_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "stale_leads_view"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "xcape_formula_snapshots_companion_product_id_fkey"
+            columns: ["companion_product_id"]
+            isOneToOne: false
+            referencedRelation: "product_performance"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "xcape_formula_snapshots_companion_product_id_fkey"
+            columns: ["companion_product_id"]
+            isOneToOne: false
+            referencedRelation: "product_performance_v2"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "xcape_formula_snapshots_companion_product_id_fkey"
+            columns: ["companion_product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "xcape_formula_snapshots_kit_product_id_fkey"
+            columns: ["kit_product_id"]
+            isOneToOne: false
+            referencedRelation: "product_performance"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "xcape_formula_snapshots_kit_product_id_fkey"
+            columns: ["kit_product_id"]
+            isOneToOne: false
+            referencedRelation: "product_performance_v2"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "xcape_formula_snapshots_kit_product_id_fkey"
+            columns: ["kit_product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "xcape_formula_snapshots_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "xcape_recommendation_proposals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      xcape_kit_components: {
+        Row: {
+          component_product_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          is_customizable: boolean
+          kit_product_id: string
+          role: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          component_product_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_customizable?: boolean
+          kit_product_id: string
+          role?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          component_product_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_customizable?: boolean
+          kit_product_id?: string
+          role?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "xcape_kit_components_component_product_id_fkey"
+            columns: ["component_product_id"]
+            isOneToOne: false
+            referencedRelation: "product_performance"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "xcape_kit_components_component_product_id_fkey"
+            columns: ["component_product_id"]
+            isOneToOne: false
+            referencedRelation: "product_performance_v2"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "xcape_kit_components_component_product_id_fkey"
+            columns: ["component_product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "xcape_kit_components_kit_product_id_fkey"
+            columns: ["kit_product_id"]
+            isOneToOne: false
+            referencedRelation: "product_performance"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "xcape_kit_components_kit_product_id_fkey"
+            columns: ["kit_product_id"]
+            isOneToOne: false
+            referencedRelation: "product_performance_v2"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "xcape_kit_components_kit_product_id_fkey"
+            columns: ["kit_product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       xcape_protocols: {
         Row: {
@@ -11356,21 +11826,38 @@ export type Database = {
         Returns: string
       }
       count_active_aestheticians: { Args: never; Returns: number }
-      create_pending_outreach_order: {
-        Args: {
-          _attributed_staff_id?: string
-          _customer_name?: string
-          _customer_phone: string
-          _notes?: string
-          _outreach_id: string
-          _payment_method?: string
-          _payment_reference?: string
-          _product_id: string
-          _quantity: number
-          _unit_price: number
-        }
-        Returns: Json
-      }
+      create_pending_outreach_order:
+        | {
+            Args: {
+              _attributed_staff_id?: string
+              _customer_name?: string
+              _customer_phone: string
+              _notes?: string
+              _outreach_id: string
+              _payment_method?: string
+              _payment_reference?: string
+              _product_id: string
+              _quantity: number
+              _unit_price: number
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              _attributed_staff_id?: string
+              _customer_name?: string
+              _customer_phone: string
+              _formula_snapshot_id?: string
+              _notes?: string
+              _outreach_id: string
+              _payment_method?: string
+              _payment_reference?: string
+              _product_id: string
+              _quantity: number
+              _unit_price: number
+            }
+            Returns: Json
+          }
       current_impersonation: {
         Args: never
         Returns: {

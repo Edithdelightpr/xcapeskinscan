@@ -8,6 +8,10 @@ export interface CartItem {
   image_url: string | null;
   unit_price: number;
   quantity: number;
+  /** Set when this line is a practitioner-approved customized formula kit —
+   *  the order RPC verifies and snapshots it server-side. */
+  formula_snapshot_id?: string | null;
+  formula_label?: string | null;
 }
 
 export interface CartAttribution {
@@ -43,11 +47,16 @@ export const useCartStore = create<CartState>()(
       attribution: emptyAttribution,
       addItem: (item, qty = 1) =>
         set((s) => {
-          const existing = s.items.find((i) => i.product_id === item.product_id);
+          // Formula lines are distinct from plain catalogue lines of the same
+          // product — a customized kit must not merge with an uncustomized one.
+          const sameLine = (i: CartItem) =>
+            i.product_id === item.product_id &&
+            (i.formula_snapshot_id ?? null) === (item.formula_snapshot_id ?? null);
+          const existing = s.items.find(sameLine);
           if (existing) {
             return {
               items: s.items.map((i) =>
-                i.product_id === item.product_id ? { ...i, quantity: i.quantity + qty } : i,
+                sameLine(i) ? { ...i, quantity: i.quantity + qty } : i,
               ),
             };
           }

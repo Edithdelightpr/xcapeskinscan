@@ -154,6 +154,30 @@ export interface ReportCareJourney {
   has_any: boolean;
 }
 
+/**
+ * Practitioner-approved XCAPE customization formula snapshot. Rendered
+ * verbatim from the immutable snapshot — the client never sees a rule
+ * engine or constructs anything themselves.
+ */
+export interface ReportFormula {
+  id: string;
+  category: string;
+  score: number | null;
+  kit_product_id: string | null;
+  kit_name: string | null;
+  kit_unit_price: number | null;
+  base_product_name: string | null;
+  active_name: string | null;
+  dose_ml: number | null;
+  companion_name: string | null;
+  companion_dose_ml: number | null;
+  instructions: string | null;
+  warnings: string[];
+  rule_version: number | null;
+  approved_at: string | null;
+  is_demo?: boolean;
+}
+
 export interface ReportPayload {
   client: { first_name: string | null; initials: string };
   assessment: {
@@ -173,6 +197,7 @@ export interface ReportPayload {
   payment_settings: ReportPaymentSettings;
   promo: ReportPromo | null;
   care_journey?: ReportCareJourney;
+  formulas?: ReportFormula[];
   link: { prefix: string; expires_at: string };
 }
 

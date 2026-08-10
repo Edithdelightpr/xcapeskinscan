@@ -32,6 +32,8 @@ export interface PendingOrderRow {
   delivery_method: 'delivery' | 'pickup' | null;
   delivery_fee: number;
   delivery_address: string | null;
+  /** Server-verified customized formula summary for staff fulfilment. */
+  formula_summary: string | null;
 }
 
 export interface PendingOrderGroup {
@@ -71,7 +73,7 @@ export const usePendingProductOrders = () => {
           attributed_staff_id, payment_method, payment_reference, notes,
           status, created_at, created_by, confirmed_by, confirmed_at,
           cancelled_by, cancelled_at, cancellation_reason,
-          delivery_method, delivery_fee, delivery_address,
+          delivery_method, delivery_fee, delivery_address, formula_summary,
           products:product_id ( name, image_url )
         `)
         .order('created_at', { ascending: false })
@@ -83,6 +85,7 @@ export const usePendingProductOrders = () => {
         delivery_method: r.delivery_method ?? null,
         delivery_fee: Number(r.delivery_fee ?? 0),
         delivery_address: r.delivery_address ?? null,
+        formula_summary: r.formula_summary ?? null,
         product_name: r.products?.name ?? null,
         product_image_url: r.products?.image_url ?? null,
       })) as PendingOrderRow[];

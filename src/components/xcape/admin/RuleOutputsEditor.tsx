@@ -11,7 +11,12 @@ import { FieldStack } from '@/components/admin/assessmentShared';
 import { useServices } from '@/hooks/useServices';
 import { useProducts } from '@/hooks/useProducts';
 import { useActiveXcapeProtocols } from '@/hooks/useXcapeProtocols';
-import type { RuleOutputs } from '@/lib/xcapeRules/types';
+import type { DoseTier, RuleOutputs } from '@/lib/xcapeRules/types';
+import {
+  CUSTOMIZATION_CATEGORIES,
+  PROVISIONAL_DOSE_TIERS,
+  validateDoseTiers,
+} from '@/lib/xcapeRules/customization';
 
 /**
  * Structured editor for what a matching rule proposes. All fields are
@@ -65,6 +70,19 @@ const RuleOutputsEditor = ({ value, onChange }: Props) => {
 
   const lines = (text: string) => text.split('\n').map((s) => s.trim()).filter(Boolean);
   const toText = (arr?: string[]) => (arr ?? []).join('\n');
+
+  const tierErrors = value.customization ? validateDoseTiers(value.customization.dose_tiers) : [];
+
+  const setTier = (i: number, patch: Partial<DoseTier>) => {
+    if (!value.customization) return;
+    onChange({
+      ...value,
+      customization: {
+        ...value.customization,
+        dose_tiers: value.customization.dose_tiers.map((t, idx) => (idx === i ? { ...t, ...patch } : t)),
+      },
+    });
+  };
 
   return (
     <div className="space-y-4">
@@ -288,6 +306,157 @@ const RuleOutputsEditor = ({ value, onChange }: Props) => {
           className="text-sm"
         />
       </FieldStack>
+
+      {/* Formula customization */}
+      <div className="rounded-lg border border-border/50 p-3 space-y-3">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <Label className="text-xs font-medium">Formula customization</Label>
+            <p className="text-[11px] text-muted-foreground">
+              When this rule matches, propose a concrete XCAPE formula for one analysis category. The
+              kit, base product, active and companion come from the admin category mapping — the tiers
+              below set the dose. Tiers stay provisional until clinically confirmed.
+            </p>
+          </div>
+          <Switch
+            checked={!!value.customization}
+            onCheckedChange={(on) =>
+              onChange({
+                ...value,
+                customization: on
+                  ? {
+                      category: CUSTOMIZATION_CATEGORIES[0].key,
+                      dose_tiers: PROVISIONAL_DOSE_TIERS.map((t) => ({ ...t })),
+                      instructions: null,
+                      warnings: [],
+                    }
+                  : null,
+              })
+            }
+          />
+        </div>
+        {value.customization && (
+          <div className="space-y-3">
+            <FieldStack label="Analysis category to customize">
+              <Select
+                value={value.customization.category}
+                onValueChange={(v) =>
+                  onChange({ ...value, customization: { ...value.customization!, category: v } })
+                }
+              >
+                <SelectTrigger className="h-8 text-xs w-full sm:w-[280px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {CUSTOMIZATION_CATEGORIES.map((c) => (
+                    <SelectItem key={c.key} value={c.key} className="text-xs">
+                      {c.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </FieldStack>
+
+            <FieldStack label="Dose tiers — score range → active dose (provisional, editable)">
+              <div className="space-y-1.5">
+                {value.customization.dose_tiers.map((t, i) => (
+                  <div key={i} className="flex items-center gap-2 flex-wrap">
+                    <span className="text-[11px] text-muted-foreground">Score</span>
+                    <Input
+                      type="number"
+                      min={0}
+                      max={100}
+                      value={t.score_min}
+                      onChange={(e) => setTier(i, { score_min: Number(e.target.value) })}
+                      className="h-7 w-16 text-xs"
+                    />
+                    <span className="text-[11px] text-muted-foreground">–</span>
+                    <Input
+                      type="number"
+                      min={0}
+                      max={100}
+                      value={t.score_max}
+                      onChange={(e) => setTier(i, { score_max: Number(e.target.value) })}
+                      className="h-7 w-16 text-xs"
+                    />
+                    <span className="text-[11px] text-muted-foreground">→</span>
+                    <Input
+                      type="number"
+                      step="0.1"
+                      min={0}
+                      value={t.dose_ml}
+                      onChange={(e) => setTier(i, { dose_ml: Number(e.target.value) })}
+                      className="h-7 w-20 text-xs"
+                    />
+                    <span className="text-[11px] text-muted-foreground">ml</span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7"
+                      onClick={() =>
+                        onChange({
+                          ...value,
+                          customization: {
+                            ...value.customization!,
+                            dose_tiers: value.customization!.dose_tiers.filter((_, idx) => idx !== i),
+                          },
+                        })
+                      }
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </Button>
+                  </div>
+                ))}
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-7 text-xs"
+                  onClick={() =>
+                    onChange({
+                      ...value,
+                      customization: {
+                        ...value.customization!,
+                        dose_tiers: [
+                          ...value.customization!.dose_tiers,
+                          { score_min: 0, score_max: 0, dose_ml: 1 },
+                        ],
+                      },
+                    })
+                  }
+                >
+                  + Add tier
+                </Button>
+              </div>
+              {tierErrors.length > 0 && (
+                <ul className="space-y-0.5 pt-1">
+                  {tierErrors.map((e, i) => (
+                    <li key={i} className="text-[11px] text-red-400">
+                      {e}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </FieldStack>
+
+            <FieldStack label="Client-facing usage instructions (optional)">
+              <Textarea
+                value={value.customization.instructions ?? ''}
+                onChange={(e) =>
+                  onChange({
+                    ...value,
+                    customization: { ...value.customization!, instructions: e.target.value || null },
+                  })
+                }
+                placeholder="e.g. Mix the active into the moisturizer, apply AM and PM"
+                rows={2}
+                className="text-sm"
+              />
+            </FieldStack>
+          </div>
+        )}
+      </div>
 
       <div className="flex items-center justify-between rounded-lg border border-border/50 px-3 py-2.5">
         <div>
