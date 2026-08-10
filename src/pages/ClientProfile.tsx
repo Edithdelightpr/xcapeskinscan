@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import PhoneInput from '@/components/ui/PhoneInput';
-import logo from '@/assets/tropics-logo.jpeg';
+
 import type { Database } from '@/integrations/supabase/types';
 import { ClientMediaTab } from '@/components/client/ClientMediaTab';
 import { ClientReportsTab } from '@/components/client/ClientReportsTab';
@@ -74,7 +74,9 @@ const ClientProfile = () => {
             <ArrowLeft className="w-4 h-4" /> Admin
           </Link>
           <div className="h-5 w-px bg-border" />
-          <img src={logo} alt="" className="w-8 h-8 rounded-full object-cover ring-1 ring-accent/40" />
+          <div className="w-8 h-8 rounded-lg bg-primary/15 ring-1 ring-accent/40 flex items-center justify-center shrink-0">
+            <span className="font-display font-bold text-xs text-foreground">X</span>
+          </div>
           <div className="min-w-0">
             <p className="text-sm font-display font-bold text-foreground truncate">{client.full_name}</p>
             <p className="text-[10px] text-muted-foreground uppercase tracking-wider">{client.client_code}</p>
