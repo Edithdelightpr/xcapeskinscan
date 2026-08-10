@@ -454,3 +454,17 @@
 @media (max-width: 767px) {
   .hero-parallax { transform: none !important; will-change: auto; }
 }
+
+/* XCAPE Guided Facial Scan — subtle scanning-line feedback */
+@keyframes xcape-scan-line {
+  0% { transform: translateY(-60%); opacity: 0; }
+  15% { opacity: 1; }
+  85% { opacity: 1; }
+  100% { transform: translateY(1050%); opacity: 0; }
+}
+.xcape-scan-line {
+  animation: xcape-scan-line 2.4s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .xcape-scan-line { animation: none !important; display: none; }
+}

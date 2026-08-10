@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { toast } from 'sonner';
 import {
-  AlertTriangle, Camera, CheckCircle2, ImagePlus, Loader2, RefreshCw, Trash2,
+  AlertTriangle, Camera, CheckCircle2, ImagePlus, Loader2, RefreshCw, ScanFace, Trash2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -12,6 +12,7 @@ import {
   type ClientMedia,
 } from '@/hooks/useClientMedia';
 import type { RealClient } from '@/hooks/useRealClients';
+import GuidedFacialScan from '@/components/xcape/scan/GuidedFacialScan';
 
 const MAX_IMAGES = 4;
 const MAX_BYTES = 10 * 1024 * 1024;
@@ -55,8 +56,12 @@ const StepImages = ({ client, media, onAdd, onRemove }: Props) => {
   const deleteMut = useDeleteClientMedia();
   const [pending, setPending] = useState<PendingUpload[]>([]);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  /** Guided Facial Scan is the primary capture mode; upload is the fallback. */
+  const [captureMode, setCaptureMode] = useState<'scan' | 'upload'>('scan');
 
   const remaining = MAX_IMAGES - media.length - pending.filter((p) => p.status === 'uploading').length;
+  /** The scan needs three open slots for the Front / Left / Right views. */
+  const scanAvailable = remaining >= 3;
 
   const checkDimensions = (file: File) =>
     new Promise<void>((resolve) => {
@@ -173,7 +178,15 @@ const StepImages = ({ client, media, onAdd, onRemove }: Props) => {
         </p>
       </section>
 
-      {/* Upload */}
+      {/* Capture — Guided Facial Scan (primary) with manual upload fallback */}
+      {captureMode === 'scan' && scanAvailable ? (
+        <GuidedFacialScan
+          client={client}
+          onUploaded={onAdd}
+          onComplete={() => setCaptureMode('upload')}
+          onFallback={() => setCaptureMode('upload')}
+        />
+      ) : (
       <section className="glass rounded-xl p-5 space-y-4">
         <div className="flex flex-wrap items-center gap-3">
           <label className="inline-flex">
@@ -198,6 +211,17 @@ const StepImages = ({ client, media, onAdd, onRemove }: Props) => {
           <span className="text-[11px] text-muted-foreground">
             {media.length} / {MAX_IMAGES} uploaded · stored privately
           </span>
+          {scanAvailable && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setCaptureMode('scan')}
+            >
+              <ScanFace className="w-4 h-4 mr-1.5" />
+              Guided Facial Scan
+            </Button>
+          )}
         </div>
 
         {/* Pending / failed uploads with retry */}
@@ -255,6 +279,7 @@ const StepImages = ({ client, media, onAdd, onRemove }: Props) => {
           </div>
         )}
       </section>
+      )}
 
       {/* Quality guidance */}
       <section className="glass rounded-xl p-5 space-y-2">
