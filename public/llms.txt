@@ -1,0 +1,12 @@
+# Tropics Med Spa
+
+> Medical-grade skincare and aesthetic treatments in Abuja, Nigeria. Personalized treatment plans, free consultations, and long-term skin health.
+
+## Pages
+
+- [Home](/): Overview of Tropics Med Spa, featured treatments and products.
+- [About](/about): Philosophy, team, standards and promise.
+- [Menu](/menu): Full catalogue of treatments and Tropical products.
+- [Consultation](/consultation): Book a free 20-minute consultation.
+- [Book Appointment](/book-appointment): Schedule a paid treatment.
+- [Schedule](/schedule): Public scheduling for available slots.

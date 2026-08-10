@@ -1,0 +1,214 @@
+// Public edge function: fetches the whitelisted Personal Report payload for a
+// given token. No PII beyond first name / initials is returned. Logs
+// link_viewed (deduped within 60s).
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
+import { resolveClientFirstName } from '../_shared/clientName.ts';
+import { buildTreatmentPlanBlock } from '../_shared/reportTreatmentPlan.ts';
+import { buildCareJourneyBlock } from '../_shared/reportCareJourney.ts';
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+};
+
+function json(body: unknown, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  });
+}
+
+async function sha256Hex(input: string): Promise<string> {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(input));
+  return Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+function initials(name?: string | null): string {
+  if (!name) return '';
+  return name.split(/\s+/).filter(Boolean).map((p) => p[0]?.toUpperCase() ?? '').slice(0, 2).join('');
+}
+
+Deno.serve(async (req) => {
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
+  if (req.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
+
+  try {
+    const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
+    const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+
+    let body: { token?: string };
+    try { body = await req.json(); } catch { return json({ error: 'Invalid JSON body' }, 400); }
+    const token = typeof body?.token === 'string' ? body.token.trim() : '';
+    if (!token || token.length < 20 || token.length > 128) return json({ error: 'Invalid token' }, 400);
+
+    const admin = createClient(SUPABASE_URL, SERVICE_KEY);
+    const token_hash = await sha256Hex(token);
+
+    const { data: link, error: linkErr } = await admin
+      .from('client_report_links')
+      .select('id, client_id, assessment_id, expires_at, revoked_at, token_prefix')
+      .eq('token_hash', token_hash)
+      .maybeSingle();
+    if (linkErr) throw linkErr;
+    if (!link) return json({ error: 'Not found' }, 404);
+    if (link.revoked_at) return json({ error: 'Link revoked' }, 410);
+    // A null `expires_at` means "persistent — expires only when revoked".
+    if (link.expires_at && new Date(link.expires_at).getTime() <= Date.now()) {
+      return json({ error: 'Link expired' }, 410);
+    }
+
+    const [{ data: client }, { data: assessment }, { data: linkFull }] = await Promise.all([
+      admin.from('clients')
+        .select('full_name')
+        .eq('id', link.client_id)
+        .maybeSingle(),
+      admin.from('client_visit_assessments')
+        .select('id, created_at, main_concern, client_goal, skin_analysis, recommended_services, recommended_products, home_care, follow_up_recommendation, next_visit_in_weeks')
+        .eq('id', link.assessment_id)
+        .maybeSingle(),
+      admin.from('client_report_links')
+        .select('created_by')
+        .eq('id', link.id)
+        .maybeSingle(),
+    ]);
+
+    if (!assessment) return json({ error: 'Assessment missing' }, 404);
+
+    // Hydrate recommended services/products (best-effort)
+    const svcIds = Array.isArray(assessment.recommended_services)
+      // Recommendations reference services by `service_id` (and products by
+      // `product_id`). Accept legacy `id` too for older rows.
+      // deno-lint-ignore no-explicit-any
+      ? assessment.recommended_services.map((x: any) => x?.service_id ?? x?.id ?? x).filter(Boolean)
+      : [];
+    const prodIds = Array.isArray(assessment.recommended_products)
+      // deno-lint-ignore no-explicit-any
+      ? assessment.recommended_products.map((x: any) => x?.product_id ?? x?.id ?? x).filter(Boolean)
+      : [];
+
+    const [{ data: services }, { data: products }] = await Promise.all([
+      svcIds.length
+        ? admin.from('services').select('id, name, description, price_per_session, image_url').in('id', svcIds)
+        : Promise.resolve({ data: [] as any[] }),
+      prodIds.length
+        ? admin.from('products').select('id, name, public_slug, short_description, selling_price, image_url').in('id', prodIds)
+        : Promise.resolve({ data: [] as any[] }),
+    ]);
+
+    const { treatment_plan, payment_settings } = await buildTreatmentPlanBlock(admin, assessment.id);
+    const care_journey = await buildCareJourneyBlock(
+      admin,
+      link.client_id,
+      // deno-lint-ignore no-explicit-any
+      ((treatment_plan as any)?.id as string | undefined) ?? null,
+    );
+
+    // ---- Promo block: practitioner code + clinic contact + defaults ----
+    const [{ data: creator }, { data: outreach }, { data: siteRow }] = await Promise.all([
+      linkFull?.created_by
+        ? admin.from('staff_users')
+            .select('id, full_name, promo_code, promo_discount_pct, promo_active')
+            .eq('id', linkFull.created_by)
+            .maybeSingle()
+        : Promise.resolve({ data: null as null | Record<string, unknown> }),
+      admin.from('outreach_settings')
+        .select('address, business_whatsapp_number, website_url, instagram_handle, tiktok_handle')
+        .eq('id', true)
+        .maybeSingle(),
+      admin.from('site_settings')
+        .select('value')
+        .eq('key', 'promo_defaults')
+        .maybeSingle(),
+    ]);
+
+    // deno-lint-ignore no-explicit-any
+    const defaults = (siteRow?.value ?? {}) as any;
+    const practitionerActive = !!creator && (creator as any).promo_active !== false && !!(creator as any).promo_code;
+    // deno-lint-ignore no-explicit-any
+    const c: any = creator ?? {};
+    const promoCode = practitionerActive ? (c.promo_code as string) : (defaults.house_promo_code ?? null);
+    const discountPct = practitionerActive
+      ? Number(c.promo_discount_pct ?? defaults.default_discount_pct ?? 0)
+      : Number(defaults.default_discount_pct ?? 0);
+    const firstName = typeof c.full_name === 'string' ? c.full_name.split(/\s+/)[0] : null;
+
+    const promo = promoCode
+      ? {
+          code: promoCode,
+          discount_pct: discountPct || null,
+          practitioner_first_name: practitionerActive ? firstName : null,
+          cta_text: (defaults.cta_text as string) ?? 'Mention this code at the front desk to redeem.',
+          address: outreach?.address ?? null,
+          whatsapp_number: outreach?.business_whatsapp_number ?? null,
+          website_url: outreach?.website_url ?? null,
+        }
+      : null;
+
+    // Map service_id → recommended session count (from the original
+    // recommendation, preserved untouched at acceptance).
+    const recommended_sessions_by_service_id: Record<string, number> = {};
+    if (Array.isArray(assessment.recommended_services)) {
+      // deno-lint-ignore no-explicit-any
+      for (const r of assessment.recommended_services as any[]) {
+        const sid = r?.service_id ?? r?.id;
+        const n = Number(r?.sessions);
+        if (sid && Number.isFinite(n) && n > 0) recommended_sessions_by_service_id[sid] = n;
+      }
+    }
+
+    // Dedupe link_viewed within 60s
+    const sixtySecAgo = new Date(Date.now() - 60_000).toISOString();
+    const { data: recentView } = await admin
+      .from('client_report_events')
+      .select('id')
+      .eq('link_id', link.id)
+      .eq('event_type', 'link_viewed')
+      .gte('created_at', sixtySecAgo)
+      .limit(1)
+      .maybeSingle();
+    if (!recentView) {
+      await admin.from('client_report_events').insert({
+        link_id: link.id,
+        event_type: 'link_viewed',
+        payload: {},
+      });
+    }
+
+    const resolvedFirstName = resolveClientFirstName(
+      null,
+      client?.full_name ?? null,
+    );
+
+    return json({
+      ok: true,
+      client: {
+        first_name: resolvedFirstName,
+        initials: initials(
+          [resolvedFirstName].filter(Boolean).join(' '),
+        ),
+      },
+      assessment: {
+        id: assessment.id,
+        created_at: assessment.created_at,
+        main_concern: assessment.main_concern,
+        client_goal: assessment.client_goal,
+        skin_analysis: assessment.skin_analysis,
+        home_care: assessment.home_care,
+        follow_up_recommendation: assessment.follow_up_recommendation,
+        next_visit_in_weeks: assessment.next_visit_in_weeks,
+      },
+      recommended_services: services ?? [],
+      recommended_products: products ?? [],
+      recommended_sessions_by_service_id,
+      treatment_plan,
+      payment_settings,
+      promo,
+      care_journey,
+      link: { prefix: link.token_prefix, expires_at: link.expires_at },
+    });
+  } catch (e) {
+    console.error('public-report-fetch error', e);
+    return json({ error: 'Server error' }, 500);
+  }
+});

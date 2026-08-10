@@ -1,0 +1,456 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600;1,700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+  :root {
+    /* ───── Light Luxe — global identity (cream + plum + gold) ─────
+     * Promoted from the former `.theme-luxe` scope. Every page now
+     * inherits this palette automatically. Use `.theme-dark` (defined
+     * below) to opt back into the original dark purple surface.       */
+    /* Warm cream ivory */
+    --background: 32 42% 95%;
+    /* Deep cocoa/espresso */
+    --foreground: 22 30% 16%;
+
+    --card: 32 40% 98%;
+    --card-foreground: 22 30% 16%;
+
+    --popover: 32 40% 98%;
+    --popover-foreground: 22 30% 16%;
+
+    /* Deep plum / aubergine — luxury contrast */
+    --primary: 288 38% 24%;
+    --primary-foreground: 32 42% 97%;
+
+    --secondary: 32 32% 90%;
+    --secondary-foreground: 22 30% 20%;
+
+    --muted: 32 25% 91%;
+    --muted-foreground: 24 14% 40%;
+
+    /* Soft bronze / gold */
+    --accent: 30 52% 44%;
+    --accent-foreground: 32 42% 97%;
+
+    --destructive: 0 70% 45%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 28 20% 84%;
+    --input: 28 20% 84%;
+    --ring: 288 38% 24%;
+
+    --radius: 0.75rem;
+
+    --glow: 30 55% 55%;
+    --surface: 32 35% 93%;
+    --surface-hover: 32 35% 90%;
+    --gold: 30 52% 44%;
+    --gold-foreground: 30 60% 24%;
+
+    /* New semantic warm accents (additive) */
+    --cocoa: 22 38% 18%;
+    --bronze: 30 55% 45%;
+    --blush: 14 42% 90%;
+    --plum-deep: 290 40% 18%;
+    --cream-warm: 32 45% 93%;
+
+    --sidebar-background: 32 42% 96%;
+    --sidebar-foreground: 22 30% 16%;
+    --sidebar-primary: 288 38% 24%;
+    --sidebar-primary-foreground: 32 42% 97%;
+    --sidebar-accent: 32 25% 91%;
+    --sidebar-accent-foreground: 22 30% 20%;
+    --sidebar-border: 28 20% 84%;
+    --sidebar-ring: 288 38% 24%;
+  }
+
+  /* Opt-in dark palette (formerly the default). Apply `.theme-dark`
+   * to a wrapper to bring back the original purple surface for
+   * specialized contexts (e.g. media viewers).                         */
+  .theme-dark {
+    --background: 260 50% 8%;
+    --foreground: 0 0% 95%;
+
+    --card: 260 40% 12%;
+    --card-foreground: 0 0% 95%;
+
+    --popover: 260 40% 10%;
+    --popover-foreground: 0 0% 95%;
+
+    --primary: 270 60% 50%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 30 30% 25%;
+    --secondary-foreground: 35 40% 75%;
+
+    --muted: 260 30% 15%;
+    --muted-foreground: 260 10% 55%;
+
+    --accent: 35 50% 40%;
+    --accent-foreground: 35 60% 85%;
+
+    --destructive: 0 70% 50%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 260 30% 18%;
+    --input: 260 30% 18%;
+    --ring: 270 60% 50%;
+
+    --glow: 270 80% 60%;
+    --surface: 260 35% 14%;
+    --surface-hover: 260 35% 18%;
+    --gold: 35 50% 45%;
+    --gold-foreground: 35 70% 80%;
+
+    --sidebar-background: 260 50% 8%;
+    --sidebar-foreground: 0 0% 95%;
+    --sidebar-primary: 270 60% 50%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 260 30% 15%;
+    --sidebar-accent-foreground: 0 0% 95%;
+    --sidebar-border: 260 30% 18%;
+    --sidebar-ring: 270 60% 50%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    background-image:
+      radial-gradient(60% 50% at 20% 10%, hsl(32 60% 88% / 0.55) 0%, transparent 70%),
+      radial-gradient(55% 50% at 85% 25%, hsl(14 45% 88% / 0.35) 0%, transparent 70%),
+      radial-gradient(60% 55% at 50% 95%, hsl(30 45% 82% / 0.22) 0%, transparent 70%);
+    background-attachment: fixed;
+  }
+  .theme-dark body,
+  body.theme-dark {
+    background-image: none;
+  }
+}
+
+@layer utilities {
+  .glass {
+    background-color: hsl(0 0% 100% / 0.6);
+    border: 1px solid hsl(22 25% 20% / 0.08);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+  }
+
+  .glass-strong {
+    background-color: hsl(0 0% 100% / 0.78);
+    border: 1px solid hsl(22 25% 20% / 0.10);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+  }
+
+  .theme-dark .glass {
+    background-color: hsl(var(--card) / 0.6);
+    border-color: hsl(var(--border) / 0.5);
+    backdrop-filter: blur(18px);
+  }
+  .theme-dark .glass-strong {
+    background-color: hsl(var(--card) / 0.8);
+    border-color: hsl(var(--border) / 0.6);
+    backdrop-filter: blur(24px);
+  }
+
+  .glow-primary {
+    box-shadow: 0 10px 40px -10px hsl(var(--glow) / 0.45), inset 0 1px 0 hsl(0 0% 100% / 0.18);
+  }
+
+  .glow-primary-soft {
+    box-shadow: 0 0 60px -10px hsl(var(--glow) / 0.25);
+  }
+
+  .gradient-primary {
+    background: linear-gradient(180deg, hsl(32 45% 96%) 0%, hsl(30 40% 93%) 55%, hsl(28 38% 90%) 100%);
+  }
+
+  .gradient-card {
+    background: linear-gradient(145deg, hsl(32 45% 99%), hsl(30 38% 94%));
+  }
+
+  .gradient-hero {
+    background:
+      radial-gradient(60% 50% at 20% 10%, hsl(30 55% 72% / 0.28) 0%, transparent 70%),
+      radial-gradient(50% 45% at 85% 20%, hsl(14 55% 78% / 0.30) 0%, transparent 70%),
+      radial-gradient(55% 50% at 50% 95%, hsl(288 40% 40% / 0.15) 0%, transparent 70%),
+      linear-gradient(180deg, hsl(32 45% 96%) 0%, hsl(30 40% 93%) 55%, hsl(28 38% 90%) 100%);
+  }
+
+  .theme-dark .gradient-primary {
+    background: linear-gradient(135deg, hsl(260 50% 8%), hsl(270 40% 18%), hsl(260 50% 8%));
+  }
+  .theme-dark .gradient-card {
+    background: linear-gradient(145deg, hsl(260 40% 14%), hsl(260 35% 10%));
+  }
+  .theme-dark .gradient-hero {
+    background: linear-gradient(180deg, hsl(260 50% 10%), hsl(270 40% 14%), hsl(260 50% 8%));
+  }
+
+  .text-gold {
+    color: hsl(var(--gold-foreground));
+  }
+
+  .bg-gold {
+    background-color: hsl(var(--gold));
+  }
+
+  /* ── Premium melanin-rich brand utilities (additive) ── */
+  .text-cocoa { color: hsl(var(--cocoa)); }
+  .text-bronze { color: hsl(var(--bronze)); }
+  .bg-cocoa { background-color: hsl(var(--cocoa)); }
+  .bg-bronze { background-color: hsl(var(--bronze)); }
+  .hover\:bg-cocoa\/90:hover { background-color: hsl(var(--cocoa) / 0.9); }
+  .border-cocoa\/25 { border-color: hsl(var(--cocoa) / 0.25); }
+  .border-bronze\/20 { border-color: hsl(var(--bronze) / 0.2); }
+  .bg-cream-warm { background-color: hsl(var(--cream-warm)); }
+  .bg-blush { background-color: hsl(var(--blush)); }
+  .bg-plum-deep { background-color: hsl(var(--plum-deep)); }
+
+  .eyebrow {
+    font-size: 11px;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    font-weight: 600;
+    color: hsl(var(--bronze));
+  }
+
+  .card-luxe {
+    background-color: hsl(var(--card));
+    border: 1px solid hsl(var(--border) / 0.7);
+    border-radius: 1rem;
+    transition: border-color 500ms ease, transform 500ms ease, box-shadow 500ms ease;
+  }
+  .card-luxe:hover {
+    border-color: hsl(var(--accent) / 0.5);
+    transform: translateY(-2px);
+    box-shadow: 0 20px 40px -28px hsl(var(--cocoa) / 0.35);
+  }
+
+  .divider-bronze {
+    background: linear-gradient(to right, transparent, hsl(var(--bronze) / 0.4), transparent);
+  }
+
+  .animate-float {
+    animation: float 6s ease-in-out infinite;
+  }
+
+  .animate-pulse-slow {
+    animation: pulse-slow 4s ease-in-out infinite;
+  }
+
+  .animate-glow {
+    animation: glow-pulse 3s ease-in-out infinite;
+  }
+
+  .animate-fade-in {
+    animation: fade-in 0.6s ease-out forwards;
+  }
+
+  .animate-slide-up {
+    animation: slide-up 0.6s ease-out forwards;
+  }
+}
+
+/* ───────── Mobile safety guards ─────────
+ * Prevent the entire app from ever scrolling horizontally on phones,
+ * and keep wide tables / pre blocks scrollable inside their own container
+ * instead of pushing the page out of frame.                                */
+@layer base {
+  html, body, #root {
+    overflow-x: hidden;
+  }
+}
+
+@layer utilities {
+  /* Any element using `overflow-x-auto` becomes a smooth, contained
+   * scroll region on touch devices.                                       */
+  .overflow-x-auto {
+    -webkit-overflow-scrolling: touch;
+    max-width: 100%;
+  }
+  /* Soft visual cue that a table can scroll horizontally on mobile. */
+  @media (max-width: 767px) {
+    .glass table,
+    .glass-strong table {
+      min-width: 100%;
+    }
+  }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+}
+
+@keyframes pulse-slow {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+@keyframes glow-pulse {
+  0%, 100% { box-shadow: 0 0 20px -5px hsl(var(--glow) / 0.3); }
+  50% { box-shadow: 0 0 40px -5px hsl(var(--glow) / 0.5); }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ───────── Public landing brand utilities (additive only) ─────────
+ * Used exclusively by /schedule (PublicScheduling). Do NOT replace any
+ * existing token; the internal app keeps its current dark look.            */
+@layer utilities {
+  .gradient-hero-bright {
+    background:
+      radial-gradient(60% 50% at 20% 10%, hsl(280 70% 35% / 0.55) 0%, transparent 70%),
+      radial-gradient(50% 45% at 85% 20%, hsl(295 70% 45% / 0.40) 0%, transparent 70%),
+      radial-gradient(55% 50% at 50% 90%, hsl(265 65% 30% / 0.55) 0%, transparent 70%),
+      linear-gradient(180deg, hsl(260 50% 12%) 0%, hsl(270 55% 22%) 38%, hsl(280 50% 20%) 65%, hsl(260 50% 10%) 100%);
+  }
+  .gradient-aurora {
+    background:
+      radial-gradient(40% 60% at 15% 30%, hsl(280 80% 55% / 0.18) 0%, transparent 70%),
+      radial-gradient(35% 55% at 85% 70%, hsl(295 80% 60% / 0.14) 0%, transparent 70%);
+  }
+  .shine-overlay {
+    background: linear-gradient(180deg, hsl(0 0% 100% / 0.05) 0%, transparent 35%);
+  }
+  .text-shine {
+    background: linear-gradient(180deg, hsl(0 0% 100%) 0%, hsl(280 60% 88%) 55%, hsl(280 50% 70%) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .btn-aurora {
+    background: linear-gradient(135deg, hsl(270 70% 55%) 0%, hsl(295 75% 60%) 100%);
+    box-shadow: 0 10px 40px -10px hsl(280 80% 55% / 0.55), inset 0 1px 0 hsl(0 0% 100% / 0.18);
+  }
+  .btn-aurora:hover {
+    background: linear-gradient(135deg, hsl(270 75% 60%) 0%, hsl(295 80% 65%) 100%);
+  }
+  .ring-violet-soft {
+    box-shadow: 0 0 0 1px hsl(280 70% 60% / 0.35), 0 20px 40px -20px hsl(280 80% 55% / 0.45);
+  }
+  .animate-aurora-drift { animation: aurora-drift 40s ease-in-out infinite; }
+  .animate-float-slow { animation: float-slow 14s ease-in-out infinite; }
+}
+
+@keyframes aurora-drift {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+  50%      { transform: translate3d(40px, -30px, 0) scale(1.08); }
+}
+@keyframes float-slow {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50%      { transform: translateY(-14px) rotate(0.5deg); }
+}
+
+/* `.theme-luxe` kept as an alias of the global theme for backward
+ * compatibility with any page wrappers still in the tree. No-op now. */
+.theme-luxe { /* alias */ }
+
+/* ───────── Public-site motion (additive, GPU-only) ─────────
+ * Warm page reveal + on-scroll section reveal. Both honor
+ * prefers-reduced-motion. No layout shift: only transform/opacity/filter.
+ */
+@layer utilities {
+  .page-reveal {
+    opacity: 0;
+    transform: translate3d(0, 12px, 0);
+    filter: blur(6px);
+    transition:
+      opacity 800ms cubic-bezier(0.22, 1, 0.36, 1),
+      transform 800ms cubic-bezier(0.22, 1, 0.36, 1),
+      filter 800ms cubic-bezier(0.22, 1, 0.36, 1);
+    will-change: opacity, transform, filter;
+  }
+  .page-reveal-in {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+    filter: blur(0);
+  }
+
+  .reveal-init {
+    opacity: 0;
+    transform: translate3d(0, 14px, 0);
+    transition:
+      opacity 700ms cubic-bezier(0.22, 1, 0.36, 1),
+      transform 700ms cubic-bezier(0.22, 1, 0.36, 1);
+    will-change: opacity, transform;
+  }
+  .reveal-in {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+
+  .hero-parallax {
+    will-change: transform;
+    transform: translate3d(0, var(--hero-parallax-y, 0px), 0);
+  }
+
+  .hero-bridge {
+    display: none;
+  }
+
+  /* Full-bleed section bands — escape the page background to add rhythm
+   * between editorial chapters. Inner content still caps to max-w-6xl.    */
+  .section-bleed-cream {
+    background:
+      radial-gradient(60% 50% at 20% 0%, hsl(30 55% 86% / 0.55) 0%, transparent 70%),
+      radial-gradient(50% 45% at 100% 100%, hsl(14 45% 88% / 0.45) 0%, transparent 70%),
+      linear-gradient(180deg, hsl(32 48% 95%) 0%, hsl(28 42% 91%) 100%);
+    position: relative;
+  }
+  .section-bleed-plum {
+    background:
+      radial-gradient(50% 60% at 0% 0%, hsl(30 55% 45% / 0.22) 0%, transparent 70%),
+      linear-gradient(135deg, hsl(290 40% 16%) 0%, hsl(288 38% 24%) 100%);
+    color: hsl(var(--primary-foreground));
+    position: relative;
+  }
+  .bridge-cream-to-bg {
+    height: 64px;
+    margin-top: -64px;
+    pointer-events: none;
+    background: linear-gradient(180deg, transparent 0%, hsl(var(--background)) 100%);
+    position: relative;
+    z-index: 1;
+  }
+
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page-reveal,
+  .reveal-init,
+  .hero-parallax {
+    transition: none !important;
+    transform: none !important;
+    filter: none !important;
+    opacity: 1 !important;
+    will-change: auto !important;
+  }
+}
+
+@media (max-width: 767px) {
+  .hero-parallax { transform: none !important; will-change: auto; }
+}
