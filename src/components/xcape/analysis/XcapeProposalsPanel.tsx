@@ -33,6 +33,7 @@ import {
 } from '@/hooks/useXcapeCustomization';
 import {
   CUSTOMIZATION_CATEGORIES,
+  resolveDose,
   resolveFormula,
   type ResolvedFormula,
 } from '@/lib/xcapeRules/customization';
@@ -338,6 +339,16 @@ const XcapeProposalsPanel = ({
           const effectiveOutputs = p.status === 'edited' && p.final_result ? p.final_result : p.proposal;
           const warnings = warningsFor(effectiveOutputs);
           const formula = formulaFor(effectiveOutputs);
+          const customizationOut = effectiveOutputs.customization ?? null;
+          // A customization proposal without an active category mapping shows
+          // its matched protocol/dose logic for review but can NOT be
+          // approved — no formula, no snapshot, no purchase path.
+          const mappingMissing = !!customizationOut && !formula;
+          const rawCategoryScore = customizationOut ? ctx[`score.${customizationOut.category}`] : null;
+          const pendingDose =
+            customizationOut && typeof rawCategoryScore === 'number'
+              ? resolveDose(customizationOut.dose_tiers, rawCategoryScore)
+              : null;
           const snapshot = formulaSnapshots.find((s) => s.proposal_id === p.id);
           const linkedProtocols = (p.proposal.protocol_ids ?? [])
             .map((id) => protocols.find((pr) => pr.id === id))
@@ -458,12 +469,39 @@ const XcapeProposalsPanel = ({
                   )}
                 </div>
               ) : (
-                effectiveOutputs.customization && (
-                  <p className="text-[11px] text-amber-400">
-                    This rule proposes a formula customization, but the category mapping is missing or
-                    inactive — an admin must activate it under Products &amp; Ingredients → Kits &amp;
-                    Customization.
-                  </p>
+                customizationOut && (
+                  <div className="rounded-lg border border-amber-500/40 bg-amber-500/5 p-3 space-y-1.5">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <FlaskConical className="w-3.5 h-3.5 text-amber-400" />
+                      <p className="text-xs font-semibold text-amber-300">
+                        XCAPE product/kit mapping required — {categoryLabel(customizationOut.category)}
+                      </p>
+                    </div>
+                    <ul className="text-[11px] text-foreground space-y-0.5">
+                      {pendingDose && typeof rawCategoryScore === 'number' && (
+                        <li>
+                          Dose logic: score {rawCategoryScore}/100 → tier{' '}
+                          {pendingDose.tier.score_min}–{pendingDose.tier.score_max} →{' '}
+                          {pendingDose.dose_ml} ml
+                        </li>
+                      )}
+                      {(customizationOut.dose_tiers?.length ?? 0) > 0 && (
+                        <li className="text-muted-foreground">
+                          Tiers:{' '}
+                          {customizationOut.dose_tiers
+                            .map((t) => `${t.score_min}–${t.score_max} ⇒ ${t.dose_ml} ml`)
+                            .join(' · ')}
+                        </li>
+                      )}
+                    </ul>
+                    <p className="text-[11px] text-amber-300">
+                      The matched protocol and dose logic are shown for review, but this formula
+                      cannot be approved or purchased until an admin activates the category mapping
+                      under Products &amp; Ingredients → Kits &amp; Customization. Product identity,
+                      concentration, max-safe-dose, contraindication and final kit mapping await
+                      catalogue completion.
+                    </p>
+                  </div>
                 )
               )}
 
@@ -496,7 +534,8 @@ const XcapeProposalsPanel = ({
                     type="button"
                     size="sm"
                     className="text-xs glow-primary"
-                    disabled={decideMut.isPending}
+                    disabled={decideMut.isPending || mappingMissing}
+                    title={mappingMissing ? 'XCAPE product/kit mapping required — an admin must activate the category mapping before this formula can be approved' : undefined}
                     onClick={() => decide(p, 'accepted', null, null)}
                   >
                     <Check className="w-3.5 h-3.5 mr-1" /> Accept & apply
@@ -506,7 +545,8 @@ const XcapeProposalsPanel = ({
                     size="sm"
                     variant="outline"
                     className="text-xs"
-                    disabled={decideMut.isPending}
+                    disabled={decideMut.isPending || mappingMissing}
+                    title={mappingMissing ? 'XCAPE product/kit mapping required — an admin must activate the category mapping before this formula can be approved' : undefined}
                     onClick={() => {
                       setEditing(p);
                       setEditOutputs(p.proposal);

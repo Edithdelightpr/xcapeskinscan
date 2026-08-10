@@ -154,6 +154,40 @@ describe('formatConcerns', () => {
     expect(byKey.firmness_skin_support).toBeUndefined();
   });
 
+  it('preserves all four practitioner scores from skin_analysis.engine verbatim', () => {
+    // Deliberately divergent machine scores prove the saved practitioner
+    // values flow through untouched — no recomputation anywhere in the
+    // preview / secure report / PDF surface.
+    const analysis = {
+      engine: {
+        priority_order: [
+          'pigmentation_stability',
+          'barrier_surface_hydration',
+          'firmness_skin_support',
+          'oil_congestion_balance',
+        ],
+        variables: {
+          pigmentation_stability: { practitioner_score: 12, machine_score: 90 },
+          barrier_surface_hydration: { practitioner_score: 34, machine_score: 10 },
+          firmness_skin_support: { practitioner_score: 56, machine_score: 5 },
+          oil_congestion_balance: { practitioner_score: 78, machine_score: 1 },
+        },
+      },
+    };
+    const concerns = formatConcerns(analysis);
+    expect(concerns.map((c) => [c.key, c.score])).toEqual([
+      ['pigmentation_stability', 12],
+      ['barrier_surface_hydration', 34],
+      ['firmness_skin_support', 56],
+      ['oil_congestion_balance', 78],
+    ]);
+    const report = formatReport({
+      clientFirstName: 'Ada',
+      assessment: { ...baseAssessment, skin_analysis: analysis },
+    });
+    expect(report.concerns.map((c) => c.score)).toEqual([12, 34, 56, 78]);
+  });
+
   it('surfaces an approved AI observation and omits it otherwise', () => {
     const withApproval = buildSkinAnalysis({
       ai_assist: {
