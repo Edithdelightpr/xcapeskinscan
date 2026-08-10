@@ -176,7 +176,7 @@ var list_visits_default = defineTool5({
 });
 
 // src/lib/mcp/index.ts
-var projectRef = "opdjgzditmzuxygsgybx";
+var projectRef = "fboyigzmwbzqhufjsauc";
 var mcp_default = defineMcp({
   name: "tropics-medspa-mcp",
   title: "Tropics MedSpa",
