@@ -28,7 +28,14 @@ export const MOCK_TAG = 'Mock — to be confirmed by Doc';
 
 export interface DelightMockupConfig {
   kit_display_name: string;
+  /** Optional EXTERNALLY hosted kit image URL (may already be public). */
   kit_image_url: string;
+  /**
+   * Object path of a mock image uploaded to the PRIVATE xcape-admin-mockups
+   * storage bucket. Only the path is persisted — never a public or signed URL.
+   * The admin editor mints a short-lived signed URL for local preview only.
+   */
+  kit_image_storage_path: string;
   short_description: string;
   /** Display-only mock price (₦). Never purchasable. */
   display_price: number;
@@ -49,6 +56,7 @@ export interface DelightMockupConfig {
 export const DEFAULT_MOCKUP_CONFIG: DelightMockupConfig = {
   kit_display_name: 'Delight Express Kit',
   kit_image_url: '',
+  kit_image_storage_path: '',
   short_description:
     'Mock description — replace with the approved Delight Express Kit description.',
   display_price: 0,
@@ -101,6 +109,13 @@ const asDoseTiers = (v: unknown, fallback: DoseTier[]): DoseTier[] => {
 };
 
 /**
+ * Signed storage URLs are short-lived preview artifacts — they must never be
+ * persisted in the mock config. Only plain external URLs survive sanitizing.
+ */
+const looksLikeSignedUrl = (v: string): boolean =>
+  /\/storage\/v1\/object\/sign\//i.test(v) || /[?&]token=/i.test(v);
+
+/**
  * Merge a stored JSON blob over the defaults, tolerating missing or
  * malformed fields — a corrupt record can never crash the admin preview.
  */
@@ -109,9 +124,11 @@ export const sanitizeMockupConfig = (raw: unknown): DelightMockupConfig => {
   const o = raw as Record<string, unknown>;
   const d = DEFAULT_MOCKUP_CONFIG;
   const category = asString(o.preview_category, d.preview_category);
+  const rawImageUrl = asString(o.kit_image_url, d.kit_image_url);
   return {
     kit_display_name: asString(o.kit_display_name, d.kit_display_name),
-    kit_image_url: asString(o.kit_image_url, d.kit_image_url),
+    kit_image_url: looksLikeSignedUrl(rawImageUrl) ? d.kit_image_url : rawImageUrl,
+    kit_image_storage_path: asString(o.kit_image_storage_path, d.kit_image_storage_path),
     short_description: asString(o.short_description, d.short_description),
     display_price: asNumber(o.display_price, d.display_price, 0),
     preview_category: CATEGORY_KEYS.has(category) ? category : d.preview_category,
@@ -146,9 +163,16 @@ export const isMockPlaceholder = <K extends keyof DelightMockupConfig>(
  *  - `is_demo` is always true.
  *  - Companion dose appears only for aggressive actives.
  */
-export const mockupToFormula = (config: DelightMockupConfig): ReportFormula => {
+export const mockupToFormula = (
+  config: DelightMockupConfig,
+  opts: { imageOverride?: string | null } = {},
+): ReportFormula => {
   const resolved = resolveDose(config.dose_tiers, config.preview_score);
   const aggressive = config.aggressiveness === 'aggressive';
+  // For a private uploaded image the editor passes a short-lived signed URL as
+  // an override; it lives only in local preview state and is never persisted.
+  const image =
+    opts.imageOverride !== undefined ? opts.imageOverride : config.kit_image_url.trim();
   return {
     id: 'mockup',
     category: config.preview_category,
@@ -169,7 +193,7 @@ export const mockupToFormula = (config: DelightMockupConfig): ReportFormula => {
     rule_version: null,
     approved_at: null,
     is_demo: true,
-    kit_image_url: config.kit_image_url.trim() || null,
+    kit_image_url: image || null,
     kit_public_slug: null,
     kit_short_description: config.short_description.trim() || null,
   };

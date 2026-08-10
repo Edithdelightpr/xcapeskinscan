@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
-import { Eye, ImagePlus, Save } from 'lucide-react';
+import { Eye, ImagePlus, Save, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -58,6 +58,13 @@ const FieldLabel = ({ children, mock }: { children: React.ReactNode; mock?: bool
   </div>
 );
 
+// Private admin-only bucket for uploaded mock images — public buckets are
+// never used for mock assets. RLS scopes every operation to the admin role.
+const MOCKUP_BUCKET = 'xcape-admin-mockups';
+// Short-lived signed URL used ONLY for local admin preview — never persisted.
+const SIGNED_URL_TTL_SECONDS = 3600;
+const MAX_MOCK_IMAGE_BYTES = 5 * 1024 * 1024;
+
 const DelightExpressMockup = () => {
   const { data: savedConfig, isLoading } = useXcapeMockup();
   const saveMockup = useSaveXcapeMockup();
@@ -70,6 +77,7 @@ const DelightExpressMockup = () => {
   const dirtyRef = useRef(false);
   const [cataloguePreviewId, setCataloguePreviewId] = useState('');
   const [uploading, setUploading] = useState(false);
+  const [signedPreviewUrl, setSignedPreviewUrl] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   // Hydrate from the saved admin record once, without clobbering edits.
@@ -78,6 +86,26 @@ const DelightExpressMockup = () => {
       setDraft(sanitizeMockupConfig(savedConfig));
     }
   }, [savedConfig]);
+
+  // Mint a short-lived signed URL for the saved private mock image. The signed
+  // URL lives only in this component's local preview state — it is never saved.
+  useEffect(() => {
+    const path = draft.kit_image_storage_path;
+    if (!path) {
+      setSignedPreviewUrl(null);
+      return;
+    }
+    let cancelled = false;
+    void supabase.storage
+      .from(MOCKUP_BUCKET)
+      .createSignedUrl(path, SIGNED_URL_TTL_SECONDS)
+      .then(({ data, error }) => {
+        if (!cancelled) setSignedPreviewUrl(error ? null : (data?.signedUrl ?? null));
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [draft.kit_image_storage_path]);
 
   const update = (patch: Partial<DelightMockupConfig>) => {
     dirtyRef.current = true;
@@ -101,27 +129,61 @@ const DelightExpressMockup = () => {
   );
 
   const previewFormula = useMemo(() => {
-    const base = mockupToFormula(draft);
+    const base = mockupToFormula(draft, {
+      // A private upload takes precedence over any external URL; its signed
+      // preview URL comes from local state only.
+      imageOverride: draft.kit_image_storage_path ? signedPreviewUrl : undefined,
+    });
     return catalogueProduct ? withCataloguePreview(base, catalogueProduct) : base;
-  }, [draft, catalogueProduct]);
+  }, [draft, signedPreviewUrl, catalogueProduct]);
 
   const uploadImage = async (file: File) => {
+    if (!file.type.startsWith('image/')) {
+      toast.error('Mock kit images must be image files');
+      return;
+    }
+    if (file.size > MAX_MOCK_IMAGE_BYTES) {
+      toast.error('Mock kit images are limited to 5 MB');
+      return;
+    }
     setUploading(true);
     try {
       const ext = (file.name.split('.').pop()?.toLowerCase() || 'jpg').replace(/[^a-z0-9]/g, '') || 'jpg';
+      const previousPath = draft.kit_image_storage_path;
       const path = `mockups/delight-express/${crypto.randomUUID()}.${ext}`;
+      // Private admin-only bucket — mock assets never touch public storage.
       const { error } = await supabase.storage
-        .from('product-media')
+        .from(MOCKUP_BUCKET)
         .upload(path, file, { cacheControl: '3600', upsert: false, contentType: file.type });
       if (error) throw error;
-      const { data } = supabase.storage.from('product-media').getPublicUrl(path);
-      update({ kit_image_url: data.publicUrl });
-      toast.success('Mock image uploaded');
+      // Persist ONLY the private object path (a private upload replaces any
+      // external URL as the image source). The signed preview URL is minted by
+      // the effect above and never saved.
+      update({ kit_image_storage_path: path, kit_image_url: '' });
+      // Clean up the replaced private object (covered by the admin DELETE policy).
+      if (previousPath && previousPath !== path) {
+        void supabase.storage
+          .from(MOCKUP_BUCKET)
+          .remove([previousPath])
+          .then(() => undefined);
+      }
+      toast.success('Mock image uploaded to the private admin bucket');
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Image upload failed');
     } finally {
       setUploading(false);
       if (fileRef.current) fileRef.current.value = '';
+    }
+  };
+
+  const removeUploadedImage = () => {
+    const path = draft.kit_image_storage_path;
+    update({ kit_image_storage_path: '' });
+    if (path) {
+      void supabase.storage
+        .from(MOCKUP_BUCKET)
+        .remove([path])
+        .then(() => undefined);
     }
   };
 
@@ -177,13 +239,14 @@ const DelightExpressMockup = () => {
           </div>
 
           <div className="space-y-1">
-            <FieldLabel>Kit image</FieldLabel>
+            <FieldLabel>Kit image URL (external)</FieldLabel>
             <div className="flex items-center gap-2">
               <Input
                 value={draft.kit_image_url}
                 onChange={(e) => update({ kit_image_url: e.target.value })}
                 placeholder="https://… (empty shows an image placeholder)"
                 className="h-8 text-xs flex-1"
+                disabled={!!draft.kit_image_storage_path}
               />
               <input
                 ref={fileRef}
@@ -207,6 +270,28 @@ const DelightExpressMockup = () => {
                 {uploading ? 'Uploading…' : 'Upload'}
               </Button>
             </div>
+            <p className="text-[10px] text-muted-foreground">
+              Externally hosted URLs may already be public. Uploaded images go to a private
+              admin-only bucket and are previewed through short-lived signed URLs — the
+              signed URL is never saved.
+            </p>
+            {draft.kit_image_storage_path && (
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-[10px] text-emerald-400">
+                  Private upload active — remove it to use an external URL.
+                </span>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  className="text-xs h-7"
+                  onClick={removeUploadedImage}
+                >
+                  <Trash2 className="w-3 h-3 mr-1" />
+                  Remove uploaded image
+                </Button>
+              </div>
+            )}
           </div>
 
           <div className="space-y-1">
