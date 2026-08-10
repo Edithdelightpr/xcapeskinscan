@@ -35,7 +35,7 @@ const XcapeReports = () => {
   const { data: rows = [], isLoading } = useQuery({
     queryKey: ['xcape', 'report-links'],
     queryFn: async (): Promise<ReportRow[]> => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('client_report_links')
         .select('id, client_id, assessment_id, created_at, revoked_at, expires_at, token_prefix, clients(full_name, client_code), client_visit_assessments(created_at, main_concern)')
         .order('created_at', { ascending: false })

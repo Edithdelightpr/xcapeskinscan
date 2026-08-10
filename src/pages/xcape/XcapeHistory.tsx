@@ -26,7 +26,7 @@ const XcapeHistory = () => {
   const { data: rows = [], isLoading } = useQuery({
     queryKey: ['xcape', 'assessment-history'],
     queryFn: async (): Promise<HistoryRow[]> => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('client_visit_assessments')
         .select('id, client_id, created_at, main_concern, client_goal, report_ready, skin_analysis_enabled, body_bmi_enabled, clients(full_name, client_code)')
         .order('created_at', { ascending: false })
