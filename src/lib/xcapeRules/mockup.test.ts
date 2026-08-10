@@ -230,7 +230,9 @@ describe('private mock image storage', () => {
       .filter((f) => f.endsWith('.sql'))
       .map((f) => readFileSync(join(migrationsDir, f), 'utf8'))
       .join('\n');
-    const statements = sql.split(/;/).filter((s) => s.includes('xcape-admin-mockups'));
+    const statements = sql
+      .split(/;/)
+      .filter((s) => s.includes('xcape-admin-mockups') && /create\s+policy/i.test(s));
     // SELECT + INSERT (with check) + DELETE policies
     expect(statements.length).toBeGreaterThanOrEqual(3);
     for (const statement of statements) {

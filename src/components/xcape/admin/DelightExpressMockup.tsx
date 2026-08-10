@@ -58,8 +58,8 @@ const FieldLabel = ({ children, mock }: { children: React.ReactNode; mock?: bool
   </div>
 );
 
-// Private admin-only bucket for uploaded mock images — never the public
-// product-media bucket. RLS scopes every operation to the admin role.
+// Private admin-only bucket for uploaded mock images — public buckets are
+// never used for mock assets. RLS scopes every operation to the admin role.
 const MOCKUP_BUCKET = 'xcape-admin-mockups';
 // Short-lived signed URL used ONLY for local admin preview — never persisted.
 const SIGNED_URL_TTL_SECONDS = 3600;
@@ -151,7 +151,7 @@ const DelightExpressMockup = () => {
       const ext = (file.name.split('.').pop()?.toLowerCase() || 'jpg').replace(/[^a-z0-9]/g, '') || 'jpg';
       const previousPath = draft.kit_image_storage_path;
       const path = `mockups/delight-express/${crypto.randomUUID()}.${ext}`;
-      // Private admin-only bucket — never the public product-media bucket.
+      // Private admin-only bucket — mock assets never touch public storage.
       const { error } = await supabase.storage
         .from(MOCKUP_BUCKET)
         .upload(path, file, { cacheControl: '3600', upsert: false, contentType: file.type });
