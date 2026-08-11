@@ -130,8 +130,6 @@ const InvitationsPanel = ({ event }: { event: ClientEventRow }) => {
   const [pick, setPick] = useState<string | null>(null);
   const [freshLink, setFreshLink] = useState<string | null>(null);
 
-  const invitedIds = new Set(invitations.map((i) => i.client_id));
-
   const invite = async () => {
     if (!pick || !user?.id) return;
     try {
@@ -219,7 +217,6 @@ const InvitationsPanel = ({ event }: { event: ClientEventRow }) => {
           ))}
         </ul>
       )}
-      {invitations.some((i) => invitedIds.has(i.client_id)) && null}
     </div>
   );
 };
