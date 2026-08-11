@@ -96,6 +96,34 @@ export const useCreateInvitation = () => {
   });
 };
 
+/**
+ * Regenerates an invitation link (old link stops working). Returns the new
+ * raw token URL once; only the new hash is stored.
+ */
+export const useResetInvitationToken = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: { id: string; event_id: string }) => {
+      const token = `${crypto.randomUUID()}${crypto.randomUUID()}`.replace(/-/g, '');
+      const token_hash = await sha256Hex(token);
+      const { error } = await supabase
+        .from('event_invitations')
+        .update({
+          token_hash,
+          token_prefix: token.slice(0, 8),
+          response_status: 'pending',
+          responded_at: null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', input.id);
+      if (error) throw error;
+      return { token, url: `${window.location.origin}/invite/${token}` };
+    },
+    onSuccess: (_data, vars) =>
+      qc.invalidateQueries({ queryKey: invitationsKey(vars.event_id) }),
+  });
+};
+
 export const useUpdateInvitationStatus = () => {
   const qc = useQueryClient();
   return useMutation({
