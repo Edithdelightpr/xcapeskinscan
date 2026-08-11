@@ -11,7 +11,7 @@ import { XCAPE } from '@/lib/xcape';
 import { useXcapeSections } from '@/hooks/useXcapeSections';
 import type { SectionKey } from '@/lib/permissions';
 import NotificationBell from '@/components/notifications/NotificationBell';
-import xcapeLogo from '@/assets/xcape-logo-black.png';
+import xcapeLogo from '@/assets/xcape-logo-gold.png';
 import xcapeIcon from '@/assets/xcape-icon.png';
 import {
   Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent,
@@ -80,18 +80,15 @@ const XcapeSidebar = () => {
 
   return (
     <Sidebar collapsible="icon" className="border-r border-border/40">
-      <SidebarHeader className="border-b border-border/40 p-4">
-        <Link to="/xcape/analysis" className="flex items-center gap-3">
+      <SidebarHeader className="border-b border-border/40 px-4 py-5">
+        <Link
+          to="/xcape/analysis"
+          className="flex items-center justify-center transition-opacity hover:opacity-80"
+        >
           {collapsed ? (
-            <img src={xcapeIcon} alt="" width={500} height={500} className="h-9 w-9 shrink-0 object-contain" />
+            <img src={xcapeIcon} alt="XCAPE" width={512} height={512} className="h-9 w-9 shrink-0 object-contain" />
           ) : (
-            <img src={xcapeLogo} alt="" width={1241} height={488} className="h-7 w-auto shrink-0" />
-          )}
-          {!collapsed && (
-            <div className="leading-tight min-w-0">
-              <p className="font-display font-bold text-foreground text-sm tracking-[0.22em]">{XCAPE.name}</p>
-              <p className="text-[10px] text-muted-foreground uppercase tracking-wider">{XCAPE.tagline}</p>
-            </div>
+            <img src={xcapeLogo} alt="XCAPE" width={800} height={315} className="h-9 w-auto shrink-0" />
           )}
         </Link>
       </SidebarHeader>
