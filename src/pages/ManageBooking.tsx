@@ -344,7 +344,7 @@ const ManageBooking = () => {
             <span className="font-display font-bold text-foreground tracking-tight">Tropics MedSpa</span>
           </div>
           <Link
-            to="/"
+            to="/medspa"
             className="text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1 transition-colors"
           >
             <ArrowLeft className="w-3 h-3" /> Back to site
@@ -784,7 +784,7 @@ const ManageBooking = () => {
               <p className="text-sm text-muted-foreground">
                 Your new time is confirmed. We'll send an updated confirmation by email.
               </p>
-              <Link to="/"><Button variant="outline" className="mt-2">Back to site</Button></Link>
+              <Link to="/medspa"><Button variant="outline" className="mt-2">Back to site</Button></Link>
             </div>
           )}
         </div>

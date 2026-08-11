@@ -20,8 +20,9 @@ const ReferralBounce = () => {
   }, [slug]);
 
   // Preserve any UTM params already on the URL when bouncing.
+  // Referral links serve the Tropics journey, which now lives at /medspa.
   const search = params.toString();
-  const target = search ? `/?${search}` : '/';
+  const target = search ? `/medspa?${search}` : '/medspa';
   return <Navigate to={target} replace />;
 };
 

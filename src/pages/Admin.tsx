@@ -543,7 +543,7 @@ const Admin = () => {
 
       <div className="p-3 border-t border-border/40 space-y-1">
         <Link
-          to="/"
+          to="/medspa"
           onClick={() => setMobileNavOpen(false)}
           className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-surface transition-all"
         >

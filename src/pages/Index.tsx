@@ -28,7 +28,7 @@ const Index = () => {
       <Seo
         title="Tropics Med Spa | Advanced Skin Care & Aesthetics in Abuja"
         description="Medical-grade skincare and aesthetic treatments in Abuja. Personalized plans, free consultations, and long-term skin health from the Tropics Med Spa team."
-        path="/"
+        path="/medspa"
       />
       <PublicTopNav />
       <div className="pt-16">

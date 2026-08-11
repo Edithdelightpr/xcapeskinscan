@@ -8,13 +8,15 @@ interface SeoProps {
   type?: 'website' | 'article' | 'product';
   jsonLd?: Record<string, any> | Record<string, any>[];
   noindex?: boolean;
+  /** Override the default origin; pass '' to emit relative canonical/og URLs. */
+  siteUrl?: string;
 }
 
 const SITE_URL = 'https://tropicsmedspa.com';
 const DEFAULT_IMAGE = `${SITE_URL}/favicon.jpeg`;
 
-const Seo = ({ title, description, path = '/', image, type = 'website', jsonLd, noindex }: SeoProps) => {
-  const url = `${SITE_URL}${path}`;
+const Seo = ({ title, description, path = '/', image, type = 'website', jsonLd, noindex, siteUrl }: SeoProps) => {
+  const url = `${siteUrl ?? SITE_URL}${path}`;
   const ogImage = image || DEFAULT_IMAGE;
   const ldArray = jsonLd ? (Array.isArray(jsonLd) ? jsonLd : [jsonLd]) : [];
 

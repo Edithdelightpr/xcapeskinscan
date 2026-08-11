@@ -170,7 +170,7 @@ const SocialMediaIntake = () => {
     <PageReveal>
       <div className="theme-luxe min-h-screen bg-gradient-to-b from-background via-background to-primary/5">
         <header className="px-4 py-4 flex items-center justify-between max-w-2xl mx-auto">
-          <Link to="/" className="flex items-center gap-2 text-foreground/80 hover:text-foreground">
+          <Link to="/medspa" className="flex items-center gap-2 text-foreground/80 hover:text-foreground">
             <ArrowLeft className="w-4 h-4" />
             <span className="text-sm">Home</span>
           </Link>

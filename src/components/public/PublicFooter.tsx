@@ -24,7 +24,7 @@ const PublicFooter = () => {
         <div>
           <h4 className="text-[10.5px] uppercase tracking-[0.24em] text-bronze font-semibold mb-4">Explore</h4>
           <ul className="space-y-2.5 text-sm">
-            <li><Link to="/" className="text-foreground/80 hover:text-primary">Home</Link></li>
+            <li><Link to="/medspa" className="text-foreground/80 hover:text-primary">Home</Link></li>
             <li><Link to="/about" className="text-foreground/80 hover:text-primary">About</Link></li>
             <li><Link to="/treatments" className="text-foreground/80 hover:text-primary">Treatments</Link></li>
             <li><Link to="/tropixa" className="text-foreground/80 hover:text-primary">Tropixa</Link></li>

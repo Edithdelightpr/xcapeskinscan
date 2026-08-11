@@ -157,7 +157,7 @@ const OutreachIntake = () => {
       <CenteredCard>
         <h1 className="font-display text-xl font-bold">Outreach not found</h1>
         <p className="text-sm text-muted-foreground">This link may be incorrect or expired.</p>
-        <Link to="/" className="text-sm text-primary underline">Back to home</Link>
+        <Link to="/medspa" className="text-sm text-primary underline">Back to home</Link>
       </CenteredCard>
     );
   }
@@ -202,7 +202,7 @@ const OutreachIntake = () => {
     <PageReveal>
     <div className="theme-luxe min-h-screen bg-gradient-to-b from-background via-background to-primary/5">
       <header className="px-4 py-4 flex items-center justify-between max-w-2xl mx-auto">
-        <Link to="/" className="flex items-center gap-2 text-foreground/80 hover:text-foreground">
+        <Link to="/medspa" className="flex items-center gap-2 text-foreground/80 hover:text-foreground">
           <ArrowLeft className="w-4 h-4" /><span className="text-sm">Home</span>
         </Link>
         <img src={tropicsLogo} alt="Tropics MedSpa" className="h-10 w-10 rounded-full object-cover" />
