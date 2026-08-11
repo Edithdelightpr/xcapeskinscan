@@ -3220,6 +3220,88 @@ export type Database = {
           },
         ]
       }
+      event_invitations: {
+        Row: {
+          client_id: string
+          created_at: string
+          created_by: string
+          event_id: string
+          id: string
+          responded_at: string | null
+          response_status: string
+          token_hash: string
+          token_prefix: string
+          updated_at: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          created_by: string
+          event_id: string
+          id?: string
+          responded_at?: string | null
+          response_status?: string
+          token_hash: string
+          token_prefix: string
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          created_by?: string
+          event_id?: string
+          id?: string
+          responded_at?: string | null
+          response_status?: string
+          token_hash?: string
+          token_prefix?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_invitations_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "client_media_usage"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "event_invitations_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_invitations_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "member_spend_monthly"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "event_invitations_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "membership_lifecycle_status"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "event_invitations_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "stale_leads_view"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "event_invitations_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "calendar_events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       expense_categories: {
         Row: {
           active: boolean
@@ -11678,10 +11760,25 @@ export type Database = {
         Args: { p_reason: string; p_schedule_item_id: string }
         Returns: Json
       }
-      capture_outreach_lead: {
-        Args: { _outreach_id: string; _payload: Json; _staff_id: string }
-        Returns: Json
-      }
+      capture_outreach_lead:
+        | {
+            Args: {
+              _email?: string
+              _full_name: string
+              _gender?: string
+              _marketing_consent?: boolean
+              _notes?: string
+              _outreach_id: string
+              _phone: string
+              _staff_id?: string
+              _wants_consult?: boolean
+            }
+            Returns: Json
+          }
+        | {
+            Args: { _outreach_id: string; _payload: Json; _staff_id: string }
+            Returns: Json
+          }
       claim_visit: {
         Args: { p_visit_id: string }
         Returns: {
@@ -12506,6 +12603,7 @@ export type Database = {
         | "medical_aesthetician"
         | "cleaner"
         | "outreach"
+        | "team"
       appointment_status:
         | "scheduled"
         | "arrived"
@@ -12538,6 +12636,7 @@ export type Database = {
         | "staff_sign_out"
         | "internal_task"
         | "follow_up"
+        | "client_event"
       client_status:
         | "lead"
         | "contacted"
@@ -12763,6 +12862,7 @@ export const Constants = {
         "medical_aesthetician",
         "cleaner",
         "outreach",
+        "team",
       ],
       appointment_status: [
         "scheduled",
@@ -12798,6 +12898,7 @@ export const Constants = {
         "staff_sign_out",
         "internal_task",
         "follow_up",
+        "client_event",
       ],
       client_status: [
         "lead",
