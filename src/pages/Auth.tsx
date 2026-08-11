@@ -8,7 +8,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { lovable } from '@/integrations/lovable';
 import { toast } from 'sonner';
-import xcapeLogo from '@/assets/xcape-logo-gold.png';
+import xcapeLogo from '@/assets/xcape-logo-black.png';
+import { joinRoleName, parseJoinRole, persistJoinRole } from '@/lib/xcapeMarketing';
 
 
 const Auth = () => {
@@ -20,6 +21,11 @@ const Auth = () => {
   const rawNext = searchParams.get('next');
   const nextPath = rawNext && rawNext.startsWith('/') && !rawNext.startsWith('//') ? rawNext : null;
   const redirectAfterAuth = nextPath ?? '/xcape';
+  // Preserve the visitor's chosen public join path (affiliate / cdp / ambassador).
+  const joinRole = parseJoinRole(searchParams.get('role'));
+  useEffect(() => {
+    if (joinRole) persistJoinRole(joinRole);
+  }, [joinRole]);
   const [mode, setMode] = useState<'signin' | 'signup' | 'forgot'>('signin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -114,13 +120,22 @@ const Auth = () => {
   };
 
   return (
-    <div className="min-h-screen gradient-primary flex items-center justify-center px-4">
+    <div className="xcape-app min-h-screen gradient-primary flex items-center justify-center px-4">
       <div className="glass-strong rounded-2xl p-8 w-full max-w-md space-y-6 glow-primary-soft">
         <div className="flex flex-col items-center space-y-3">
           <img src={xcapeLogo} alt="" width={1241} height={488} className="h-12 w-auto" />
           <h1 className="text-2xl font-display font-bold text-foreground tracking-[0.25em]">XCAPE</h1>
           <p className="text-xs text-muted-foreground tracking-wider uppercase">Tropical Skin Analysis — Staff Portal</p>
         </div>
+
+        {joinRole && (
+          <div className="rounded-xl border border-accent/30 bg-accent/10 px-4 py-3">
+            <p className="text-sm font-semibold text-foreground">Joining as {joinRoleName(joinRole)}</p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {mode === 'signin' ? 'Sign in to continue.' : 'Create your account below.'} An administrator will confirm your {joinRoleName(joinRole)} access.
+            </p>
+          </div>
+        )}
 
         <div className="grid grid-cols-2 gap-1 p-1 bg-surface rounded-lg">
           <button

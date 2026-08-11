@@ -1,5 +1,6 @@
 import { Helmet } from 'react-helmet-async';
 import AdminClientRecords from '@/components/admin/AdminClientRecords';
+import TeamCapturedLeads from '@/components/xcape/TeamCapturedLeads';
 import XcapePageHeader from '@/components/xcape/XcapePageHeader';
 
 /**
@@ -15,6 +16,7 @@ const XcapeClients = () => (
       title="Clients"
       description="Client records with their assessments, media and reports."
     />
+    <TeamCapturedLeads />
     <AdminClientRecords />
   </div>
 );

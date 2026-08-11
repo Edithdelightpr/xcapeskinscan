@@ -5,6 +5,7 @@ import ClientSearchPicker from '@/components/admin/ClientSearchPicker';
 import SafetyIntakeModal from '@/components/intake/SafetyIntakeModal';
 import { useClientSafetyIntakes } from '@/hooks/useSafetyIntakes';
 import { useCreateRealClient, type RealClient } from '@/hooks/useRealClients';
+import { useReferralSlug } from '@/hooks/useReferralSlug';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -34,6 +35,7 @@ interface Chip {
  */
 const StepClientIntake = ({ client, onPick }: Props) => {
   const { user } = useAuth();
+  const { slug: referralSlug, utm } = useReferralSlug();
   const [createMode, setCreateMode] = useState(false);
   const [form, setForm] = useState({ full_name: '', phone: '', email: '', location: '' });
   const createMut = useCreateRealClient();
@@ -67,7 +69,13 @@ const StepClientIntake = ({ client, onPick }: Props) => {
         phone: phone || null,
         email: email || null,
         location: form.location.trim() || null,
-        source_type: null,
+        // Attribution: mark wizard capture and preserve any referral context
+        // that accompanied the practitioner into the analysis flow.
+        source_type: referralSlug ? 'referral' : 'xcape_wizard',
+        captured_via: 'xcape_wizard',
+        referral_meta: referralSlug
+          ? { slug: referralSlug, ...utm }
+          : (Object.keys(utm).length > 0 ? { ...utm } : null),
         attributed_staff_id: user?.id ?? null,
         status: 'lead',
       });

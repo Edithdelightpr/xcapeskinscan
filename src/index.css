@@ -150,6 +150,62 @@
   font-family: "DM Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 
+/* XCAPE authenticated workspace — light neutral palette with gold accents,
+   extending the public monochrome identity into the signed-in shell.
+   Scoped to .xcape-app so the legacy MedSpa admin keeps its own theme. */
+.xcape-app {
+  --background: 36 20% 97%;
+  --foreground: 210 6% 10%;
+  --card: 0 0% 100%;
+  --card-foreground: 210 6% 10%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 210 6% 10%;
+  --primary: 210 6% 10%;
+  --primary-foreground: 36 30% 97%;
+  --secondary: 36 14% 93%;
+  --secondary-foreground: 210 6% 16%;
+  --muted: 36 14% 93%;
+  --muted-foreground: 214 6% 40%;
+  --accent: 43 74% 42%;
+  --accent-foreground: 36 30% 97%;
+  --destructive: 0 72% 45%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 30 10% 86%;
+  --input: 30 10% 82%;
+  --ring: 43 74% 42%;
+  --gold: 43 74% 42%;
+  --gold-foreground: 43 80% 22%;
+  --surface: 36 16% 94%;
+  --surface-hover: 36 16% 89%;
+  --glow: 43 74% 55%;
+  --sidebar-background: 40 22% 98%;
+  --sidebar-foreground: 214 6% 40%;
+  --sidebar-primary: 210 6% 10%;
+  --sidebar-primary-foreground: 36 30% 97%;
+  --sidebar-accent: 36 14% 92%;
+  --sidebar-accent-foreground: 210 6% 16%;
+  --sidebar-border: 30 10% 88%;
+  --sidebar-ring: 43 74% 42%;
+}
+
+.xcape-app .gradient-primary {
+  background: linear-gradient(180deg,
+    hsl(40 24% 98%) 0%,
+    hsl(37 18% 96%) 45%,
+    hsl(34 16% 92%) 100%);
+}
+
+.xcape-app .glass,
+.xcape-app .glass-strong {
+  background: hsl(0 0% 100% / 0.75);
+  border-color: hsl(30 10% 84%);
+}
+
+.xcape-app .glass-deep {
+  background: hsl(36 16% 95% / 0.9);
+  border-color: hsl(30 10% 84%);
+}
+
 @layer components {
   .xl-step-amber {
     background-color: hsl(var(--xl-tint-amber-soft));

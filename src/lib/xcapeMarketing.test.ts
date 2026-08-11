@@ -3,6 +3,8 @@ import {
   XCAPE_DISCLAIMER,
   XCAPE_RESEARCH_CLAIMS,
   XCAPE_ROLES,
+  joinRoleName,
+  parseJoinRole,
   roleAuthHref,
 } from './xcapeMarketing';
 
@@ -31,5 +33,21 @@ describe('xcapeMarketing', () => {
 
   it('carries a non-diagnostic disclaimer', () => {
     expect(XCAPE_DISCLAIMER).toMatch(/does not provide medical diagnosis/i);
+  });
+
+  it('parses only known join roles from ?role=', () => {
+    expect(parseJoinRole('affiliate')).toBe('affiliate');
+    expect(parseJoinRole('cdp')).toBe('cdp');
+    expect(parseJoinRole('ambassador')).toBe('ambassador');
+    expect(parseJoinRole('admin')).toBeNull();
+    expect(parseJoinRole('')).toBeNull();
+    expect(parseJoinRole(null)).toBeNull();
+    expect(parseJoinRole(undefined)).toBeNull();
+  });
+
+  it('labels join roles for auth and pending screens', () => {
+    expect(joinRoleName('affiliate')).toBe('Affiliate');
+    expect(joinRoleName('cdp')).toBe('Certified Distribution Partner');
+    expect(joinRoleName('ambassador')).toBe('Team / Ambassador');
   });
 });

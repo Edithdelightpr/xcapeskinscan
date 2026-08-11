@@ -3,13 +3,15 @@ import { Helmet } from 'react-helmet-async';
 import {
   ScanFace, Users, FileText, History, BookOpen, UserCircle,
   ShieldCheck, Stethoscope, Gauge, LibraryBig, Package, AlertTriangle,
-  LayoutTemplate, Activity, LogOut, ExternalLink, SlidersHorizontal,
+  LayoutTemplate, Activity, LogOut, ExternalLink, SlidersHorizontal, CalendarDays,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useAuth, APP_ROLE_LABELS } from '@/hooks/useAuth';
 import { XCAPE } from '@/lib/xcape';
+import { useXcapeSections } from '@/hooks/useXcapeSections';
+import type { SectionKey } from '@/lib/permissions';
 import NotificationBell from '@/components/notifications/NotificationBell';
-import xcapeLogo from '@/assets/xcape-logo-gold.png';
+import xcapeLogo from '@/assets/xcape-logo-black.png';
 import xcapeIcon from '@/assets/xcape-icon.png';
 import {
   Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent,
@@ -21,15 +23,18 @@ interface NavItem {
   title: string;
   url: string;
   icon: LucideIcon;
+  /** Permission section gating this destination (undefined = always visible). */
+  section?: SectionKey;
 }
 
 const PRACTITIONER_NAV: NavItem[] = [
-  { title: 'New Analysis', url: '/xcape/analysis', icon: ScanFace },
-  { title: 'Clients', url: '/xcape/clients', icon: Users },
-  { title: 'Reports', url: '/xcape/reports', icon: FileText },
-  { title: 'History', url: '/xcape/history', icon: History },
-  { title: 'Protocols', url: '/xcape/protocols', icon: BookOpen },
-  { title: 'Account', url: '/xcape/account', icon: UserCircle },
+  { title: 'New Analysis', url: '/xcape/analysis', icon: ScanFace, section: 'xcape-analysis' },
+  { title: 'Clients', url: '/xcape/clients', icon: Users, section: 'xcape-clients' },
+  { title: 'Reports', url: '/xcape/reports', icon: FileText, section: 'xcape-reports' },
+  { title: 'Events', url: '/xcape/events', icon: CalendarDays, section: 'xcape-events' },
+  { title: 'History', url: '/xcape/history', icon: History, section: 'xcape-history' },
+  { title: 'Protocols', url: '/xcape/protocols', icon: BookOpen, section: 'xcape-protocols' },
+  { title: 'Account', url: '/xcape/account', icon: UserCircle, section: 'xcape-account' },
 ];
 
 const ADMIN_NAV: NavItem[] = [
@@ -50,6 +55,11 @@ const XcapeSidebar = () => {
   const { isAdmin, profile, roles, signOut } = useAuth();
   const { state } = useSidebar();
   const collapsed = state === 'collapsed';
+  // null = show everything (admin or no JobRole bundle assigned, legacy behaviour)
+  const xcapeSections = useXcapeSections();
+  const practitionerNav = xcapeSections
+    ? PRACTITIONER_NAV.filter((item) => !item.section || xcapeSections.has(item.section))
+    : PRACTITIONER_NAV;
 
   const isActive = (url: string) => pathname === url || pathname.startsWith(`${url}/`);
 
@@ -89,7 +99,7 @@ const XcapeSidebar = () => {
       <SidebarContent>
         <SidebarGroup>
           {!collapsed && <SidebarGroupLabel>Practice</SidebarGroupLabel>}
-          <SidebarGroupContent>{renderNav(PRACTITIONER_NAV)}</SidebarGroupContent>
+          <SidebarGroupContent>{renderNav(practitionerNav)}</SidebarGroupContent>
         </SidebarGroup>
 
         {isAdmin && (
@@ -140,7 +150,7 @@ const XcapeShell = () => (
     <Helmet>
       <title>XCAPE</title>
     </Helmet>
-    <div className="min-h-screen flex w-full gradient-primary">
+    <div className="xcape-app min-h-screen flex w-full gradient-primary">
       <XcapeSidebar />
       <div className="flex-1 flex flex-col min-w-0">
         <header className="h-12 flex items-center gap-3 border-b border-border/40 bg-card/60 backdrop-blur-xl sticky top-0 z-30">

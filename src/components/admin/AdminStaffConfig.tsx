@@ -551,7 +551,7 @@ const AdminStaffConfig = () => {
                       <p className="text-[11px] text-muted-foreground">{s.email}</p>
                     </div>
                     <div className="flex flex-wrap gap-1.5">
-                      {(['admin', 'front_desk', 'medical_aesthetician', 'cleaner', 'outreach'] as AppRole[]).map((r) => {
+                      {(['admin', 'front_desk', 'medical_aesthetician', 'cleaner', 'outreach', 'team'] as AppRole[]).map((r) => {
                         const has = s.roles.includes(r);
                         return (
                           <button

@@ -8,7 +8,7 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
-const APP_ROLES = ['admin', 'front_desk', 'medical_aesthetician', 'cleaner', 'outreach'] as const;
+const APP_ROLES = ['admin', 'front_desk', 'medical_aesthetician', 'cleaner', 'outreach', 'team'] as const;
 type AppRole = typeof APP_ROLES[number];
 
 interface Body {

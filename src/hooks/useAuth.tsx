@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useState, ReactNode, useCallback 
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 
-export type AppRole = 'admin' | 'front_desk' | 'medical_aesthetician' | 'cleaner' | 'outreach';
+export type AppRole = 'admin' | 'front_desk' | 'medical_aesthetician' | 'cleaner' | 'outreach' | 'team';
 
 export const APP_ROLE_LABELS: Record<AppRole, string> = {
   admin: 'Administrator',
@@ -10,6 +10,7 @@ export const APP_ROLE_LABELS: Record<AppRole, string> = {
   medical_aesthetician: 'Medical Expert',
   cleaner: 'Cleaner',
   outreach: 'Outreach',
+  team: 'Team',
 };
 
 interface StaffProfile {

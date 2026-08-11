@@ -64,3 +64,38 @@ export const XCAPE_ROLES: XcapeRole[] = [
  * path for the later onboarding phase — no backend change is required yet.
  */
 export const roleAuthHref = (role: XcapeJoinRole): string => `/auth?role=${role}`;
+
+/** sessionStorage key preserving the visitor's chosen join path through auth. */
+export const JOIN_ROLE_SESSION_KEY = 'xcape:join_role';
+
+/** Validate an arbitrary ?role= value against the known public join paths. */
+export const parseJoinRole = (raw: string | null | undefined): XcapeJoinRole | null =>
+  XCAPE_ROLES.some((r) => r.role === raw) ? (raw as XcapeJoinRole) : null;
+
+export const joinRoleName = (role: XcapeJoinRole): string =>
+  XCAPE_ROLES.find((r) => r.role === role)?.name ?? role;
+
+export const persistJoinRole = (role: XcapeJoinRole): void => {
+  try {
+    sessionStorage.setItem(JOIN_ROLE_SESSION_KEY, role);
+  } catch {
+    /* storage unavailable — intent simply isn't preserved */
+  }
+};
+
+/** The visitor's pending join intent, if any survived navigation. */
+export const readJoinRole = (): XcapeJoinRole | null => {
+  try {
+    return parseJoinRole(sessionStorage.getItem(JOIN_ROLE_SESSION_KEY));
+  } catch {
+    return null;
+  }
+};
+
+export const clearJoinRole = (): void => {
+  try {
+    sessionStorage.removeItem(JOIN_ROLE_SESSION_KEY);
+  } catch {
+    /* ignore */
+  }
+};
