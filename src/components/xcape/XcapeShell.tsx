@@ -1,15 +1,14 @@
 import { Link, Outlet, useLocation } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import {
-  ScanFace, Users, FileText, History, BookOpen, UserCircle,
-  ShieldCheck, Stethoscope, Gauge, LibraryBig, Package, AlertTriangle,
-  LayoutTemplate, Activity, LogOut, ExternalLink, SlidersHorizontal, CalendarDays,
+  History, ShieldCheck, Stethoscope, Gauge, LibraryBig, Package, AlertTriangle,
+  LayoutTemplate, Activity, LogOut, ExternalLink, SlidersHorizontal,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useAuth, APP_ROLE_LABELS } from '@/hooks/useAuth';
 import { XCAPE } from '@/lib/xcape';
 import { useXcapeSections } from '@/hooks/useXcapeSections';
-import type { SectionKey } from '@/lib/permissions';
+import { buildXcapeNav, type XcapeNavItem } from '@/lib/xcapeNav';
 import NotificationBell from '@/components/notifications/NotificationBell';
 import xcapeLogo from '@/assets/xcape-logo-gold.png';
 import xcapeIcon from '@/assets/xcape-icon.png';
@@ -19,25 +18,7 @@ import {
   SidebarProvider, SidebarTrigger, useSidebar,
 } from '@/components/ui/sidebar';
 
-interface NavItem {
-  title: string;
-  url: string;
-  icon: LucideIcon;
-  /** Permission section gating this destination (undefined = always visible). */
-  section?: SectionKey;
-}
-
-const PRACTITIONER_NAV: NavItem[] = [
-  { title: 'New Analysis', url: '/xcape/analysis', icon: ScanFace, section: 'xcape-analysis' },
-  { title: 'Clients', url: '/xcape/clients', icon: Users, section: 'xcape-clients' },
-  { title: 'Reports', url: '/xcape/reports', icon: FileText, section: 'xcape-reports' },
-  { title: 'Events', url: '/xcape/events', icon: CalendarDays, section: 'xcape-events' },
-  { title: 'History', url: '/xcape/history', icon: History, section: 'xcape-history' },
-  { title: 'Protocols', url: '/xcape/protocols', icon: BookOpen, section: 'xcape-protocols' },
-  { title: 'Account', url: '/xcape/account', icon: UserCircle, section: 'xcape-account' },
-];
-
-const ADMIN_NAV: NavItem[] = [
+const ADMIN_NAV: XcapeNavItem[] = [
   { title: 'Access Management', url: '/xcape/admin/access', icon: ShieldCheck },
   { title: 'Practitioners', url: '/xcape/admin/practitioners', icon: Stethoscope },
   { title: 'XCAPE Scoring Standard', url: '/xcape/admin/scoring-standard', icon: Gauge },
@@ -53,21 +34,22 @@ const ADMIN_NAV: NavItem[] = [
 const XcapeSidebar = () => {
   const { pathname } = useLocation();
   const { isAdmin, profile, roles, signOut } = useAuth();
+  // Field-Team members get three genuine top-level tabs instead of the full
+  // practitioner list. Admins always keep the complete navigation.
+  const isTeam = !isAdmin && roles.includes('team');
   const { state } = useSidebar();
   const collapsed = state === 'collapsed';
   // null = show everything (admin or no JobRole bundle assigned, legacy behaviour)
   const xcapeSections = useXcapeSections();
-  const practitionerNav = xcapeSections
-    ? PRACTITIONER_NAV.filter((item) => !item.section || xcapeSections.has(item.section))
-    : PRACTITIONER_NAV;
+  const primaryNav = buildXcapeNav(xcapeSections, isTeam);
 
   const isActive = (url: string) => pathname === url || pathname.startsWith(`${url}/`);
 
-  const renderNav = (items: NavItem[]) => (
+  const renderNav = (items: XcapeNavItem[]) => (
     <SidebarMenu>
       {items.map((item) => (
         <SidebarMenuItem key={item.url}>
-          <SidebarMenuButton asChild isActive={isActive(item.url)} tooltip={item.title}>
+          <SidebarMenuButton asChild isActive={isActive(item.url)} tooltip={item.hint ?? item.title}>
             <Link to={item.url}>
               <item.icon className="h-4 w-4" />
               {!collapsed && <span>{item.title}</span>}
@@ -95,8 +77,10 @@ const XcapeSidebar = () => {
 
       <SidebarContent>
         <SidebarGroup>
-          {!collapsed && <SidebarGroupLabel>Practice</SidebarGroupLabel>}
-          <SidebarGroupContent>{renderNav(practitionerNav)}</SidebarGroupContent>
+          {!collapsed && (
+            <SidebarGroupLabel>{isTeam ? 'XCAPE Field' : 'Practice'}</SidebarGroupLabel>
+          )}
+          <SidebarGroupContent>{renderNav(primaryNav)}</SidebarGroupContent>
         </SidebarGroup>
 
         {isAdmin && (

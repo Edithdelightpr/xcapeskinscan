@@ -22,7 +22,7 @@ export const XCAPE_RESEARCH_CLAIMS = {
 export const XCAPE_DISCLAIMER =
   'XCAPE supports professional skin assessment. It does not provide medical diagnosis and does not replace consultation with a qualified medical professional.';
 
-export type XcapeJoinRole = 'affiliate' | 'cdp' | 'ambassador';
+export type XcapeJoinRole = 'affiliate' | 'cdp' | 'ambassador' | 'team';
 
 export interface XcapeRole {
   role: XcapeJoinRole;
@@ -30,6 +30,8 @@ export interface XcapeRole {
   tagline: string;
   description: string;
   cta: string;
+  /** Public join paths appear as landing-page cards; internal ones don't. */
+  publicPath: boolean;
 }
 
 /** The three public join paths. Distinction must stay unmistakable. */
@@ -40,6 +42,7 @@ export const XCAPE_ROLES: XcapeRole[] = [
     tagline: 'Refer & earn',
     description: 'Refer clients and earn through XCAPE.',
     cta: 'Sign up as an Affiliate',
+    publicPath: true,
   },
   {
     role: 'cdp',
@@ -48,6 +51,7 @@ export const XCAPE_ROLES: XcapeRole[] = [
     description:
       'Operate XCAPE analysis and product services from an approved physical location.',
     cta: 'Apply as a Partner Location',
+    publicPath: true,
   },
   {
     role: 'ambassador',
@@ -56,8 +60,24 @@ export const XCAPE_ROLES: XcapeRole[] = [
     description:
       'Introduce XCAPE to prospective partners and support field activations.',
     cta: 'Join the Team',
+    publicPath: true,
+  },
+  {
+    // Internal field-team invite path (/auth?role=team). Not a landing card —
+    // it exists so a field recruit's join intent survives the auth round trip.
+    role: 'team',
+    name: 'Field Team',
+    tagline: 'XCAPE field operations',
+    description:
+      'Run skin analyses, capture leads and manage client event RSVPs in the field.',
+    cta: 'Join the Field Team',
+    publicPath: false,
   },
 ];
+
+/** Only the join paths that are advertised publicly on the landing page. */
+export const XCAPE_PUBLIC_ROLES: XcapeRole[] = XCAPE_ROLES.filter((r) => r.publicPath);
+
 
 /**
  * Role-aware auth link. The `role` query param preserves the visitor's chosen

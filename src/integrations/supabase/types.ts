@@ -7881,6 +7881,8 @@ export type Database = {
       }
       staff_assignments: {
         Row: {
+          approved_at: string | null
+          approved_by: string | null
           assigned_by: string | null
           created_at: string
           job_role_id: string | null
@@ -7889,6 +7891,8 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
           assigned_by?: string | null
           created_at?: string
           job_role_id?: string | null
@@ -7897,6 +7901,8 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          approved_at?: string | null
+          approved_by?: string | null
           assigned_by?: string | null
           created_at?: string
           job_role_id?: string | null
@@ -7905,6 +7911,27 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "staff_assignments_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "daily_ops_metrics"
+            referencedColumns: ["staff_user_id"]
+          },
+          {
+            foreignKeyName: "staff_assignments_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "staff_performance_summary"
+            referencedColumns: ["staff_user_id"]
+          },
+          {
+            foreignKeyName: "staff_assignments_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "staff_users"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "staff_assignments_assigned_by_fkey"
             columns: ["assigned_by"]
@@ -11711,6 +11738,7 @@ export type Database = {
         Args: { _approver_notes?: string; _reward_id: string }
         Returns: string
       }
+      approve_team_member: { Args: { _staff_id: string }; Returns: undefined }
       assert_visit_clinically_complete: {
         Args: { p_visit_id: string }
         Returns: undefined
@@ -11779,6 +11807,7 @@ export type Database = {
             Args: { _outreach_id: string; _payload: Json; _staff_id: string }
             Returns: Json
           }
+      claim_team_intent: { Args: never; Returns: Json }
       claim_visit: {
         Args: { p_visit_id: string }
         Returns: {
