@@ -51,6 +51,9 @@ import XcapeReports from "./pages/xcape/XcapeReports";
 import XcapeHistory from "./pages/xcape/XcapeHistory";
 import XcapeProtocols from "./pages/xcape/XcapeProtocols";
 import XcapeAccount from "./pages/xcape/XcapeAccount";
+import XcapeEvents from "./pages/xcape/XcapeEvents";
+import XcapeSectionGate from "./components/xcape/XcapeSectionGate";
+import EventInvite from "./pages/EventInvite";
 import XcapeAdminAccess from "./pages/xcape/admin/XcapeAdminAccess";
 import XcapeAdminPractitioners from "./pages/xcape/admin/XcapeAdminPractitioners";
 import XcapeAdminScoring from "./pages/xcape/admin/XcapeAdminScoring";
@@ -123,6 +126,8 @@ const App = () => (
             <Route path="/manage-booking" element={<ManageBooking />} />
             {/* Personal Report — token-only public link. Never indexed. */}
             <Route path="/report/:token" element={<PersonalReport />} />
+            {/* Client event invitation — token-only public RSVP link. */}
+            <Route path="/invite/:token" element={<EventInvite />} />
             <Route path="/admin" element={<AuthGuard><Admin /></AuthGuard>} />
             <Route path="/admin/clients/:id" element={<AuthGuard><ClientProfile /></AuthGuard>} />
             {/* Staff-only Personal Report preview. Uses the standard AuthGuard
@@ -139,12 +144,13 @@ const App = () => (
                 routes above remain intact at their original paths. */}
             <Route path="/xcape" element={<AuthGuard><XcapeShell /></AuthGuard>}>
               <Route index element={<Navigate to="/xcape/analysis" replace />} />
-              <Route path="analysis" element={<XcapeNewAnalysis />} />
-              <Route path="clients" element={<XcapeClients />} />
-              <Route path="reports" element={<XcapeReports />} />
-              <Route path="history" element={<XcapeHistory />} />
-              <Route path="protocols" element={<XcapeProtocols />} />
-              <Route path="account" element={<XcapeAccount />} />
+              <Route path="analysis" element={<XcapeSectionGate section="xcape-analysis"><XcapeNewAnalysis /></XcapeSectionGate>} />
+              <Route path="clients" element={<XcapeSectionGate section="xcape-clients"><XcapeClients /></XcapeSectionGate>} />
+              <Route path="reports" element={<XcapeSectionGate section="xcape-reports"><XcapeReports /></XcapeSectionGate>} />
+              <Route path="events" element={<XcapeSectionGate section="xcape-events"><XcapeEvents /></XcapeSectionGate>} />
+              <Route path="history" element={<XcapeSectionGate section="xcape-history"><XcapeHistory /></XcapeSectionGate>} />
+              <Route path="protocols" element={<XcapeSectionGate section="xcape-protocols"><XcapeProtocols /></XcapeSectionGate>} />
+              <Route path="account" element={<XcapeSectionGate section="xcape-account"><XcapeAccount /></XcapeSectionGate>} />
               <Route path="admin" element={<XcapeAdminGate />}>
                 <Route path="access" element={<XcapeAdminAccess />} />
                 <Route path="practitioners" element={<XcapeAdminPractitioners />} />
