@@ -13,7 +13,7 @@ interface SeoProps {
 }
 
 const SITE_URL = 'https://tropicsmedspa.com';
-const DEFAULT_IMAGE = `${SITE_URL}/favicon.jpeg`;
+const DEFAULT_IMAGE = `${SITE_URL}/favicon.png`;
 
 const Seo = ({ title, description, path = '/', image, type = 'website', jsonLd, noindex, siteUrl }: SeoProps) => {
   const url = `${siteUrl ?? SITE_URL}${path}`;
