@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { ArrowRight } from 'lucide-react';
 import { BlurFade } from './BlurFade';
-import { XCAPE_ROLES, roleAuthHref } from '@/lib/xcapeMarketing';
+import { XCAPE_PUBLIC_ROLES, roleAuthHref } from '@/lib/xcapeMarketing';
 
 /**
  * The three join paths. Each card links to /auth with a ?role= parameter so
@@ -20,7 +20,7 @@ export function XcapeJoinPaths() {
       </BlurFade>
 
       <div className="mt-10 grid gap-5 md:grid-cols-3">
-        {XCAPE_ROLES.map((role, i) => (
+        {XCAPE_PUBLIC_ROLES.map((role, i) => (
           <BlurFade key={role.role} delay={0.1 * i}>
             <article className="flex h-full flex-col rounded-xl border border-border bg-background p-6 transition-colors hover:border-foreground/40">
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
