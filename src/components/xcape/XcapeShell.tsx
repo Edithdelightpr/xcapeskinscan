@@ -9,8 +9,8 @@ import type { LucideIcon } from 'lucide-react';
 import { useAuth, APP_ROLE_LABELS } from '@/hooks/useAuth';
 import { XCAPE } from '@/lib/xcape';
 import NotificationBell from '@/components/notifications/NotificationBell';
-import xcapeLogo from '@/assets/xcape-logo-gold.png.asset.json';
-import xcapeIcon from '@/assets/xcape-icon.png.asset.json';
+import xcapeLogo from '@/assets/xcape-logo-gold.png';
+import xcapeIcon from '@/assets/xcape-icon.png';
 import {
   Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent,
   SidebarGroupLabel, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem,
@@ -73,9 +73,9 @@ const XcapeSidebar = () => {
       <SidebarHeader className="border-b border-border/40 p-4">
         <Link to="/xcape/analysis" className="flex items-center gap-3">
           {collapsed ? (
-            <img src={xcapeIcon.url} alt="" width={500} height={500} className="h-9 w-9 shrink-0 object-contain" />
+            <img src={xcapeIcon} alt="" width={500} height={500} className="h-9 w-9 shrink-0 object-contain" />
           ) : (
-            <img src={xcapeLogo.url} alt="" width={1241} height={488} className="h-7 w-auto shrink-0" />
+            <img src={xcapeLogo} alt="" width={1241} height={488} className="h-7 w-auto shrink-0" />
           )}
           {!collapsed && (
             <div className="leading-tight min-w-0">
