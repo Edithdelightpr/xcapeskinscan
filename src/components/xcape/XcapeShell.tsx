@@ -70,9 +70,11 @@ const XcapeSidebar = () => {
     <Sidebar collapsible="icon" className="border-r border-border/40">
       <SidebarHeader className="border-b border-border/40 p-4">
         <Link to="/xcape/analysis" className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-primary/15 ring-1 ring-accent/40 flex items-center justify-center shrink-0">
-            <span className="font-display font-bold text-foreground">X</span>
-          </div>
+          {collapsed ? (
+            <img src={xcapeIcon.url} alt="" width={500} height={500} className="h-9 w-9 shrink-0 object-contain" />
+          ) : (
+            <img src={xcapeLogo.url} alt="" width={1241} height={488} className="h-7 w-auto shrink-0" />
+          )}
           {!collapsed && (
             <div className="leading-tight min-w-0">
               <p className="font-display font-bold text-foreground text-sm tracking-[0.22em]">{XCAPE.name}</p>
