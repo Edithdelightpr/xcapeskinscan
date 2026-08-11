@@ -14,7 +14,7 @@ interface Props {
   onClose: () => void;
 }
 
-const ALL_ROLES: AppRole[] = ['admin', 'front_desk', 'medical_aesthetician', 'cleaner', 'outreach'];
+const ALL_ROLES: AppRole[] = ['admin', 'front_desk', 'medical_aesthetician', 'cleaner', 'outreach', 'team'];
 
 type Step = 1 | 2 | 3 | 4;
 type AuthMode = 'invite' | 'password';

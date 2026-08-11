@@ -23,7 +23,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 
-const ALL_ROLES: AppRole[] = ['admin', 'front_desk', 'medical_aesthetician', 'cleaner', 'outreach'];
+const ALL_ROLES: AppRole[] = ['admin', 'front_desk', 'medical_aesthetician', 'cleaner', 'outreach', 'team'];
 
 const AdminTeam = () => {
   const { data: staff = [], isLoading } = useRealStaff();
