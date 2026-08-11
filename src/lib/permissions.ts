@@ -40,6 +40,14 @@ export const SECTION_KEYS = [
   'admin-subscription',
   'admin-delivery',
   'admin-reconciliation',
+  // XCAPE workspace (authenticated shell destinations)
+  'xcape-analysis',
+  'xcape-clients',
+  'xcape-reports',
+  'xcape-history',
+  'xcape-events',
+  'xcape-protocols',
+  'xcape-account',
 ] as const;
 
 export type SectionKey = (typeof SECTION_KEYS)[number];
@@ -79,7 +87,8 @@ export function normalizeTabOverrides(raw: unknown): TabOverrides {
 
 /** Default permissions for any newly-created vacancy. Personal tabs included by default; admin can untick. */
 export const DEFAULT_ROLE_PERMISSIONS: JobRolePermissions = {
-  sections: ['staff-today', 'staff-eod', 'admin-dashboard'],
+  sections: ['staff-today', 'staff-eod', 'admin-dashboard',
+    'xcape-analysis', 'xcape-clients', 'xcape-reports', 'xcape-history', 'xcape-events', 'xcape-protocols', 'xcape-account'],
   canManageLeads: false,
   canViewClients: false,
   canLogFinance: false,
@@ -125,6 +134,12 @@ export interface SectionGroup {
 }
 
 export const SECTION_GROUPS: SectionGroup[] = [
+  {
+    id: 'xcape-workspace',
+    label: 'XCAPE Workspace',
+    description: 'Skin analysis workspace destinations',
+    sections: ['xcape-analysis', 'xcape-clients', 'xcape-reports', 'xcape-history', 'xcape-events', 'xcape-protocols', 'xcape-account'],
+  },
   {
     id: 'personal',
     label: 'Personal',
@@ -215,6 +230,13 @@ export const SECTION_LABELS: Record<SectionKey, string> = {
   'admin-subscription': 'Subscription',
   'admin-delivery': 'Delivery & Shipping',
   'admin-reconciliation': 'Client Reconciliation',
+  'xcape-analysis': 'New Analysis',
+  'xcape-clients': 'XCAPE Clients',
+  'xcape-reports': 'XCAPE Reports',
+  'xcape-history': 'Analysis History',
+  'xcape-events': 'Client Events',
+  'xcape-protocols': 'Protocols',
+  'xcape-account': 'Account',
 };
 
 export function adminPermissions(): EffectivePermissions {
