@@ -38,6 +38,7 @@ import { AuthProvider } from "./hooks/useAuth";
 import { ImpersonationProvider } from "./hooks/useImpersonation";
 import ImpersonationBanner from "./components/admin/impersonation/ImpersonationBanner";
 import AuthGuard from "./components/auth/AuthGuard";
+import MedSpaGuard from '@/components/auth/MedSpaGuard';
 import SupabaseHydrator from "./components/SupabaseHydrator";
 import NavStatePersistor from "./components/NavStatePersistor";
 import ReferralAttribution from "./components/ReferralAttribution";
@@ -128,15 +129,15 @@ const App = () => (
             <Route path="/report/:token" element={<PersonalReport />} />
             {/* Client event invitation — token-only public RSVP link. */}
             <Route path="/invite/:token" element={<EventInvite />} />
-            <Route path="/admin" element={<AuthGuard><Admin /></AuthGuard>} />
-            <Route path="/admin/clients/:id" element={<AuthGuard><ClientProfile /></AuthGuard>} />
+            <Route path="/admin" element={<AuthGuard><MedSpaGuard><Admin /></MedSpaGuard></AuthGuard>} />
+            <Route path="/admin/clients/:id" element={<AuthGuard><MedSpaGuard><ClientProfile /></MedSpaGuard></AuthGuard>} />
             {/* Staff-only Personal Report preview. Uses the standard AuthGuard
                 so any role that can open Client → Reports (admin, front_desk,
                 medical_aesthetician) can also preview. The underlying edge
                 function repeats the role check server-side. */}
             <Route
               path="/admin/clients/:id/report-preview"
-              element={<AuthGuard><AdminReportPreview /></AuthGuard>}
+              element={<AuthGuard><MedSpaGuard><AdminReportPreview /></MedSpaGuard></AuthGuard>}
             />
             {/* ==================== XCAPE SHELL ====================
                 Standalone tropical-skin analysis product. Reuses the existing

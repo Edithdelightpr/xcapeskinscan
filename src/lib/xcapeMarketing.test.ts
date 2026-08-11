@@ -3,14 +3,16 @@ import {
   XCAPE_DISCLAIMER,
   XCAPE_RESEARCH_CLAIMS,
   XCAPE_ROLES,
+  XCAPE_PUBLIC_ROLES,
   joinRoleName,
   parseJoinRole,
   roleAuthHref,
 } from './xcapeMarketing';
 
 describe('xcapeMarketing', () => {
-  it('offers exactly three distinct join roles', () => {
-    expect(XCAPE_ROLES.map((r) => r.role)).toEqual(['affiliate', 'cdp', 'ambassador']);
+  it('advertises exactly three distinct public join roles', () => {
+    expect(XCAPE_PUBLIC_ROLES.map((r) => r.role)).toEqual(['affiliate', 'cdp', 'ambassador']);
+    expect(XCAPE_PUBLIC_ROLES.some((r) => r.role === 'team')).toBe(false);
     for (const role of XCAPE_ROLES) {
       expect(role.name.length).toBeGreaterThan(0);
       expect(role.description.length).toBeGreaterThan(0);
@@ -39,6 +41,7 @@ describe('xcapeMarketing', () => {
     expect(parseJoinRole('affiliate')).toBe('affiliate');
     expect(parseJoinRole('cdp')).toBe('cdp');
     expect(parseJoinRole('ambassador')).toBe('ambassador');
+    expect(parseJoinRole('team')).toBe('team');
     expect(parseJoinRole('admin')).toBeNull();
     expect(parseJoinRole('')).toBeNull();
     expect(parseJoinRole(null)).toBeNull();
