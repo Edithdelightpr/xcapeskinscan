@@ -209,7 +209,7 @@ const Auth = () => {
             : 'First time? Switch to Sign Up.'}
         </p>
 
-        <Link to="/" className="flex items-center justify-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors">
+        <Link to="/medspa" className="flex items-center justify-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors">
           <ArrowLeft className="w-3 h-3" /> Back to client app
         </Link>
       </div>

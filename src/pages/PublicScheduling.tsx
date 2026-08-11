@@ -54,7 +54,7 @@ const PublicScheduling = () => {
       {/* Sticky branded header */}
       <header className="border-b border-border/40 backdrop-blur-xl bg-background/50 sticky top-0 z-20">
         <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
-          <Link to="/" className="flex items-center gap-2.5 group">
+          <Link to="/medspa" className="flex items-center gap-2.5 group">
             <img
               src={tropicsLogo}
               alt="Tropics MedSpa"
@@ -70,7 +70,7 @@ const PublicScheduling = () => {
             </div>
           </Link>
           <Link
-            to="/"
+            to="/medspa"
             className="text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1 transition-colors"
           >
             <ArrowLeft className="w-3 h-3" /> Back to site
