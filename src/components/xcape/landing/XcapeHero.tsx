@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { BlurFade } from './BlurFade';
-import xcapeMark from '@/assets/xcape-mark.png';
+import xcapeLogo from '@/assets/xcape-logo-black.png';
 import heroScan from '@/assets/xcape-hero-scan.webp';
 
 /**
@@ -12,10 +12,7 @@ export function XcapeHero() {
     <section className="mx-auto grid max-w-6xl items-center gap-10 pl-[max(1.5rem,env(safe-area-inset-left))] pr-[max(1.5rem,env(safe-area-inset-right))] pb-16 pt-[max(2.5rem,env(safe-area-inset-top))] lg:grid-cols-[1.05fr_1fr] lg:gap-8 lg:pb-24 lg:pt-16">
       <div>
         <BlurFade>
-          <div className="flex items-center gap-3">
-            <img src={xcapeMark} alt="" width={40} height={40} className="h-10 w-10" />
-            <span className="text-2xl font-bold tracking-tight">XCAPE</span>
-          </div>
+          <img src={xcapeLogo} alt="XCAPE" width={1241} height={488} className="h-10 w-auto" />
         </BlurFade>
 
         <BlurFade delay={0.1}>

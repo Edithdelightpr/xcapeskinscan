@@ -8,6 +8,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { lovable } from '@/integrations/lovable';
 import { toast } from 'sonner';
+import xcapeLogo from '@/assets/xcape-logo-gold.png';
 
 
 const Auth = () => {
@@ -116,9 +117,7 @@ const Auth = () => {
     <div className="min-h-screen gradient-primary flex items-center justify-center px-4">
       <div className="glass-strong rounded-2xl p-8 w-full max-w-md space-y-6 glow-primary-soft">
         <div className="flex flex-col items-center space-y-3">
-          <div className="w-16 h-16 rounded-2xl bg-primary/15 ring-2 ring-accent/40 flex items-center justify-center">
-            <span className="font-display font-bold text-2xl text-foreground">X</span>
-          </div>
+          <img src={xcapeLogo} alt="" width={1241} height={488} className="h-12 w-auto" />
           <h1 className="text-2xl font-display font-bold text-foreground tracking-[0.25em]">XCAPE</h1>
           <p className="text-xs text-muted-foreground tracking-wider uppercase">Tropical Skin Analysis — Staff Portal</p>
         </div>

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
-import xcapeMark from '@/assets/xcape-mark.png';
+import xcapeLogo from '@/assets/xcape-logo-black.png';
 
 const NAV_LINKS = [
   { label: 'How it works', href: '#how-it-works' },
@@ -33,9 +33,8 @@ export function XcapeLandingNav() {
       aria-hidden={!shown}
     >
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between pl-[max(1.5rem,env(safe-area-inset-left))] pr-[max(1.5rem,env(safe-area-inset-right))]">
-        <Link to="/" className="flex min-h-[44px] items-center gap-2" tabIndex={shown ? 0 : -1}>
-          <img src={xcapeMark} alt="" width={28} height={28} className="h-7 w-7" />
-          <span className="text-lg font-bold tracking-tight">XCAPE</span>
+        <Link to="/" className="flex min-h-[44px] items-center" tabIndex={shown ? 0 : -1}>
+          <img src={xcapeLogo} alt="XCAPE" width={1241} height={488} className="h-6 w-auto" />
         </Link>
 
         <nav className="hidden items-center gap-6 md:flex" aria-label="Landing sections">
