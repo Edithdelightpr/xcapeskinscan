@@ -9,6 +9,8 @@ import type { LucideIcon } from 'lucide-react';
 import { useAuth, APP_ROLE_LABELS } from '@/hooks/useAuth';
 import { XCAPE } from '@/lib/xcape';
 import NotificationBell from '@/components/notifications/NotificationBell';
+import xcapeLogo from '@/assets/xcape-logo-gold.png.asset.json';
+import xcapeIcon from '@/assets/xcape-icon.png.asset.json';
 import {
   Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent,
   SidebarGroupLabel, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem,

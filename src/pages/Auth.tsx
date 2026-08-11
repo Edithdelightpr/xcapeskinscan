@@ -8,6 +8,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { lovable } from '@/integrations/lovable';
 import { toast } from 'sonner';
+import xcapeLogo from '@/assets/xcape-logo-gold.png.asset.json';
 
 
 const Auth = () => {
