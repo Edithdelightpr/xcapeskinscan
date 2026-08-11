@@ -5,6 +5,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import Index from "./pages/Index.tsx";
+import XcapeLanding from "./pages/XcapeLanding.tsx";
 import NotFound from "./pages/NotFound.tsx";
 import Admin from "./pages/Admin.tsx";
 import Auth from "./pages/Auth.tsx";
@@ -78,7 +79,9 @@ const App = () => (
             <DiscountPopup />
             <ImpersonationBanner />
             <Routes>
-            <Route path="/" element={<Index />} />
+            {/* XCAPE public landing; the Tropics MedSpa landing lives at /medspa */}
+            <Route path="/" element={<XcapeLanding />} />
+            <Route path="/medspa" element={<Index />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             {/* Managed Supabase OAuth 2.1 consent — external MCP clients land here */}
