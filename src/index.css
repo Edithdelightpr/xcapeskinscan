@@ -1,5 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600;1,700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -117,6 +118,70 @@
     --sidebar-accent-foreground: 0 0% 95%;
     --sidebar-border: 260 30% 18%;
     --sidebar-ring: 270 60% 50%;
+  }
+}
+
+/* XCAPE public landing — scoped Notion-style monochrome theme.
+   Overrides semantic tokens only within .xcape-public so the rest of
+   the app keeps the existing Tropics purple theme. */
+.xcape-public {
+  --background: 0 0% 100%;
+  --foreground: 210 6% 7%;
+  --muted-foreground: 214 6% 44%;
+  --border: 220 9% 91%;
+  --primary: 210 6% 7%;
+  --primary-foreground: 0 0% 100%;
+  /* Dark feature band */
+  --xl-dark: 210 6% 7%;
+  --xl-dark-foreground: 210 20% 96%;
+  --xl-dark-muted: 214 8% 62%;
+  --xl-dark-tile: 210 5% 12%;
+  --xl-dark-border: 210 5% 20%;
+  /* Step-card pastel tints */
+  --xl-tint-amber: 41 96% 90%;
+  --xl-tint-amber-soft: 41 100% 96%;
+  --xl-tint-amber-border: 41 90% 84%;
+  --xl-tint-blue: 207 90% 91%;
+  --xl-tint-blue-soft: 207 100% 96%;
+  --xl-tint-blue-border: 207 86% 85%;
+  --xl-tint-emerald: 152 60% 90%;
+  --xl-tint-emerald-soft: 152 62% 96%;
+  --xl-tint-emerald-border: 152 55% 83%;
+  font-family: "DM Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+@layer components {
+  .xl-step-amber {
+    background-color: hsl(var(--xl-tint-amber-soft));
+    border-color: hsl(var(--xl-tint-amber-border));
+  }
+  .xl-step-amber-band {
+    background-color: hsl(var(--xl-tint-amber));
+  }
+  .xl-step-blue {
+    background-color: hsl(var(--xl-tint-blue-soft));
+    border-color: hsl(var(--xl-tint-blue-border));
+  }
+  .xl-step-blue-band {
+    background-color: hsl(var(--xl-tint-blue));
+  }
+  .xl-step-emerald {
+    background-color: hsl(var(--xl-tint-emerald-soft));
+    border-color: hsl(var(--xl-tint-emerald-border));
+  }
+  .xl-step-emerald-band {
+    background-color: hsl(var(--xl-tint-emerald));
+  }
+  .xl-dark-band {
+    background-color: hsl(var(--xl-dark));
+    color: hsl(var(--xl-dark-foreground));
+  }
+  .xl-dark-tile {
+    background-color: hsl(var(--xl-dark-tile));
+    border-color: hsl(var(--xl-dark-border));
+  }
+  .xl-dark-muted-text {
+    color: hsl(var(--xl-dark-muted));
   }
 }
 

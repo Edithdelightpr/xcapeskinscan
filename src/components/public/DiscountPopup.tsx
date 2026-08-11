@@ -9,6 +9,16 @@ const SESSION_KEY = "tropics-discount-popup-dismissed";
 const DEFAULT_DELAY_MS = 20_000;
 
 const EXCLUDED_PREFIXES = ["/auth", "/admin", "/outreach/portal", "/checkout"];
+// Exact paths excluded in addition to prefixes — "/" is the XCAPE landing,
+// not a MedSpa surface; the MedSpa landing lives at /medspa.
+const EXCLUDED_EXACT = ["/", "/xcape"];
+
+function isExcluded(pathname: string) {
+  return (
+    EXCLUDED_EXACT.includes(pathname) ||
+    EXCLUDED_PREFIXES.some((p) => pathname === p || pathname.startsWith(p + "/"))
+  );
+}
 
 type PromoPopupConfig = {
   enabled?: boolean;
@@ -25,10 +35,6 @@ type PromoPopupConfig = {
   delay_ms?: number;
   dismissible?: boolean;
 };
-
-function isExcluded(pathname: string) {
-  return EXCLUDED_PREFIXES.some((p) => pathname === p || pathname.startsWith(p + "/"));
-}
 
 function isValidCta(kind: string | undefined, target: string | undefined): boolean {
   if (!target || typeof target !== "string") return false;

@@ -1,0 +1,66 @@
+/**
+ * XCAPE public marketing copy — single source of truth for landing claims.
+ *
+ * IMPORTANT: research figures and their phrasing are PENDING confirmation
+ * from clinical leadership (formal research vs. professional observation vs.
+ * analysed clients vs. collected profiles vs. published evidence). Until
+ * confirmed, edit values and labels HERE ONLY — never hardcode them inside
+ * components.
+ */
+
+export const XCAPE_RESEARCH_CLAIMS = {
+  /** Years behind the standard — classification pending confirmation. */
+  years: 17,
+  yearsLabel: 'Years of professional skin practice',
+  /** Skin profiles behind the standard — classification pending confirmation. */
+  profiles: 10000,
+  profilesDisplay: '10,000+',
+  profilesLabel: 'Skin profiles collected across Africa',
+} as const;
+
+/** Neutral positioning line — no diagnostic or regulated-medical claims. */
+export const XCAPE_DISCLAIMER =
+  'XCAPE supports professional skin assessment. It does not provide medical diagnosis and does not replace consultation with a qualified medical professional.';
+
+export type XcapeJoinRole = 'affiliate' | 'cdp' | 'ambassador';
+
+export interface XcapeRole {
+  role: XcapeJoinRole;
+  name: string;
+  tagline: string;
+  description: string;
+  cta: string;
+}
+
+/** The three public join paths. Distinction must stay unmistakable. */
+export const XCAPE_ROLES: XcapeRole[] = [
+  {
+    role: 'affiliate',
+    name: 'Affiliate',
+    tagline: 'Refer & earn',
+    description: 'Refer clients and earn through XCAPE.',
+    cta: 'Sign up as an Affiliate',
+  },
+  {
+    role: 'cdp',
+    name: 'Certified Distribution Partner',
+    tagline: 'For approved locations',
+    description:
+      'Operate XCAPE analysis and product services from an approved physical location.',
+    cta: 'Apply as a Partner Location',
+  },
+  {
+    role: 'ambassador',
+    name: 'Team / Ambassador',
+    tagline: 'Represent XCAPE',
+    description:
+      'Introduce XCAPE to prospective partners and support field activations.',
+    cta: 'Join the Team',
+  },
+];
+
+/**
+ * Role-aware auth link. The `role` query param preserves the visitor's chosen
+ * path for the later onboarding phase — no backend change is required yet.
+ */
+export const roleAuthHref = (role: XcapeJoinRole): string => `/auth?role=${role}`;
