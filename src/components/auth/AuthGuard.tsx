@@ -1,9 +1,10 @@
-import { ReactNode } from 'react';
+import { ReactNode, useCallback } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { ShieldAlert } from 'lucide-react';
 import { joinRoleName, readJoinRole } from '@/lib/xcapeMarketing';
+import { useJoinIntentClaim } from '@/hooks/useJoinIntentClaim';
 
 interface Props {
   children: ReactNode;
@@ -12,13 +13,24 @@ interface Props {
 }
 
 const AuthGuard = ({ children, requireRole = true }: Props) => {
-  const { user, loading, roles, profile, signOut } = useAuth();
+  const { user, loading, roles, profile, signOut, refresh } = useAuth();
   const joinRole = readJoinRole();
 
-  if (loading) {
+  // Redeem a pending field-Team join intent exactly once, after sign-in.
+  // Registers the account as PENDING only — access still needs admin approval.
+  const onClaimed = useCallback(() => { void refresh(); }, [refresh]);
+  const { claiming } = useJoinIntentClaim({
+    userId: user?.id,
+    hasRole: roles.length > 0,
+    onClaimed,
+  });
+
+  if (loading || claiming) {
     return (
       <div className="xcape-app min-h-screen gradient-primary flex items-center justify-center">
-        <p className="text-muted-foreground text-sm">Loading…</p>
+        <p className="text-muted-foreground text-sm">
+          {claiming ? 'Setting up your XCAPE access…' : 'Loading…'}
+        </p>
       </div>
     );
   }
@@ -26,6 +38,7 @@ const AuthGuard = ({ children, requireRole = true }: Props) => {
   if (!user) {
     return <Navigate to="/auth" replace />;
   }
+
 
   // Block inactive / suspended accounts even if they hold a role
   if (profile && profile.status !== 'active') {
