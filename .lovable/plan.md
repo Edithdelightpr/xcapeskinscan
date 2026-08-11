@@ -1,45 +1,48 @@
-# XCAPE Landing Page — Rebuilt on the Reference Framework
+# Plan: Adopt the official XCAPE logo
 
-## Goal
+Replace the generated monogram + text wordmark with the official uploaded logo (gold serif "Xcape" wordmark with green leaf, 1254×1254 PNG on white). Two processed variants cover every surface: full-black monochrome for the light landing, transparent gold original for the dark app surfaces.
 
-Replace the home page (`/`) with a new XCAPE public landing page that reuses the exact design framework of the "Bottomline chat" reference project (checked out and studied at commit 33801392), reworded for XCAPE's objective: a tropical/melanin-rich skin analysis platform — backed by 17 years of research across 10,000+ skin profiles in Africa — recruiting **Affiliates**, **Certified Distribution Partners (CDPs)**, and **Team/Ambassadors**. Sign-up CTAs link to the existing `/auth` page. No backend or database changes.
+## 1. Process the uploaded logo (deterministic, no AI edit)
 
-## The reference framework (what we replicate)
+From `user-uploads://image-2.png` using ImageMagick:
 
-- Notion-style light monochrome: white background, neutral grays, centered `max-w-5xl` column
-- Fixed nav that only appears after scrolling (~60px): logo left, "Sign in" button right
-- Hero = one soft-gray `rounded-2xl` card: wordmark, large tight-tracked headline, subcopy, dark CTA button; right side a hand-drawn black-and-white ink illustration (`mix-blend-multiply`)
-- Section 2 = three pastel-tinted cards (amber / blue / emerald header band with an overlapping white icon chip)
-- Section 3 = inverted dark band (`neutral-900`): eyebrow, heading, 2×2 icon feature grid
-- Section 4 = centered closing CTA + hairline footer
-- Signature `BlurFade` motion (blur + rise + fade, staggered) and the Camera Plain Variable typeface (font file copied from the reference snapshot)
+- **Trim + transparency**: crop to content bounding box (`-trim`), convert white background to transparent (`-fuzz -transparent white`).
+- **Variant A — `xcape-logo-black.png`**: full monochrome black (RGB zeroed, alpha preserved) for the light Notion-style landing where gold-on-white lacks contrast and the framework is monochrome.
+- **Variant B — `xcape-logo-gold.png`**: original gold letters + green leaf on transparency, for dark surfaces (app shell, auth) where the official gold reads well.
+- **Mark crop — `xcape-icon.png`**: the "X + leaf" cropped square from Variant B, used only as the favicon/touch-icon source.
 
-## Section-by-section mapping to XCAPE
+Store Variants A/B as Lovable CDN assets (`lovable-assets create` → `src/assets/xcape-logo-black.png.asset.json`, `src/assets/xcape-logo-gold.png.asset.json`) and import the pointer URLs. The favicon stays a real file in `public/` (never a pointer).
 
-1. **Scroll nav** — XCAPE mark + "Sign in" → `/auth` (if already signed in: "Open XCAPE" → `/xcape/analysis`)
-2. **Hero card** — XCAPE wordmark; headline in the spirit of "Skin analysis, built for African skin."; subcopy: guided facial scan, four clinical scores, practitioner review, personalized formula — built on 17 years of research across 10,000+ skin profiles in Africa; CTA "Join XCAPE" → `/auth`; newly generated ink-style illustration of a guided 3-view facial scan (same hand-drawn language as the reference)
-3. **"Choose your path"** — three pastel cards: **Affiliate** (refer clients, earn on analyses and kits), **Certified Distribution Partner** (for verified locations where clients get scanned and receive kits), **Team / Ambassador** (join the field team). Each card: one-line description + "Sign up" → `/auth`
-4. **Dark band — "What XCAPE does"** — 2×2 grid: Guided 3-view facial scan; Four skin-health scores; Practitioner-reviewed protocols; Personalized kit formula & secure report. Eyebrow carries the research credibility line
-5. **Closing CTA + footer** — "Ready to join XCAPE?" → `/auth`; minimal hairline footer
+## 2. Landing page (light, monochrome) — black variant
 
-## Technical approach
+- `src/components/xcape/landing/XcapeHero.tsx`: replace the monogram `<img>` + "XCAPE" text span with the single official logo image, `alt="XCAPE"`, explicit `width`/`height` from the processed file, sized ~`h-10 w-auto`. Headline, CTAs and illustration unchanged.
+- `src/components/xcape/landing/XcapeLandingNav.tsx`: same swap in the scrolled nav (`h-7 w-auto`, `alt="XCAPE"`).
 
-- New `src/pages/XcapeLanding.tsx` plus small section components under `src/components/xcape/landing/` — no changes to existing landing components
-- Routing: `/` → new XCAPE landing; the current MedSpa `Index` moves untouched to `/medspa` so nothing is deleted; every other MedSpa route (`/treatments`, `/tropixa`, `/consultation`, …) keeps its URL
-- Scoped light theme: a `.xcape-public` wrapper class in `index.css` carrying the reference's light-monochrome tokens + the three pastel tints as semantic tokens — no hardcoded color utilities in components; the global purple theme is untouched
-- Typography: copy `CameraPlainVariable.woff2` from the snapshot into `src/assets`, register `@font-face` scoped to the landing wrapper. Note: this intentionally deviates from the project's Poppins rule for this page only, to stay faithful to the reference framework — the rest of the app keeps Poppins
-- Motion: port `BlurFade` dependency-free (IntersectionObserver + CSS transitions) matching the reference timing — no new npm packages
-- Hero illustration: generate a hand-drawn black-and-white facial-scan illustration in the same style as the reference artwork
-- `index.html` head: title/description/og tags become XCAPE ("XCAPE — Tropical Skin Analysis"); remove the `edithdelightpr` social link from JSON-LD; swap the MedicalBusiness JSON-LD for an Organization entry; regenerate `public/sitemap.xml` to include `/medspa`
+## 3. App shell + auth (dark surfaces) — gold variant
 
-## Out of scope (later phases)
+- `src/components/xcape/XcapeShell.tsx`: add the gold logo image beside/above the existing XCAPE name in the sidebar header (keep name + tagline text; logo at `h-7 w-auto`).
+- `src/pages/Auth.tsx`: place the gold logo above the existing "XCAPE" heading (`h-10 w-auto`).
 
-- Role-specific onboarding logic for Affiliate / CDP / Team sign-ups
-- Redesign of inner pages (`/auth`, the XCAPE shell, MedSpa public pages) — landing first, then we roll the framework outward
-- Any backend, database, or authentication changes
+## 4. Favicon + touch icon
+
+- From the `xcape-icon.png` crop: `magick -resize 64x64 -background none -gravity center -extent 64x64 public/favicon.png` (gold mark, transparent bg — visible on light and dark browser chrome).
+- Regenerate `public/apple-touch-icon.png` at 180×180 on a white background (iOS flattens transparency to black otherwise).
+- `index.html` already references `/favicon.png` + `/apple-touch-icon.png` — no markup change needed.
+
+## 5. Cleanup
+
+- Delete `src/assets/xcape-mark.png` (generated monogram, unused after the swap; it has no CDN pointer).
+- `public/favicon.jpeg` (old Tropics-era file, unreferenced) removed only after confirming no reference remains.
+
+## Technical details
+
+- Alt text: `alt="XCAPE"` on the hero/auth logo (conveys brand); nav logo also `"XCAPE"` since it links home.
+- Explicit width/height attributes on every `<img>` to prevent layout shift; `fetchPriority` untouched (hero illustration keeps `high`).
+- No routing, copy, theme-token, or layout changes; no MedSpa (`/medspa`) changes.
+- Logo processing uses ImageMagick only — no AI regeneration, so letterforms stay pixel-faithful.
 
 ## Verification
 
-- Typecheck, build, and existing test suite stay green
-- Visual check of the new `/` at top and scrolled states (nav appearance, BlurFade, cards, dark band, footer)
-- Confirm `/medspa` still renders the old landing, and all sign-up CTAs reach `/auth`
+- `rg` confirms zero remaining references to `xcape-mark`.
+- Typecheck, full test suite, production build.
+- Playwright screenshots: landing hero + scrolled nav (desktop 1280, mobile 390), auth page, signed-out shell fallback, and `/favicon.png` serving the new mark.
