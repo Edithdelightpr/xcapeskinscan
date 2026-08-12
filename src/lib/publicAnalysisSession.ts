@@ -415,3 +415,38 @@ export async function startAnalysis(token: string, opts?: { retry?: boolean }): 
   });
 
 }
+
+/* ------------------------------------------------------------------ */
+/* Report sharing (lead capture)                                       */
+/* ------------------------------------------------------------------ */
+
+export interface ShareReportResult {
+  ok: true;
+  /** Persistent Personal Report URL for this visitor. */
+  url: string;
+  /** wa.me deep link prefilled with the report message. */
+  whatsapp_url: string;
+  share_text: string;
+}
+
+/**
+ * Promotes the anonymous session to a real lead and returns the visitor's
+ * shareable Personal Report link. Contact details are required by the same
+ * outreach rules the staff workflow uses — a report is never issued without
+ * a name and mobile number.
+ */
+export async function shareReport(input: {
+  token: string;
+  fullName: string;
+  phone: string;
+  email?: string;
+  consent: boolean;
+}): Promise<ShareReportResult> {
+  return callFn<ShareReportResult>('public-analysis-share-report', {
+    token: input.token,
+    full_name: input.fullName,
+    phone: input.phone,
+    email: input.email || undefined,
+    consent: input.consent,
+  });
+}
