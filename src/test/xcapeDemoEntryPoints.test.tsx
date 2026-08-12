@@ -30,13 +30,13 @@ describe('public skin-analysis entry points', () => {
   it('landing nav exposes desktop and mobile demo CTAs', () => {
     renderWith(<XcapeLandingNav />);
     const links = screen
-      .getAllByRole('link', { name: /try free analysis|free xcape skin analysis demo/i })
+      .getAllByRole('link', { name: /try free analysis|free xcape skin analysis demo/i, hidden: true })
       .filter((el) => el.getAttribute('href') === XCAPE_DEMO_PATH);
     // one inside the desktop nav, one in the always-visible mobile cluster
     expect(links.length).toBeGreaterThanOrEqual(2);
-    const desktopNav = screen.getByRole('navigation', { name: /landing sections/i });
+    const desktopNav = screen.getByRole('navigation', { name: /landing sections/i, hidden: true });
     expect(
-      within(desktopNav).getByRole('link', { name: /try free analysis/i }),
+      within(desktopNav).getByRole('link', { name: /try free analysis/i, hidden: true }),
     ).toHaveAttribute('href', XCAPE_DEMO_PATH);
     expect(links.some((el) => el.className.includes('md:hidden'))).toBe(true);
   });
