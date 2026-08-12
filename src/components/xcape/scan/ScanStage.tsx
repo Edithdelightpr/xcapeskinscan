@@ -249,7 +249,7 @@ const ScanStage = ({
       )}
 
       {/* Accepted thumbnails */}
-      {Object.keys(accepted).length > 0 && (
+      {!minimalChrome && Object.keys(accepted).length > 0 && (
         <div className="flex items-center justify-center gap-2 pt-1">
           {SCAN_VIEWS.filter((v) => accepted[v.id]).map((v) => (
             <figure key={v.id} className="w-16 overflow-hidden rounded-lg border border-border/40">
