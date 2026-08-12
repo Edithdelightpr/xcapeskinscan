@@ -12,19 +12,22 @@ export const FACE_CHECK_PROMPT_VERSION = 'face-check-v1';
 
 const SYSTEM = `You are an image QA checker for a cosmetic skin-analysis capture step.
 You never diagnose, never describe the person and never identify anyone.
-Return ONLY JSON: {"face_count": <integer 0-5>, "pose": "front"|"left"|"right"|"unclear", "face_fraction": <0-1>}
+Return ONLY JSON: {"face_count": <integer 0-5>, "pose": "front"|"left"|"right"|"unclear", "yaw_degrees": <number -90..90>, "face_fraction": <0-1>}
 - face_count: number of distinct human faces clearly visible.
 - pose: head orientation from the CAMERA's point of view.
   "front" = looking straight at the camera (both ears/cheeks roughly symmetric).
   "left"  = the person has turned their head to THEIR OWN left (camera sees more of their right cheek).
   "right" = the person has turned their head to THEIR OWN right.
   "unclear" = cannot tell, face obscured, or not a real photographed human face.
+- yaw_degrees: estimated head rotation. 0 = facing the camera, POSITIVE = turned toward THEIR OWN left, NEGATIVE = turned toward THEIR OWN right. A gentle turn is 15-30 degrees.
 - face_fraction: approximate fraction of the image height covered by the face.`;
 
 export interface FaceCheck {
   ok: boolean;
   faceCount: number;
   pose: 'front' | 'left' | 'right' | 'unclear';
+  /** Signed estimate; positive = turned toward the subject's own left. */
+  yawDegrees: number;
   faceFraction: number;
 }
 
@@ -75,6 +78,7 @@ export async function checkFace(
       ok: true,
       faceCount: Number.isFinite(faceCount) ? faceCount : 0,
       pose: pose === 'front' || pose === 'left' || pose === 'right' ? pose : 'unclear',
+      yawDegrees: Number.isFinite(Number(parsed?.yaw_degrees)) ? Number(parsed.yaw_degrees) : 0,
       faceFraction: Number(parsed?.face_fraction) || 0,
     };
   } catch {
@@ -92,4 +96,35 @@ export function faceSizeCode(fraction: number): 'ok' | 'face_too_small' | 'face_
   if (fraction < MIN_FACE_FRACTION) return 'face_too_small';
   if (fraction > MAX_FACE_FRACTION) return 'face_too_close';
   return 'ok';
+}
+
+/**
+ * Coarse-pose tolerance.
+ *
+ * The browser gate already accepts a gentle side turn (~15-20 degrees), which a
+ * general vision model frequently labels "front" or "unclear". Requiring an
+ * exact label therefore rejected valid captures. The server still fails closed
+ * on the cases that matter: no readable face, and a head clearly turned the
+ * WRONG way for the requested view.
+ */
+export const FRONT_MAX_YAW_DEG = 25;
+export const SIDE_MIN_YAW_DEG = 10;
+
+export function poseMatches(view: ViewId, face: FaceCheck): boolean {
+  const yaw = Number.isFinite(face.yawDegrees) ? face.yawDegrees : 0;
+
+  if (view === 'front') {
+    // Reject only a clearly turned head.
+    if (face.pose === 'left' || face.pose === 'right') return Math.abs(yaw) <= FRONT_MAX_YAW_DEG;
+    return Math.abs(yaw) <= FRONT_MAX_YAW_DEG;
+  }
+
+  const wanted = view === 'left' ? 1 : -1;
+  // A confident opposite-side label is always a mismatch.
+  if (face.pose === 'left' || face.pose === 'right') {
+    if ((face.pose === 'left' ? 1 : -1) !== wanted) return false;
+    return true;
+  }
+  // "front"/"unclear": accept when the signed estimate still leans the right way.
+  return yaw * wanted >= SIDE_MIN_YAW_DEG;
 }
