@@ -77,7 +77,7 @@ const PublicSkinAnalysis = () => {
       <Seo
         title="Free Skin Analysis for Tropical Skin | XCAPE"
         description="Take three guided photos and get your four XCAPE skin-health scores in about two minutes. No account needed. Photos deleted within 24 hours."
-        canonical="/skin-analysis"
+        path="/skin-analysis"
       />
 
       <header className="border-b border-border">
