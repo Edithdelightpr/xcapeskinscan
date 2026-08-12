@@ -185,6 +185,12 @@ export interface PublicAnalysisStatus {
   verified_views: PublicViewId[];
   capture_method: 'camera' | 'upload' | 'mixed' | null;
   expires_at: string | null;
+  /**
+   * Server-computed: the worker that owns this run has not heartbeat for the
+   * server's stale window, so exactly one recovery claim is allowed. The
+   * browser never decides this and never sees the lease or heartbeat time.
+   */
+  recoverable_stale: boolean;
 }
 
 const STATUSES = [
