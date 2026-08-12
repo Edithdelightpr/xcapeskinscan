@@ -30,9 +30,15 @@ export function XcapeHero() {
 
         <BlurFade delay={0.3}>
           <div className="mt-8 flex flex-wrap items-center gap-4">
+            <Link
+              to={XCAPE_DEMO_PATH}
+              className="inline-flex min-h-[48px] items-center rounded-full bg-foreground px-7 text-base font-medium text-background transition-opacity hover:opacity-85 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foreground"
+            >
+              {XCAPE_DEMO_CTA}
+            </Link>
             <a
               href="#join"
-              className="inline-flex min-h-[44px] items-center rounded-full bg-foreground px-7 text-base font-medium text-background transition-opacity hover:opacity-85"
+              className="inline-flex min-h-[48px] items-center rounded-full border border-foreground px-7 text-base font-medium transition-colors hover:bg-foreground hover:text-background focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foreground"
             >
               Join XCAPE
             </a>
@@ -43,8 +49,10 @@ export function XcapeHero() {
               Sign in
             </Link>
           </div>
+          <p className="mt-3 text-sm text-muted-foreground">{XCAPE_DEMO_MICROCOPY}</p>
         </BlurFade>
       </div>
+
 
       <BlurFade delay={0.25} className="flex justify-center lg:justify-end">
         <img
