@@ -6,10 +6,8 @@ import { Button } from '@/components/ui/button';
 import PublicScanIntro from '@/components/xcape/public/PublicScanIntro';
 import PublicCaptureStage from '@/components/xcape/public/PublicCaptureStage';
 import PublicUploadFallback from '@/components/xcape/public/PublicUploadFallback';
-import AnalysisScanAnimation, {
-  isAnalysisPhase,
-  type AnalysisPhase,
-} from '@/components/xcape/public/AnalysisScanAnimation';
+import AnalysisScanAnimation from '@/components/xcape/public/AnalysisScanAnimation';
+import { isAnalysisPhase, type AnalysisPhase } from '@/lib/analysisPhases';
 import {
   PUBLIC_VIEWS,
   clearStoredToken,
