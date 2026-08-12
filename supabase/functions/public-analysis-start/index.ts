@@ -18,7 +18,14 @@ import {
 } from '../_shared/publicAnalysis.ts';
 
 interface Body {
-  /** Explicit camera + temporary-processing consent. Required. */
+  /**
+   * Required for BOTH capture methods: consent to temporary image storage and
+   * third-party AI processing.
+   */
+  image_processing_consent?: boolean;
+  /** How the visitor intends to supply images. */
+  capture_method?: 'camera' | 'upload';
+  /** Camera permission consent — only meaningful when capture_method = camera. */
   camera_consent?: boolean;
   /** Honeypot + render timestamp (bot heuristics, same as public intake). */
   website?: string;
@@ -45,8 +52,12 @@ Deno.serve(async (req) => {
     if (body.rendered_at && Date.now() - body.rendered_at < 1200) {
       return json({ error: 'Please take a moment before starting.' }, 400);
     }
-    if (body.camera_consent !== true) {
-      return json({ error: 'Camera consent is required to start an analysis.' }, 400);
+    if (body.image_processing_consent !== true) {
+      return json({ error: 'Image-processing consent is required to start an analysis.' }, 400);
+    }
+    const captureMethod = body.capture_method === 'upload' ? 'upload' : 'camera';
+    if (captureMethod === 'camera' && body.camera_consent !== true) {
+      return json({ error: 'Camera consent is required to use the camera.' }, 400);
     }
 
     const ip_hmac = await hmacHex(clientIp(req));
@@ -79,6 +90,7 @@ Deno.serve(async (req) => {
         phase: 'awaiting_capture',
         ip_hmac,
         ua_hmac,
+        capture_method: captureMethod,
         expires_at: new Date(now + SESSION_TTL_MS).toISOString(),
         purge_at: new Date(now + SESSION_PURGE_MS).toISOString(),
       })
@@ -86,19 +98,32 @@ Deno.serve(async (req) => {
       .single();
     if (error || !row) return json({ error: 'Could not start the analysis.' }, 500);
 
-    await admin.from('public_analysis_consents').insert({
-      session_id: row.id,
-      consent_type: 'camera',
-      granted: true,
-      ip_hmac,
-      evidence: { surface: 'public_skin_analysis', version: 'v1' },
-    });
+    // image_processing is always recorded; camera consent ONLY when the
+    // camera method was selected (the upload fallback must not fake it).
+    const consents = [
+      {
+        session_id: row.id,
+        consent_type: 'image_processing',
+        granted: true,
+        ip_hmac,
+        evidence: { surface: 'public_skin_analysis', version: 'v1', capture_method: captureMethod },
+      },
+      {
+        session_id: row.id,
+        consent_type: captureMethod === 'camera' ? 'camera' : 'upload',
+        granted: true,
+        ip_hmac,
+        evidence: { surface: 'public_skin_analysis', version: 'v1' },
+      },
+    ];
+    await admin.from('public_analysis_consents').insert(consents);
 
     // The session id is deliberately NOT returned — every later call resolves
     // it from the token hash server-side.
     return json({
       ok: true,
       token,
+      capture_method: captureMethod,
       expires_at: row.expires_at,
       views: VIEWS,
       retention: {
@@ -106,7 +131,7 @@ Deno.serve(async (req) => {
         session_deleted_after_days: 30,
         third_party_ai_processing: true,
       },
-    });
+    }, 200, true);
   } catch (e) {
     console.error('[public-analysis-start] failed', e instanceof Error ? e.message : e);
     return json({ error: 'Unexpected error' }, 500);

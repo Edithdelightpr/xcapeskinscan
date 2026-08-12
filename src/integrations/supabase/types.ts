@@ -6888,6 +6888,7 @@ export type Database = {
           ai_raw: Json | null
           ai_raw_purge_at: string | null
           attempt_count: number
+          capture_method: string | null
           client_id: string | null
           created_at: string
           delivered_at: string | null
@@ -6909,11 +6910,13 @@ export type Database = {
           ua_hmac: string | null
           updated_at: string
           views_captured: Json
+          views_issued: Json
         }
         Insert: {
           ai_raw?: Json | null
           ai_raw_purge_at?: string | null
           attempt_count?: number
+          capture_method?: string | null
           client_id?: string | null
           created_at?: string
           delivered_at?: string | null
@@ -6935,11 +6938,13 @@ export type Database = {
           ua_hmac?: string | null
           updated_at?: string
           views_captured?: Json
+          views_issued?: Json
         }
         Update: {
           ai_raw?: Json | null
           ai_raw_purge_at?: string | null
           attempt_count?: number
+          capture_method?: string | null
           client_id?: string | null
           created_at?: string
           delivered_at?: string | null
@@ -6961,6 +6966,7 @@ export type Database = {
           ua_hmac?: string | null
           updated_at?: string
           views_captured?: Json
+          views_issued?: Json
         }
         Relationships: [
           {
@@ -12321,7 +12327,7 @@ export type Database = {
         Args: { _limit?: number }
         Returns: {
           id: string
-          image_paths: Json
+          image_paths: string[]
         }[]
       }
       log_accountability_event: {

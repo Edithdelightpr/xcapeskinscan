@@ -1,33 +1,54 @@
 // Retention worker for the anonymous public skin-analysis demo.
 //
-// 1. Deletes original images once past their 24h deadline (storage first,
-//    then clears the recorded paths).
-// 2. Deletes orphan objects that have no matching session row.
-// 3. Runs the SQL retention routine: expire stale sessions, drop short-TTL
-//    ai_raw debug payloads, delete anonymous sessions after 30 days.
+// Order matters (failure-safe): storage objects are deleted FIRST, the
+// recorded paths are cleared SECOND, and only then does the SQL routine
+// delete session rows — a row that still lists image paths is never deleted,
+// so stored images can never be orphaned.
 //
-// Protected by a shared secret header so it cannot be triggered at will.
+// It also reconciles the bucket restrictions (private, 8 MB, jpeg/png) on
+// every run, because SQL writes to storage.buckets are not permitted.
+//
+// Auth: shared cleanup key (x-cleanup-key) or the project cron secret
+// (x-cron-secret) used by the scheduled hourly invocation.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
-import { BUCKET, corsHeaders, json } from '../_shared/publicAnalysis.ts';
+import { BUCKET, BUCKET_CONFIG, corsHeaders, json } from '../_shared/publicAnalysis.ts';
+
+const PAGE = 100;
+const MAX_ORPHAN_FOLDERS = 5000;
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
   if (req.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
 
-  const expected = Deno.env.get('PUBLIC_ANALYSIS_CLEANUP_KEY');
-  const provided = req.headers.get('x-cleanup-key');
-  if (!expected || !provided || provided !== expected) {
-    return json({ error: 'Forbidden' }, 403);
+  const admin = createClient(
+    Deno.env.get('SUPABASE_URL')!,
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+    { auth: { autoRefreshToken: false, persistSession: false } },
+  );
+
+  // Shared cleanup key (manual runs) OR the vault-stored project cron secret
+  // (scheduled hourly run). No secret is ever committed to the repo.
+  const cleanupKey = Deno.env.get('PUBLIC_ANALYSIS_CLEANUP_KEY');
+  const providedCleanup = req.headers.get('x-cleanup-key') ?? '';
+  const providedCron = req.headers.get('x-cron-secret') ?? '';
+  let authorized = !!cleanupKey && providedCleanup === cleanupKey;
+  if (!authorized && providedCron) {
+    const { data: cronOk } = await admin.rpc('verify_cron_secret', { candidate: providedCron });
+    authorized = cronOk === true;
   }
+  if (!authorized) return json({ error: 'Forbidden' }, 403);
 
   try {
-    const admin = createClient(
-      Deno.env.get('SUPABASE_URL')!,
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
-      { auth: { autoRefreshToken: false, persistSession: false } },
-    );
 
-    // ── 1. Images past their 24h deadline ────────────────────────────────
+    // ── 0. Reconcile bucket restrictions (idempotent) ────────────────────
+    const { error: bucketErr } = await admin.storage.updateBucket(BUCKET, {
+      public: BUCKET_CONFIG.public,
+      fileSizeLimit: BUCKET_CONFIG.fileSizeLimit,
+      allowedMimeTypes: [...BUCKET_CONFIG.allowedMimeTypes],
+    });
+    if (bucketErr) console.error('[public-analysis-cleanup] bucket reconcile failed');
+
+    // ── 1. Images past their deadline (or whose session is due for purge) ─
     let imagesDeleted = 0;
     const { data: due, error: dueErr } = await admin.rpc('list_public_analysis_image_purge', {
       _limit: 200,
@@ -47,31 +68,45 @@ Deno.serve(async (req) => {
         .eq('id', row.id);
     }
 
-    // ── 2. Orphan prefixes (session row already deleted) ─────────────────
+    // ── 2. Orphan prefixes (session row already deleted), paginated ───────
     let orphansDeleted = 0;
-    const { data: prefixes } = await admin.storage.from(BUCKET).list('', { limit: 500 });
-    const folders = (prefixes ?? []).filter((p) => p.id === null).map((p) => p.name);
-    if (folders.length > 0) {
-      const { data: live } = await admin
-        .from('public_analysis_sessions')
-        .select('id')
-        .in('id', folders);
-      const liveIds = new Set((live ?? []).map((r: { id: string }) => r.id));
-      for (const folder of folders) {
-        if (liveIds.has(folder)) continue;
-        const { data: objs } = await admin.storage.from(BUCKET).list(folder, { limit: 100 });
-        const paths = (objs ?? []).filter((o) => o.id !== null).map((o) => `${folder}/${o.name}`);
-        if (paths.length === 0) continue;
-        const { error: rmErr } = await admin.storage.from(BUCKET).remove(paths);
-        if (!rmErr) orphansDeleted += paths.length;
+    let scanned = 0;
+    for (let offset = 0; offset < MAX_ORPHAN_FOLDERS; offset += PAGE) {
+      const { data: page } = await admin.storage.from(BUCKET).list('', { limit: PAGE, offset });
+      const entries = page ?? [];
+      if (entries.length === 0) break;
+      const folders = entries.filter((p) => p.id === null).map((p) => p.name);
+      scanned += folders.length;
+      if (folders.length > 0) {
+        const { data: live } = await admin
+          .from('public_analysis_sessions')
+          .select('id')
+          .in('id', folders);
+        const liveIds = new Set((live ?? []).map((r: { id: string }) => r.id));
+        for (const folder of folders) {
+          if (liveIds.has(folder)) continue;
+          const { data: objs } = await admin.storage.from(BUCKET).list(folder, { limit: 100 });
+          const objPaths = (objs ?? []).filter((o) => o.id !== null).map((o) => `${folder}/${o.name}`);
+          if (objPaths.length === 0) continue;
+          const { error: rmErr } = await admin.storage.from(BUCKET).remove(objPaths);
+          if (!rmErr) orphansDeleted += objPaths.length;
+        }
       }
+      if (entries.length < PAGE) break;
     }
 
-    // ── 3. Row retention ─────────────────────────────────────────────────
+    // ── 3. Row retention (skips rows that still own objects) ─────────────
     const { data: purge, error: purgeErr } = await admin.rpc('purge_public_analysis_expired');
     if (purgeErr) throw purgeErr;
 
-    return json({ ok: true, images_deleted: imagesDeleted, orphans_deleted: orphansDeleted, rows: purge });
+    return json({
+      ok: true,
+      bucket_reconciled: !bucketErr,
+      images_deleted: imagesDeleted,
+      folders_scanned: scanned,
+      orphans_deleted: orphansDeleted,
+      rows: purge,
+    });
   } catch (e) {
     console.error('[public-analysis-cleanup] failed', e instanceof Error ? e.message : e);
     return json({ error: 'Cleanup failed' }, 500);

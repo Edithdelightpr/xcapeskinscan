@@ -26,18 +26,33 @@ export const SESSION_TTL_MS = 2 * 60 * 60 * 1000; // 2 hours
 export const IMAGE_TTL_MS = 24 * 60 * 60 * 1000;
 /** Anonymous session + report data deleted after 30 days. */
 export const SESSION_PURGE_MS = 30 * 24 * 60 * 60 * 1000;
-/** Signed upload link lifetime. */
-export const UPLOAD_URL_TTL_S = 300;
+/**
+ * Supabase `createSignedUploadUrl()` tokens are valid for two hours; that
+ * value is fixed by the storage service and cannot be shortened here.
+ */
+export const SIGNED_UPLOAD_TTL_S = 2 * 60 * 60;
 /** Abuse protection: sessions per pseudonymised IP per hour. */
 export const MAX_SESSIONS_PER_IP_HOUR = 5;
 /** Server-side upload ceiling (also re-checked when the file is read). */
 export const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
 export const ALLOWED_MIME = ['image/jpeg', 'image/png'];
 
-export function json(body: unknown, status = 200): Response {
+/** Bucket restrictions, reconciled from code (SQL writes to storage.buckets are rejected). */
+export const BUCKET_CONFIG = {
+  public: false,
+  fileSizeLimit: MAX_IMAGE_BYTES,
+  allowedMimeTypes: ALLOWED_MIME,
+} as const;
+
+export function json(body: unknown, status = 200, sensitive = false): Response {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    headers: {
+      ...corsHeaders,
+      'Content-Type': 'application/json',
+      // Responses carrying the session token or session state must never be cached.
+      'Cache-Control': sensitive ? 'no-store' : 'no-store, max-age=0',
+    },
   });
 }
 
