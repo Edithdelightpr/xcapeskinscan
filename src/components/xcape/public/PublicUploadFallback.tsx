@@ -8,14 +8,17 @@ import {
   MAX_IMAGE_BYTES,
   uploadAndVerifyView,
   type PublicViewId,
+  type VerifyFailure,
 } from '@/lib/publicAnalysisSession';
 
 interface Props {
   token: string;
-  initialVerified?: PublicViewId[];
-  onAllVerified: () => void;
+  /** Shared, page-owned list of views already verified on the server. */
+  verifiedViews: PublicViewId[];
+  onViewVerified: (view: PublicViewId) => void;
   onSwitchToCamera: () => void;
-  onSessionExpired: (message: string) => void;
+  /** Called ONLY when the session itself is invalid or expired. */
+  onSessionEnded: (message: string) => void;
 }
 
 /** Cheap client-side pre-checks. The server decision is always the real one. */
@@ -47,21 +50,22 @@ async function preCheck(file: File): Promise<string | null> {
  */
 const PublicUploadFallback = ({
   token,
-  initialVerified = [],
-  onAllVerified,
+  verifiedViews,
+  onViewVerified,
   onSwitchToCamera,
-  onSessionExpired,
+  onSessionEnded,
 }: Props) => {
-  const [verified, setVerified] = useState<Set<string>>(new Set(initialVerified));
+  const verified = new Set<string>(verifiedViews);
   const [busyView, setBusyView] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [retryable, setRetryable] = useState<Record<string, boolean>>({});
   const inputs = useRef<Record<string, HTMLInputElement | null>>({});
-  const doneRef = useRef(false);
 
   const handleFile = useCallback(
     async (view: PublicViewId, file: File | undefined) => {
       if (!file) return;
       setErrors((e) => ({ ...e, [view]: '' }));
+      setRetryable((r) => ({ ...r, [view]: false }));
       const local = await preCheck(file);
       if (local) {
         setErrors((e) => ({ ...e, [view]: local }));
@@ -70,27 +74,25 @@ const PublicUploadFallback = ({
       setBusyView(view);
       try {
         const res = await uploadAndVerifyView({ token, view, file, source: 'upload' });
-        if (res.ok) {
-          setVerified((prev) => {
-            const next = new Set(prev).add(view);
-            if (SCAN_VIEWS.every((v) => next.has(v.id)) && !doneRef.current) {
-              doneRef.current = true;
-              onAllVerified();
-            }
-            return next;
-          });
+        if (res.ok === true) {
+          onViewVerified(view);
         } else {
-          setErrors((e) => ({ ...e, [view]: res.guidance ?? 'That photo could not be used.' }));
+          // 422 rejection, 429 ceiling and recoverable network/5xx/storage
+          // failures all keep the session — only the guidance differs.
+          const failure: VerifyFailure = res;
+          setErrors((e) => ({ ...e, [view]: failure.guidance }));
+          setRetryable((r) => ({ ...r, [view]: failure.kind === 'recoverable' }));
         }
       } catch (err) {
-        onSessionExpired(err instanceof Error ? err.message : 'Something went wrong.');
+        // Only an invalid/expired session reaches here.
+        onSessionEnded(err instanceof Error ? err.message : 'Your analysis session is no longer valid.');
       } finally {
         setBusyView(null);
         const input = inputs.current[view];
         if (input) input.value = '';
       }
     },
-    [token, onAllVerified, onSessionExpired],
+    [token, onViewVerified, onSessionEnded],
   );
 
   return (
@@ -149,8 +151,26 @@ const PublicUploadFallback = ({
                 onChange={(e) => void handleFile(v.id as PublicViewId, e.target.files?.[0])}
               />
               {error && (
-                <p role="alert" className="mt-2 text-xs font-medium text-destructive">
+                <p
+                  role="alert"
+                  className={cn(
+                    'mt-2 text-xs font-medium',
+                    retryable[v.id] ? 'text-foreground' : 'text-destructive',
+                  )}
+                >
                   {error}
+                  {retryable[v.id] && (
+                    <>
+                      {' '}
+                      <button
+                        type="button"
+                        className="underline"
+                        onClick={() => inputs.current[v.id]?.click()}
+                      >
+                        Try again
+                      </button>
+                    </>
+                  )}
                 </p>
               )}
             </div>

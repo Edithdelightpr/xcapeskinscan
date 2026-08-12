@@ -41,6 +41,12 @@ export interface UseGuidedCaptureOptions {
    * unconditional shutter (default `false`).
    */
   enforceQualityOnManual?: boolean;
+  /**
+   * Views that are already final server-side and must not be asked for again
+   * (public flow resuming a session or switching capture mode). The staff
+   * flow never passes this and keeps its historical behaviour.
+   */
+  skipViews?: ScanViewId[];
   holdMs?: number;
 }
 
@@ -87,12 +93,32 @@ export interface GuidedCaptureState {
  * or frame data leaves the browser from this hook.
  */
 export function useGuidedCapture(options: UseGuidedCaptureOptions): GuidedCaptureState {
-  const { active, autoAccept = false, enforceQualityOnManual = false, holdMs = HOLD_MS } = options;
+  const {
+    active,
+    autoAccept = false,
+    enforceQualityOnManual = false,
+    skipViews,
+    holdMs = HOLD_MS,
+  } = options;
+
+  // Kept in a ref so a changing array identity never restarts the loop.
+  const skipRef = useRef<ScanViewId[]>(skipViews ?? []);
+  skipRef.current = skipViews ?? [];
+  const firstPendingIndex = (from: number) => {
+    for (let i = from; i < SCAN_VIEWS.length; i++) {
+      if (!skipRef.current.includes(SCAN_VIEWS[i].id)) return i;
+    }
+    return -1;
+  };
 
   const reducedMotion = useReducedMotion();
 
   const [phase, setPhase] = useState<CapturePhase>('idle');
-  const [viewIndex, setViewIndex] = useState(0);
+  const [viewIndex, setViewIndex] = useState(() => {
+    const skip = skipViews ?? [];
+    const i = SCAN_VIEWS.findIndex((v) => !skip.includes(v.id));
+    return i < 0 ? 0 : i;
+  });
   const currentView = SCAN_VIEWS[viewIndex].id;
 
   const [accepted, setAccepted] = useState<Partial<Record<ScanViewId, GuidedCapture>>>({});
@@ -148,14 +174,16 @@ export function useGuidedCapture(options: UseGuidedCaptureOptions): GuidedCaptur
     });
     setPendingCapture(null);
     setViewIndex((i) => {
-      if (i < SCAN_VIEWS.length - 1) {
-        setGuidance(neutralGuidance(SCAN_VIEWS[i + 1].id));
+      const next = firstPendingIndex(i + 1);
+      if (next >= 0) {
+        setGuidance(neutralGuidance(SCAN_VIEWS[next].id));
         setPhase('scanning');
-        return i + 1;
+        return next;
       }
       setPhase('complete');
       return i;
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const commitCapture = useCallback(

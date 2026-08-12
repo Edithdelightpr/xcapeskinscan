@@ -11,12 +11,15 @@
 import jpeg from 'https://esm.sh/jpeg-js@0.4.4';
 import UPNG from 'https://esm.sh/upng-js@2.1.0';
 import {
+  MAX_DECODE_PIXELS,
   MIN_IMAGE_DIM,
   NORMALIZED_MAX_DIM,
   SERVER_THRESHOLDS,
+  readImageDimensions,
   sniffImageMime,
   type VerifyCode,
 } from './publicAnalysis.ts';
+
 
 /** Raw RGBA surface used between decode, orientation and resize. */
 interface Surface {
@@ -179,9 +182,23 @@ export function laplacianVariance(gray: Float32Array, width: number, height: num
  */
 export function normalizeImage(raw: Uint8Array): NormalizeResult {
   const mime = sniffImageMime(raw);
+
   if (!mime) return { ok: false, code: 'unsupported_format' };
 
+  // Decompression-bomb guard: the header dimensions decide whether a full
+  // RGBA surface may be allocated at all. A 3 MB file can still claim
+  // 30000x30000 (3.6 GB of RGBA) — that is rejected here, before decoding.
+  const header = readImageDimensions(raw);
+  if (!header) return { ok: false, code: 'corrupt_image' };
+  if (header.width * header.height > MAX_DECODE_PIXELS) {
+    return { ok: false, code: 'too_many_pixels' };
+  }
+  if (Math.min(header.width, header.height) < MIN_IMAGE_DIM) {
+    return { ok: false, code: 'too_small' };
+  }
+
   let surface: Surface;
+
   try {
     surface = decodeSurface(raw, mime);
     if (!surface.width || !surface.height) return { ok: false, code: 'corrupt_image' };

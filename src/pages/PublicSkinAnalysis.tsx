@@ -1,37 +1,91 @@
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { CheckCircle2, RefreshCw } from 'lucide-react';
+import { CheckCircle2, Loader2, RefreshCw } from 'lucide-react';
 import Seo from '@/components/Seo';
 import { Button } from '@/components/ui/button';
 import PublicScanIntro from '@/components/xcape/public/PublicScanIntro';
 import PublicCaptureStage from '@/components/xcape/public/PublicCaptureStage';
 import PublicUploadFallback from '@/components/xcape/public/PublicUploadFallback';
 import {
+  PUBLIC_VIEWS,
   clearStoredToken,
+  fetchStatus,
   readStoredToken,
   startSession,
   PublicAnalysisError,
+  type PublicViewId,
 } from '@/lib/publicAnalysisSession';
 import xcapeLogo from '@/assets/xcape-logo-black.png';
 
-type Stage = 'intro' | 'camera' | 'upload' | 'captured' | 'expired';
+type Stage = 'resuming' | 'intro' | 'camera' | 'upload' | 'captured' | 'expired';
+
+const allDone = (views: PublicViewId[]) => PUBLIC_VIEWS.every((v) => views.includes(v));
 
 /**
  * Public XCAPE skin analysis — anonymous capture surface.
  *
- * This step of the journey ends once all three views are captured and
- * verified server-side; the analysis, animation, report and lead capture
- * arrive in the next phase.
+ * The page owns the single source of truth for verified views, so switching
+ * between the guided camera and the upload fallback (in either direction)
+ * and reloading the tab all preserve progress. Only an invalid or expired
+ * session clears the stored token.
  */
 const PublicSkinAnalysis = () => {
   const renderedAt = useMemo(() => Date.now(), []);
   const honeypot = useRef('');
 
-  const [stage, setStage] = useState<Stage>('intro');
+  const [stage, setStage] = useState<Stage>(() => (readStoredToken() ? 'resuming' : 'intro'));
   const [token, setToken] = useState<string | null>(() => readStoredToken());
+  const [verifiedViews, setVerifiedViews] = useState<PublicViewId[]>([]);
   const [starting, setStarting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [expiredMessage, setExpiredMessage] = useState<string | null>(null);
+
+  const endSession = useCallback((message: string) => {
+    clearStoredToken();
+    setToken(null);
+    setVerifiedViews([]);
+    setExpiredMessage(message);
+    setStage('expired');
+  }, []);
+
+  // ── Resume: a stored token is checked before any new session is created ──
+  useEffect(() => {
+    if (stage !== 'resuming') return;
+    const stored = readStoredToken();
+    if (!stored) {
+      setStage('intro');
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      try {
+        const s = await fetchStatus(stored);
+        if (cancelled) return;
+        setToken(stored);
+        setVerifiedViews(s.verified_views);
+        if (allDone(s.verified_views) || s.status === 'queued' || s.status === 'complete') {
+          setStage('captured');
+        } else {
+          setStage(s.capture_method === 'upload' ? 'upload' : 'camera');
+        }
+      } catch (e) {
+        if (cancelled) return;
+        if (e instanceof PublicAnalysisError && e.kind === 'invalid') {
+          // Only an invalid/expired token is discarded.
+          clearStoredToken();
+          setToken(null);
+          setStage('intro');
+        } else {
+          // Network / 5xx: keep the token, let the visitor retry.
+          setError('We could not reach the analysis service. Please try again.');
+          setStage('intro');
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [stage]);
 
   const begin = useCallback(
     async (method: 'camera' | 'upload') => {
@@ -45,6 +99,7 @@ const PublicSkinAnalysis = () => {
           website: honeypot.current,
         });
         setToken(res.token);
+        setVerifiedViews([]);
         setStage(method);
       } catch (e) {
         setError(
@@ -57,16 +112,19 @@ const PublicSkinAnalysis = () => {
     [renderedAt],
   );
 
-  const handleExpired = useCallback((message: string) => {
-    clearStoredToken();
-    setToken(null);
-    setExpiredMessage(message);
-    setStage('expired');
+  /** Shared across camera and upload — a view verified in one mode counts in the other. */
+  const handleVerified = useCallback((view: PublicViewId) => {
+    setVerifiedViews((prev) => {
+      const next = prev.includes(view) ? prev : [...prev, view];
+      if (allDone(next)) setStage('captured');
+      return next;
+    });
   }, []);
 
   const restart = useCallback(() => {
     clearStoredToken();
     setToken(null);
+    setVerifiedViews([]);
     setExpiredMessage(null);
     setError(null);
     setStage('intro');
@@ -104,23 +162,32 @@ const PublicSkinAnalysis = () => {
           }}
         />
 
+        {stage === 'resuming' && (
+          <div className="mx-auto flex max-w-lg flex-col items-center gap-3 py-16 text-center">
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" aria-hidden />
+            <p className="text-sm text-muted-foreground">Restoring your session…</p>
+          </div>
+        )}
+
         {stage === 'intro' && <PublicScanIntro starting={starting} error={error} onStart={begin} />}
 
         {stage === 'camera' && token && (
           <PublicCaptureStage
             token={token}
-            onAllVerified={() => setStage('captured')}
+            verifiedViews={verifiedViews}
+            onViewVerified={handleVerified}
             onSwitchToUpload={() => setStage('upload')}
-            onSessionExpired={handleExpired}
+            onSessionEnded={endSession}
           />
         )}
 
         {stage === 'upload' && token && (
           <PublicUploadFallback
             token={token}
-            onAllVerified={() => setStage('captured')}
+            verifiedViews={verifiedViews}
+            onViewVerified={handleVerified}
             onSwitchToCamera={() => setStage('camera')}
-            onSessionExpired={handleExpired}
+            onSessionEnded={endSession}
           />
         )}
 

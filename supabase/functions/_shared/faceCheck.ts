@@ -5,7 +5,7 @@
 // model. Only a tiny structured judgement is requested — face count and
 // coarse head pose. No landmarks, embeddings or other biometric data are
 // requested, returned or stored.
-import type { ViewId } from './publicAnalysis.ts';
+import { MAX_FACE_FRACTION, MIN_FACE_FRACTION, type ViewId } from './publicAnalysis.ts';
 
 export const FACE_CHECK_MODEL = 'google/gemini-3-flash-preview';
 export const FACE_CHECK_PROMPT_VERSION = 'face-check-v1';
@@ -80,4 +80,16 @@ export async function checkFace(
   } catch {
     return null;
   }
+}
+
+/**
+ * Enforces the documented face-size window. `face_fraction` is the fraction
+ * of image height covered by the face. A missing/zero value is treated as
+ * "not reported" and never rejects on its own.
+ */
+export function faceSizeCode(fraction: number): 'ok' | 'face_too_small' | 'face_too_close' {
+  if (!Number.isFinite(fraction) || fraction <= 0) return 'ok';
+  if (fraction < MIN_FACE_FRACTION) return 'face_too_small';
+  if (fraction > MAX_FACE_FRACTION) return 'face_too_close';
+  return 'ok';
 }

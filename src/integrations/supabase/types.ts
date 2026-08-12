@@ -12419,6 +12419,19 @@ export type Database = {
         }
         Returns: string
       }
+      public_analysis_commit_view: {
+        Args: { p_meta: Json; p_token_hash: string; p_view: string }
+        Returns: Json
+      }
+      public_analysis_issue_view: {
+        Args: { p_token_hash: string; p_view: string }
+        Returns: Json
+      }
+      public_analysis_resolve_view: {
+        Args: { p_token_hash: string; p_view: string }
+        Returns: Json
+      }
+      public_analysis_status: { Args: { p_token_hash: string }; Returns: Json }
       purge_public_analysis_expired: { Args: never; Returns: Json }
       read_email_batch: {
         Args: { batch_size: number; queue_name: string; vt: number }
