@@ -12,7 +12,7 @@ import {
   BUCKET,
   IMAGE_TTL_MS,
   MAX_IMAGE_BYTES,
-  UPLOAD_URL_TTL_S,
+  SIGNED_UPLOAD_TTL_S,
   VIEWS,
   corsHeaders,
   isViewId,
@@ -56,7 +56,7 @@ Deno.serve(async (req) => {
 
     const { data: session, error } = await admin
       .from('public_analysis_sessions')
-      .select('id, status, expires_at, views_captured, image_paths')
+      .select('id, status, expires_at, views_captured, views_issued, image_paths')
       .eq('token_hash', token_hash)
       .maybeSingle();
     if (error) return json({ error: 'Could not verify the session' }, 500);
@@ -68,10 +68,14 @@ Deno.serve(async (req) => {
       return json({ error: 'This session is no longer accepting images.' }, 409);
     }
 
+    // views_captured is only ever written once P2 has verified that the file
+    // actually exists and passed validation. A view whose upload failed or
+    // never completed is therefore still re-issuable at the same path.
     const captured = (session.views_captured ?? {}) as Record<string, unknown>;
     if (captured[view]) {
       return json({ error: 'That view has already been captured.' }, 409);
     }
+    const issued = (session.views_issued ?? {}) as Record<string, unknown>;
 
     const path = objectPath(session.id, view);
     const { data: signed, error: signErr } = await admin.storage
@@ -87,7 +91,14 @@ Deno.serve(async (req) => {
       .update({
         status: 'uploading',
         phase: `capturing_${view}`,
-        views_captured: { ...captured, [view]: { issued_at: new Date().toISOString() } },
+        views_issued: {
+          ...issued,
+          [view]: {
+            last_issued_at: new Date().toISOString(),
+            attempts:
+              (((issued[view] as { attempts?: number } | undefined)?.attempts ?? 0) as number) + 1,
+          },
+        },
         image_paths: Array.from(paths),
         images_purge_at: new Date(Date.now() + IMAGE_TTL_MS).toISOString(),
       })
@@ -99,10 +110,11 @@ Deno.serve(async (req) => {
       path,
       upload_token: signed.token,
       bucket: BUCKET,
-      expires_in: UPLOAD_URL_TTL_S,
+      // Supabase signed upload tokens are valid for two hours — reported truthfully.
+      expires_in: SIGNED_UPLOAD_TTL_S,
       max_bytes: MAX_IMAGE_BYTES,
       allowed_mime: ALLOWED_MIME,
-    });
+    }, 200, true);
   } catch (e) {
     console.error('[public-analysis-upload-url] failed', e instanceof Error ? e.message : e);
     return json({ error: 'Unexpected error' }, 500);
