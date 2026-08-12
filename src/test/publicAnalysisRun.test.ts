@@ -177,7 +177,7 @@ describe('runPublicAnalysis', () => {
     const { admin, rpc, createSignedUrl } = makeAdmin();
     const fetchImpl = vi.fn(async () => aiResponse(GOOD_AI)) as unknown as typeof fetch;
 
-    const out = await runPublicAnalysis({ admin, sessionId: 'sess-1', apiKey: 'k', fetchImpl });
+    const out = await runPublicAnalysis({ admin, sessionId: 'sess-1', apiKey: 'k', workerLease: 'lease-1', fetchImpl });
     expect(out).toEqual({ ok: true });
 
     expect(fetchImpl).toHaveBeenCalledTimes(1);
@@ -201,7 +201,7 @@ describe('runPublicAnalysis', () => {
   it('stores only the validated result and sanitized engine — never signed URLs or envelopes', async () => {
     const { admin, rpc } = makeAdmin();
     const fetchImpl = vi.fn(async () => aiResponse(GOOD_AI)) as unknown as typeof fetch;
-    await runPublicAnalysis({ admin, sessionId: 'sess-2', apiKey: 'k', fetchImpl });
+    await runPublicAnalysis({ admin, sessionId: 'sess-2', apiKey: 'k', workerLease: 'lease-1', fetchImpl });
 
     const complete = rpc.mock.calls.find(
       (c) => (c as unknown as [string])[0] === 'public_analysis_complete_run',
@@ -220,7 +220,7 @@ describe('runPublicAnalysis', () => {
   ])('fails honestly on gateway %s', async (status, code) => {
     const { admin, rpc } = makeAdmin();
     const fetchImpl = vi.fn(async () => ({ ok: false, status }) as unknown as Response) as unknown as typeof fetch;
-    const out = await runPublicAnalysis({ admin, sessionId: 's', apiKey: 'k', fetchImpl });
+    const out = await runPublicAnalysis({ admin, sessionId: 's', apiKey: 'k', workerLease: 'lease-1', fetchImpl });
     expect(out).toEqual({ ok: false, code });
     const fail = rpc.mock.calls.find((c) => (c as unknown as [string])[0] === 'public_analysis_fail_run');
     expect((fail as unknown as [string, { p_failure_code: string }])[1].p_failure_code).toBe(code);
@@ -231,7 +231,7 @@ describe('runPublicAnalysis', () => {
     const fetchImpl = vi.fn(async () => {
       throw new Error('network down');
     }) as unknown as typeof fetch;
-    expect(await runPublicAnalysis({ admin, sessionId: 's', apiKey: 'k', fetchImpl })).toEqual({
+    expect(await runPublicAnalysis({ admin, sessionId: 's', apiKey: 'k', workerLease: 'lease-1', fetchImpl })).toEqual({
       ok: false,
       code: 'ai_unavailable',
     });
@@ -240,7 +240,7 @@ describe('runPublicAnalysis', () => {
   it('fails before any AI call when an image cannot be signed', async () => {
     const { admin } = makeAdmin(false);
     const fetchImpl = vi.fn() as unknown as typeof fetch;
-    expect(await runPublicAnalysis({ admin, sessionId: 's', apiKey: 'k', fetchImpl })).toEqual({
+    expect(await runPublicAnalysis({ admin, sessionId: 's', apiKey: 'k', workerLease: 'lease-1', fetchImpl })).toEqual({
       ok: false,
       code: 'images_unavailable',
     });
@@ -250,7 +250,7 @@ describe('runPublicAnalysis', () => {
   it('rejects malformed AI output instead of repairing it', async () => {
     const { admin } = makeAdmin();
     const fetchImpl = vi.fn(async () => aiResponse({ scores: {} })) as unknown as typeof fetch;
-    const out = await runPublicAnalysis({ admin, sessionId: 's', apiKey: 'k', fetchImpl });
+    const out = await runPublicAnalysis({ admin, sessionId: 's', apiKey: 'k', workerLease: 'lease-1', fetchImpl });
     expect(out.ok).toBe(false);
   });
 });

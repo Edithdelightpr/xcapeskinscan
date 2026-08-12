@@ -61,10 +61,7 @@ export function runIdempotencyKey(): string {
   } catch {
     /* ignore */
   }
-  const key =
-    typeof crypto !== 'undefined' && 'randomUUID' in crypto
-      ? crypto.randomUUID()
-      : `run-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+  const key = freshKey();
   try {
     sessionStorage.setItem(RUN_KEY, key);
   } catch {
@@ -72,6 +69,24 @@ export function runIdempotencyKey(): string {
   }
   return key;
 }
+
+function freshKey(): string {
+  return typeof crypto !== 'undefined' && 'randomUUID' in crypto
+    ? crypto.randomUUID()
+    : `run-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+/** A new key for an explicit visitor retry only. */
+export function newRunIdempotencyKey(): string {
+  const key = freshKey();
+  try {
+    sessionStorage.setItem(RUN_KEY, key);
+  } catch {
+    /* ignore */
+  }
+  return key;
+}
+
 
 
 export interface StartResult {
@@ -314,13 +329,20 @@ export interface RunResult {
 /**
  * Starts — or simply reports — the single analysis job of this session.
  *
- * Only `{ token, idempotency_key }` is sent: never a session id, path,
+ * Only `{ token, idempotency_key, retry }` is sent: never a session id, path,
  * model, score, prompt or image URL. Repeat and concurrent calls return the
  * current state instead of triggering another AI request.
+ *
+ * This is called ONLY when entering/resuming a not-yet-running analysis, or
+ * on an explicit visitor "Try again". Polling never calls it.
  */
-export async function startAnalysis(token: string): Promise<RunResult> {
+export async function startAnalysis(token: string, opts?: { retry?: boolean }): Promise<RunResult> {
+  const retry = opts?.retry === true;
   return callFn<RunResult>('public-analysis-run', {
     token,
-    idempotency_key: runIdempotencyKey(),
+    // A retry is a deliberate new attempt, so it carries a new key.
+    idempotency_key: retry ? newRunIdempotencyKey() : runIdempotencyKey(),
+    retry,
   });
+
 }

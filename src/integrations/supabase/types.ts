@@ -6914,6 +6914,8 @@ export type Database = {
           updated_at: string
           views_captured: Json
           views_issued: Json
+          worker_heartbeat_at: string | null
+          worker_lease: string | null
         }
         Insert: {
           ai_raw?: Json | null
@@ -6945,6 +6947,8 @@ export type Database = {
           updated_at?: string
           views_captured?: Json
           views_issued?: Json
+          worker_heartbeat_at?: string | null
+          worker_lease?: string | null
         }
         Update: {
           ai_raw?: Json | null
@@ -6976,6 +6980,8 @@ export type Database = {
           updated_at?: string
           views_captured?: Json
           views_issued?: Json
+          worker_heartbeat_at?: string | null
+          worker_lease?: string | null
         }
         Relationships: [
           {
@@ -12429,7 +12435,11 @@ export type Database = {
         Returns: string
       }
       public_analysis_claim_run: {
-        Args: { p_idempotency_key: string; p_token_hash: string }
+        Args: {
+          p_idempotency_key: string
+          p_retry?: boolean
+          p_token_hash: string
+        }
         Returns: Json
       }
       public_analysis_commit_view: {
@@ -12443,11 +12453,16 @@ export type Database = {
           p_engine_version: string
           p_prompt_version: string
           p_session_id: string
+          p_worker_lease: string
         }
         Returns: Json
       }
       public_analysis_fail_run: {
-        Args: { p_failure_code: string; p_session_id: string }
+        Args: {
+          p_failure_code: string
+          p_session_id: string
+          p_worker_lease: string
+        }
         Returns: Json
       }
       public_analysis_issue_view: {
@@ -12459,7 +12474,7 @@ export type Database = {
         Returns: Json
       }
       public_analysis_set_phase: {
-        Args: { p_phase: string; p_session_id: string }
+        Args: { p_phase: string; p_session_id: string; p_worker_lease: string }
         Returns: Json
       }
       public_analysis_status: { Args: { p_token_hash: string }; Returns: Json }

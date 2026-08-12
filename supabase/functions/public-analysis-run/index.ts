@@ -6,17 +6,22 @@
 // never accepted — everything is derived server-side from the SHA-256 token
 // hash.
 //
-// Concurrency: `public_analysis_claim_run()` locks the session row, so only
-// the request that wins the claim starts a worker. Every other call (repeat,
-// concurrent or poll) returns the current state — one session can only ever
-// produce one AI call, except when a previous worker died and the job is
-// reclaimed as stale.
+// Concurrency: `public_analysis_claim_run()` locks the session row and hands
+// the winning caller a server-generated worker lease. Only a worker holding
+// the current lease can move a phase, complete or fail the run, so an older
+// worker can never finish a reclaimed attempt.
+//
+// Honest guarantee: one active AI call at a time. A second provider call can
+// happen only after an explicit visitor retry, or after a genuinely stale
+// worker (no heartbeat for several minutes) is recovered. This is not an
+// exactly-once external delivery guarantee — the AI provider offers no
+// idempotency key for these requests.
 //
 // The worker runs as a background task so the HTTP call returns immediately
 // and the page polls `public-analysis-status`.
 //
-// Nothing sensitive is logged: never the raw token, a signed URL, image
-// bytes, the provider envelope or service credentials.
+// Nothing sensitive is logged or returned: never the raw token, the worker
+// lease, a signed URL, image bytes, the provider envelope or credentials.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
 import { corsHeaders, json, sha256Hex } from '../_shared/publicAnalysis.ts';
 import { runPublicAnalysis, type WorkerAdmin } from '../_shared/publicAnalysisWorker.ts';
@@ -26,7 +31,10 @@ declare const EdgeRuntime: { waitUntil(p: Promise<unknown>): void } | undefined;
 interface Body {
   token?: string;
   idempotency_key?: string;
+  /** Explicit visitor action only — polling never sets this. */
+  retry?: boolean;
 }
+
 
 const RPC_ERRORS: Record<string, { message: string; status: number }> = {
   invalid_session: { message: 'Invalid session', status: 401 },
@@ -70,6 +78,7 @@ Deno.serve(async (req) => {
     const { data, error } = await admin.rpc('public_analysis_claim_run', {
       p_token_hash: await sha256Hex(body.token),
       p_idempotency_key: body.idempotency_key,
+      p_retry: body.retry === true,
     });
     if (error) {
       console.error('[public-analysis-run] claim rpc failed');
@@ -87,11 +96,14 @@ Deno.serve(async (req) => {
       const work = runPublicAnalysis({
         admin: admin as unknown as WorkerAdmin,
         sessionId: String(res.session_id),
+        // Stays server-side: never serialized into the HTTP response.
+        workerLease: String(res.worker_lease),
         apiKey: Deno.env.get('LOVABLE_API_KEY'),
       });
       if (typeof EdgeRuntime !== 'undefined') EdgeRuntime.waitUntil(work);
       else await work;
     }
+
 
     return json(
       {

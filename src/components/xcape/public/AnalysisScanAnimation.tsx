@@ -1,7 +1,8 @@
 import { useMemo } from 'react';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { cn } from '@/lib/utils';
-import xcapeLogoGold from '@/assets/xcape-logo-gold.png';
+import xcapeWordmark from '@/assets/xcape-logo-black.png';
+
 
 /** The real backend phases — the UI never invents one. */
 export type AnalysisPhase =
@@ -109,13 +110,14 @@ const AnalysisScanAnimation = ({ photoUrl, phase }: Props) => {
           />
         ))}
 
-        {/* Restrained tracking points */}
+        {/* Restrained tracking points — cool blue only, never gold/amber */}
         {TRACKING_POINTS.map((p, i) => (
           <g key={`${p.x}-${p.y}`} className={reduced ? undefined : 'xcape-scan-track'} style={{ animationDelay: `${i * 0.18}s` }}>
-            <circle cx={p.x} cy={p.y} r="0.9" fill="rgba(251,191,36,0.85)" />
-            <circle cx={p.x} cy={p.y} r="2.2" fill="none" stroke="rgba(251,191,36,0.35)" strokeWidth="0.25" />
+            <circle cx={p.x} cy={p.y} r="0.9" fill="rgba(191,219,254,0.9)" />
+            <circle cx={p.x} cy={p.y} r="2.2" fill="none" stroke="rgba(96,165,250,0.45)" strokeWidth="0.25" />
           </g>
         ))}
+
       </svg>
     ),
     [reduced],
@@ -127,9 +129,13 @@ const AnalysisScanAnimation = ({ photoUrl, phase }: Props) => {
       aria-label="XCAPE skin analysis in progress"
     >
       <div className="mb-6 flex items-center justify-between gap-3">
-        <img src={xcapeLogoGold} alt="XCAPE" className="h-5 w-auto opacity-90" />
+        {/* The exact black wordmark inside a restrained white surface. */}
+        <span className="inline-flex items-center rounded-md bg-white px-2.5 py-1.5">
+          <img src={xcapeWordmark} alt="XCAPE" className="h-4 w-auto" />
+        </span>
         <span className="text-[11px] uppercase tracking-[0.18em] text-slate-400">Analysis</span>
       </div>
+
 
       {/* Portrait frame */}
       <div className="relative mx-auto aspect-[4/5] w-full max-w-sm overflow-hidden rounded-2xl border border-slate-700/70 bg-[#0f1113]">
