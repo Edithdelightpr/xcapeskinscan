@@ -40,6 +40,9 @@ export interface WorkerAdmin {
 export interface WorkerDeps {
   admin: WorkerAdmin;
   sessionId: string;
+  /** Server-generated lease proving this worker owns the current attempt.
+   *  Never returned to the browser and never logged. */
+  workerLease: string;
   apiKey: string | undefined;
   fetchImpl?: typeof fetch;
 }
@@ -67,15 +70,25 @@ export function engineVariablesFromScores(
 }
 
 export async function runPublicAnalysis(deps: WorkerDeps): Promise<WorkerOutcome> {
-  const { admin, sessionId, apiKey } = deps;
+  const { admin, sessionId, apiKey, workerLease } = deps;
   const doFetch = deps.fetchImpl ?? fetch;
 
+  /** Every real phase transition is also this worker's heartbeat. */
   const setPhase = (phase: string) =>
-    admin.rpc('public_analysis_set_phase', { p_session_id: sessionId, p_phase: phase });
+    admin.rpc('public_analysis_set_phase', {
+      p_session_id: sessionId,
+      p_phase: phase,
+      p_worker_lease: workerLease,
+    });
   const fail = async (code: string): Promise<WorkerOutcome> => {
-    await admin.rpc('public_analysis_fail_run', { p_session_id: sessionId, p_failure_code: code });
+    await admin.rpc('public_analysis_fail_run', {
+      p_session_id: sessionId,
+      p_failure_code: code,
+      p_worker_lease: workerLease,
+    });
     return { ok: false, code };
   };
+
 
   try {
     await setPhase('preparing_images');
@@ -160,7 +173,9 @@ export async function runPublicAnalysis(deps: WorkerDeps): Promise<WorkerOutcome
       p_engine_version: engine.engine_version,
       p_prompt_version: PUBLIC_PROMPT_VERSION,
       p_ai_result: result,
+      p_worker_lease: workerLease,
     });
+
     if (completeErr) {
       console.error('[public-analysis-run] complete rpc failed');
       return await fail('persist_failed');

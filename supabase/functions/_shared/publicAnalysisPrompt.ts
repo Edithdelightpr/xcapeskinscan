@@ -147,10 +147,14 @@ export function validatePublicAiResult(raw: unknown): PublicAiValidation {
   for (const key of PUBLIC_VARIABLE_KEYS) {
     const v = scoreSrc[key];
     if (v === undefined || v === null) return { ok: false, code: 'ai_missing_scores' };
-    const n = typeof v === 'number' ? v : Number(v);
-    if (!Number.isFinite(n) || n < 0 || n > 100) return { ok: false, code: 'ai_invalid_score' };
-    scores[key] = Math.round(n);
+    // Strict: a JSON number, finite, integer, 0-100. Numeric strings and
+    // decimals are rejected outright — nothing is coerced or repaired.
+    if (typeof v !== 'number' || !Number.isFinite(v) || !Number.isInteger(v) || v < 0 || v > 100) {
+      return { ok: false, code: 'ai_invalid_score' };
+    }
+    scores[key] = v;
   }
+
 
   const rawEvidence = obj.evidence;
   if (!rawEvidence || typeof rawEvidence !== 'object' || Array.isArray(rawEvidence)) {
