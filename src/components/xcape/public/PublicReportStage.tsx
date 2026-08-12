@@ -158,20 +158,15 @@ const PublicReportStage = ({
             </div>
           )}
 
+          <PublicShareReportForm token={sessionToken ?? null} />
+
           <div className="flex flex-col gap-3 sm:flex-row">
-            <Button
-              className="min-h-[44px] bg-slate-100 text-slate-900 hover:bg-white"
-              onClick={onRestart}
-            >
-              Start a new analysis
-            </Button>
             <Button
               variant="outline"
               className="min-h-[44px] border-slate-600 bg-transparent text-slate-200 hover:bg-slate-800 hover:text-slate-50"
-              disabled
+              onClick={onRestart}
             >
-              <Send className="mr-2 h-4 w-4" aria-hidden />
-              Send my report (coming soon)
+              Start a new analysis
             </Button>
           </div>
 
