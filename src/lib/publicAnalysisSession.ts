@@ -23,6 +23,7 @@ export const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
 export const ALLOWED_MIME = ['image/jpeg', 'image/png'];
 
 const TOKEN_KEY = 'xcape_public_analysis_token';
+const RUN_KEY = 'xcape_public_analysis_run_key';
 
 export function readStoredToken(): string | null {
   try {
@@ -43,10 +44,35 @@ export function storeToken(token: string) {
 export function clearStoredToken() {
   try {
     sessionStorage.removeItem(TOKEN_KEY);
+    sessionStorage.removeItem(RUN_KEY);
   } catch {
     /* ignore */
   }
 }
+
+/**
+ * Stable idempotency key for this browser session's analysis job. A reload
+ * reuses the same key so a resumed page never starts a second AI call.
+ */
+export function runIdempotencyKey(): string {
+  try {
+    const existing = sessionStorage.getItem(RUN_KEY);
+    if (existing) return existing;
+  } catch {
+    /* ignore */
+  }
+  const key =
+    typeof crypto !== 'undefined' && 'randomUUID' in crypto
+      ? crypto.randomUUID()
+      : `run-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+  try {
+    sessionStorage.setItem(RUN_KEY, key);
+  } catch {
+    /* ignore */
+  }
+  return key;
+}
+
 
 export interface StartResult {
   token: string;
@@ -271,4 +297,30 @@ export async function uploadAndVerifyView(input: {
     }
     throw e;
   }
+}
+
+/* ------------------------------------------------------------------ */
+/* Analysis run (P3)                                                   */
+/* ------------------------------------------------------------------ */
+
+export interface RunResult {
+  ok: true;
+  /** True only for the request that won the row-locked claim. */
+  started: boolean;
+  status: string;
+  phase: string | null;
+}
+
+/**
+ * Starts — or simply reports — the single analysis job of this session.
+ *
+ * Only `{ token, idempotency_key }` is sent: never a session id, path,
+ * model, score, prompt or image URL. Repeat and concurrent calls return the
+ * current state instead of triggering another AI request.
+ */
+export async function startAnalysis(token: string): Promise<RunResult> {
+  return callFn<RunResult>('public-analysis-run', {
+    token,
+    idempotency_key: runIdempotencyKey(),
+  });
 }

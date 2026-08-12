@@ -589,3 +589,44 @@
 @media (prefers-reduced-motion: reduce) {
   .xcape-scan-line { animation: none !important; display: none; }
 }
+
+/* ------------------------------------------------------------------ */
+/* XCAPE public analysis — scanning stage                              */
+/* Dark charcoal stage, cool technical accents. No purple/gold here.   */
+/* ------------------------------------------------------------------ */
+@keyframes xcape-scan-beam {
+  0% { transform: translateY(-12%); opacity: 0; }
+  12% { opacity: 1; }
+  88% { opacity: 1; }
+  100% { transform: translateY(112%); opacity: 0; }
+}
+@keyframes xcape-scan-pulse {
+  0%, 100% { opacity: 0.12; transform: scale(0.94); }
+  50% { opacity: 0.5; transform: scale(1.04); }
+}
+@keyframes xcape-scan-track {
+  0%, 100% { opacity: 0.35; }
+  50% { opacity: 1; }
+}
+@keyframes xcape-scan-indeterminate {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(300%); }
+}
+@keyframes xcape-scan-contour {
+  0%, 100% { opacity: 0.25; }
+  50% { opacity: 0.6; }
+}
+
+.xcape-scan-beam { animation: xcape-scan-beam 3.2s cubic-bezier(0.4, 0, 0.2, 1) infinite; }
+.xcape-scan-pulse { animation: xcape-scan-pulse 2.4s ease-in-out infinite; }
+.xcape-scan-track { animation: xcape-scan-track 1.8s ease-in-out infinite; }
+.xcape-scan-contour { animation: xcape-scan-contour 4s ease-in-out infinite; }
+.xcape-scan-indeterminate { animation: xcape-scan-indeterminate 1.6s ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .xcape-scan-beam,
+  .xcape-scan-pulse,
+  .xcape-scan-track,
+  .xcape-scan-contour,
+  .xcape-scan-indeterminate { animation: none; }
+}

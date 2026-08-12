@@ -17,7 +17,8 @@ interface Props {
   token: string;
   /** Shared, page-owned list of views already verified on the server. */
   verifiedViews: PublicViewId[];
-  onViewVerified: (view: PublicViewId) => void;
+  /** The verified frame is handed up so the page can own its object URL. */
+  onViewVerified: (view: PublicViewId, frame?: Blob) => void;
   onSwitchToUpload: () => void;
   /** Called ONLY when the session itself is invalid or expired. */
   onSessionEnded: (message: string) => void;
@@ -84,7 +85,7 @@ const PublicCaptureStage = ({
       });
       if (res.ok === true) {
         accept();
-        onViewVerified(pendingCapture.view as PublicViewId);
+        onViewVerified(pendingCapture.view as PublicViewId, pendingCapture.blob);
         return;
       }
       const failure: VerifyFailure = res;
