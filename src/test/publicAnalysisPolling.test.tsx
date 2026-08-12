@@ -33,6 +33,7 @@ const status = (over: Partial<Record<string, unknown>> = {}) => ({
   verified_views: ['front', 'left', 'right'],
   capture_method: 'camera',
   expires_at: null,
+  recoverable_stale: false,
   ...over,
 });
 
@@ -104,5 +105,34 @@ describe('public analysis polling', () => {
 
     await waitFor(() => expect(startAnalysis).toHaveBeenCalledTimes(1));
     expect(startAnalysis).toHaveBeenCalledWith(expect.any(String), { retry: true });
+  });
+
+  it('makes exactly one recovery claim when the SERVER reports a stale worker', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    // Live for the first lookups, then the server declares the lease stale.
+    fetchStatus.mockResolvedValueOnce(status());
+    fetchStatus.mockResolvedValueOnce(status());
+    fetchStatus.mockResolvedValue(status({ recoverable_stale: true }));
+    renderPage();
+
+    await waitFor(() => expect(startAnalysis).toHaveBeenCalledTimes(1));
+    // The stable idempotency key is used: no retry flag, no fresh key.
+    expect(startAnalysis).toHaveBeenCalledWith(expect.any(String));
+
+    // Further stale polls must not claim again.
+    for (let i = 0; i < 60; i++) await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS);
+    expect(startAnalysis).toHaveBeenCalledTimes(1);
+    vi.useRealTimers();
+  });
+
+  it('does not claim while the server still reports a fresh worker', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    fetchStatus.mockResolvedValue(status({ recoverable_stale: false }));
+    renderPage();
+
+    await waitFor(() => expect(fetchStatus).toHaveBeenCalled());
+    for (let i = 0; i < 60; i++) await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS);
+    expect(startAnalysis).not.toHaveBeenCalled();
+    vi.useRealTimers();
   });
 });
