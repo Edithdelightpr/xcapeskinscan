@@ -61,6 +61,7 @@ const ScanStage = ({
   reviewUrl,
   variant = 'staff',
   showManualCapture = true,
+  minimalChrome = false,
   onManualCapture,
   onToggleCamera,
   onCancel,
