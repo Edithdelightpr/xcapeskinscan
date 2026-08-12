@@ -1,3 +1,10 @@
+import {
+  isPublicScoreKey,
+  priorityFromScores,
+  sanitizeScores,
+  type PublicScoreKey,
+  type PublicScores,
+} from '@/lib/publicAnalysisScores';
 /**
  * Client for the anonymous XCAPE public skin-analysis session.
  *
@@ -191,6 +198,10 @@ export interface PublicAnalysisStatus {
    * browser never decides this and never sees the lease or heartbeat time.
    */
   recoverable_stale: boolean;
+  /** The four health scores — present only once the run is complete. */
+  scores: PublicScores | null;
+  /** Server-named weakest category, re-derived locally as a fallback. */
+  priority_category: PublicScoreKey | null;
 }
 
 const STATUSES = [
@@ -211,6 +222,7 @@ const STATUSES = [
  */
 export function sanitizeStatusPayload(raw: unknown): PublicAnalysisStatus {
   const row = (raw ?? {}) as Record<string, unknown>;
+  const scores = sanitizeScores(row.scores);
   const views = Array.isArray(row.verified_views) ? row.verified_views : [];
   return {
     status: (STATUSES as readonly string[]).includes(row.status as string)
@@ -226,6 +238,10 @@ export function sanitizeStatusPayload(raw: unknown): PublicAnalysisStatus {
         : null,
     expires_at: typeof row.expires_at === 'string' ? row.expires_at : null,
     recoverable_stale: row.recoverable_stale === true,
+    scores,
+    priority_category: isPublicScoreKey(row.priority_category)
+      ? row.priority_category
+      : priorityFromScores(scores),
   };
 }
 
