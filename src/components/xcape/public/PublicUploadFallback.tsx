@@ -122,7 +122,7 @@ const PublicUploadFallback = ({
                     {done && <CheckCircle2 className="h-4 w-4 text-emerald-600" aria-hidden />}
                     {v.label} view
                   </p>
-                  <p className="text-xs text-muted-foreground">{v.hint ?? v.label}</p>
+                  <p className="text-xs text-muted-foreground">{v.instruction}</p>
                 </div>
                 <Button
                   variant={done ? 'outline' : 'default'}
