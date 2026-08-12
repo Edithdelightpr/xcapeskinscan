@@ -139,9 +139,17 @@ const PublicCaptureStage = ({
   }
 
   return (
-    <div className="mx-auto w-full max-w-lg space-y-4">
+    <div className="grid w-full gap-6 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start">
+      <div className="space-y-4">
+      <div className="space-y-1">
+        <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">Step 1 of 3</p>
+        <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
+          Look at the camera. We&apos;ll do the rest.
+        </h1>
+      </div>
       <ScanStage
         variant="public"
+        minimalChrome
         videoRef={capture.camera.videoRef}
         mirrored={capture.camera.facingMode === 'user'}
         guidance={capture.guidance}
