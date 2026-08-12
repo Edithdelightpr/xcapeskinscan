@@ -6887,6 +6887,9 @@ export type Database = {
         Row: {
           ai_raw: Json | null
           ai_raw_purge_at: string | null
+          analysis_attempts: number
+          analysis_completed_at: string | null
+          analysis_started_at: string | null
           attempt_count: number
           capture_method: string | null
           client_id: string | null
@@ -6915,6 +6918,9 @@ export type Database = {
         Insert: {
           ai_raw?: Json | null
           ai_raw_purge_at?: string | null
+          analysis_attempts?: number
+          analysis_completed_at?: string | null
+          analysis_started_at?: string | null
           attempt_count?: number
           capture_method?: string | null
           client_id?: string | null
@@ -6943,6 +6949,9 @@ export type Database = {
         Update: {
           ai_raw?: Json | null
           ai_raw_purge_at?: string | null
+          analysis_attempts?: number
+          analysis_completed_at?: string | null
+          analysis_started_at?: string | null
           attempt_count?: number
           capture_method?: string | null
           client_id?: string | null
@@ -12419,8 +12428,26 @@ export type Database = {
         }
         Returns: string
       }
+      public_analysis_claim_run: {
+        Args: { p_idempotency_key: string; p_token_hash: string }
+        Returns: Json
+      }
       public_analysis_commit_view: {
         Args: { p_meta: Json; p_token_hash: string; p_view: string }
+        Returns: Json
+      }
+      public_analysis_complete_run: {
+        Args: {
+          p_ai_result: Json
+          p_engine: Json
+          p_engine_version: string
+          p_prompt_version: string
+          p_session_id: string
+        }
+        Returns: Json
+      }
+      public_analysis_fail_run: {
+        Args: { p_failure_code: string; p_session_id: string }
         Returns: Json
       }
       public_analysis_issue_view: {
@@ -12429,6 +12456,10 @@ export type Database = {
       }
       public_analysis_resolve_view: {
         Args: { p_token_hash: string; p_view: string }
+        Returns: Json
+      }
+      public_analysis_set_phase: {
+        Args: { p_phase: string; p_session_id: string }
         Returns: Json
       }
       public_analysis_status: { Args: { p_token_hash: string }; Returns: Json }

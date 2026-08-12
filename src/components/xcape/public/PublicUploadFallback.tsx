@@ -15,7 +15,8 @@ interface Props {
   token: string;
   /** Shared, page-owned list of views already verified on the server. */
   verifiedViews: PublicViewId[];
-  onViewVerified: (view: PublicViewId) => void;
+  /** The verified file is handed up so the page can own its object URL. */
+  onViewVerified: (view: PublicViewId, frame?: Blob) => void;
   onSwitchToCamera: () => void;
   /** Called ONLY when the session itself is invalid or expired. */
   onSessionEnded: (message: string) => void;
@@ -75,7 +76,7 @@ const PublicUploadFallback = ({
       try {
         const res = await uploadAndVerifyView({ token, view, file, source: 'upload' });
         if (res.ok === true) {
-          onViewVerified(view);
+          onViewVerified(view, file);
         } else {
           // 422 rejection, 429 ceiling and recoverable network/5xx/storage
           // failures all keep the session — only the guidance differs.

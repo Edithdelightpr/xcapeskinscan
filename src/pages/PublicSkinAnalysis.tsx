@@ -6,28 +6,47 @@ import { Button } from '@/components/ui/button';
 import PublicScanIntro from '@/components/xcape/public/PublicScanIntro';
 import PublicCaptureStage from '@/components/xcape/public/PublicCaptureStage';
 import PublicUploadFallback from '@/components/xcape/public/PublicUploadFallback';
+import AnalysisScanAnimation, {
+  isAnalysisPhase,
+  type AnalysisPhase,
+} from '@/components/xcape/public/AnalysisScanAnimation';
 import {
   PUBLIC_VIEWS,
   clearStoredToken,
   fetchStatus,
   readStoredToken,
+  startAnalysis,
   startSession,
   PublicAnalysisError,
+  type PublicAnalysisStatus,
   type PublicViewId,
 } from '@/lib/publicAnalysisSession';
 import xcapeLogo from '@/assets/xcape-logo-black.png';
 
-type Stage = 'resuming' | 'intro' | 'camera' | 'upload' | 'captured' | 'expired';
+type Stage =
+  | 'resuming'
+  | 'intro'
+  | 'camera'
+  | 'upload'
+  | 'analyzing'
+  | 'analyzed'
+  | 'analysis_failed'
+  | 'expired';
 
 const allDone = (views: PublicViewId[]) => PUBLIC_VIEWS.every((v) => views.includes(v));
 
+/** How often the page asks the server for the real phase. */
+export const POLL_INTERVAL_MS = 2_000;
+/** The scanning stage is always visible for at least this long. */
+export const MIN_ANIMATION_MS = 2_500;
+
 /**
- * Public XCAPE skin analysis — anonymous capture surface.
+ * Public XCAPE skin analysis — anonymous capture and analysis surface.
  *
- * The page owns the single source of truth for verified views, so switching
- * between the guided camera and the upload fallback (in either direction)
- * and reloading the tab all preserve progress. Only an invalid or expired
- * session clears the stored token.
+ * The page owns the single source of truth for verified views and for the
+ * temporary object URL of the locally held front frame (created here,
+ * revoked on unmount and whenever it is replaced). Only an invalid or
+ * expired session clears the stored token.
  */
 const PublicSkinAnalysis = () => {
   const renderedAt = useMemo(() => Date.now(), []);
@@ -39,13 +58,50 @@ const PublicSkinAnalysis = () => {
   const [starting, setStarting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [expiredMessage, setExpiredMessage] = useState<string | null>(null);
+  const [phase, setPhase] = useState<AnalysisPhase | null>(null);
+  const [analysisError, setAnalysisError] = useState<string | null>(null);
 
-  const endSession = useCallback((message: string) => {
-    clearStoredToken();
-    setToken(null);
-    setVerifiedViews([]);
-    setExpiredMessage(message);
-    setStage('expired');
+  /** Temporary object URL for the front frame — owned and revoked here. */
+  const [frontUrl, setFrontUrl] = useState<string | null>(null);
+  const frontUrlRef = useRef<string | null>(null);
+  const analysisStartedAt = useRef<number | null>(null);
+
+  const setFrontFrame = useCallback((blob: Blob) => {
+    if (frontUrlRef.current) URL.revokeObjectURL(frontUrlRef.current);
+    const url = URL.createObjectURL(blob);
+    frontUrlRef.current = url;
+    setFrontUrl(url);
+  }, []);
+
+  const releaseFrontFrame = useCallback(() => {
+    if (frontUrlRef.current) URL.revokeObjectURL(frontUrlRef.current);
+    frontUrlRef.current = null;
+    setFrontUrl(null);
+  }, []);
+
+  useEffect(() => () => releaseFrontFrame(), [releaseFrontFrame]);
+
+  const endSession = useCallback(
+    (message: string) => {
+      clearStoredToken();
+      releaseFrontFrame();
+      setToken(null);
+      setVerifiedViews([]);
+      setExpiredMessage(message);
+      setStage('expired');
+    },
+    [releaseFrontFrame],
+  );
+
+  /** Applies a server status to the page state machine. */
+  const applyStatus = useCallback((s: PublicAnalysisStatus) => {
+    setVerifiedViews(s.verified_views);
+    setPhase(isAnalysisPhase(s.phase) ? s.phase : null);
+    if (s.status === 'complete') return 'analyzed' as const;
+    if (s.status === 'failed') return 'analysis_failed' as const;
+    if (s.status === 'analyzing' || s.status === 'building_report') return 'analyzing' as const;
+    if (s.status === 'queued' || allDone(s.verified_views)) return 'analyzing' as const;
+    return null;
   }, []);
 
   // ── Resume: a stored token is checked before any new session is created ──
@@ -62,12 +118,8 @@ const PublicSkinAnalysis = () => {
         const s = await fetchStatus(stored);
         if (cancelled) return;
         setToken(stored);
-        setVerifiedViews(s.verified_views);
-        if (allDone(s.verified_views) || s.status === 'queued' || s.status === 'complete') {
-          setStage('captured');
-        } else {
-          setStage(s.capture_method === 'upload' ? 'upload' : 'camera');
-        }
+        const next = applyStatus(s);
+        setStage(next ?? (s.capture_method === 'upload' ? 'upload' : 'camera'));
       } catch (e) {
         if (cancelled) return;
         if (e instanceof PublicAnalysisError && e.kind === 'invalid') {
@@ -85,7 +137,7 @@ const PublicSkinAnalysis = () => {
     return () => {
       cancelled = true;
     };
-  }, [stage]);
+  }, [stage, applyStatus]);
 
   const begin = useCallback(
     async (method: 'camera' | 'upload') => {
@@ -113,22 +165,115 @@ const PublicSkinAnalysis = () => {
   );
 
   /** Shared across camera and upload — a view verified in one mode counts in the other. */
-  const handleVerified = useCallback((view: PublicViewId) => {
-    setVerifiedViews((prev) => {
-      const next = prev.includes(view) ? prev : [...prev, view];
-      if (allDone(next)) setStage('captured');
-      return next;
-    });
+  const handleVerified = useCallback(
+    (view: PublicViewId, frame?: Blob) => {
+      if (view === 'front' && frame) setFrontFrame(frame);
+      setVerifiedViews((prev) => {
+        const next = prev.includes(view) ? prev : [...prev, view];
+        if (allDone(next)) {
+          // The capture stage dissolves straight into the scanning stage —
+          // there is no holding screen.
+          setPhase(null);
+          setAnalysisError(null);
+          analysisStartedAt.current = Date.now();
+          setStage('analyzing');
+        }
+        return next;
+      });
+    },
+    [setFrontFrame],
+  );
+
+  // ── Analysis: idempotent start + honest polling ──────────────────────────
+  useEffect(() => {
+    if (stage !== 'analyzing' || !token) return;
+    if (analysisStartedAt.current === null) analysisStartedAt.current = Date.now();
+    let cancelled = false;
+    let timer: number | undefined;
+
+    const settle = (next: Stage) => {
+      const elapsed = Date.now() - (analysisStartedAt.current ?? Date.now());
+      const wait = Math.max(0, MIN_ANIMATION_MS - elapsed);
+      timer = window.setTimeout(() => {
+        if (!cancelled) setStage(next);
+      }, wait);
+    };
+
+    const failWith = (message: string) => {
+      setAnalysisError(message);
+      settle('analysis_failed');
+    };
+
+    const tick = async () => {
+      try {
+        // Idempotent: starts the job, resumes a stale one, or just reports.
+        const run = await startAnalysis(token);
+        if (cancelled) return;
+        if (isAnalysisPhase(run.phase)) setPhase(run.phase);
+
+        const s = await fetchStatus(token);
+        if (cancelled) return;
+        setVerifiedViews(s.verified_views);
+        if (isAnalysisPhase(s.phase)) setPhase(s.phase);
+
+        if (s.status === 'complete') {
+          setPhase('analysis_complete');
+          settle('analyzed');
+          return;
+        }
+        if (s.status === 'failed') {
+          failWith('The analysis could not be completed. You can try again.');
+          return;
+        }
+        timer = window.setTimeout(() => void tick(), POLL_INTERVAL_MS);
+      } catch (e) {
+        if (cancelled) return;
+        if (e instanceof PublicAnalysisError) {
+          if (e.kind === 'invalid') {
+            endSession(e.message);
+            return;
+          }
+          if (e.kind === 'rate_limited') {
+            failWith(e.message);
+            return;
+          }
+          if (e.kind === 'rejected') {
+            failWith(e.message);
+            return;
+          }
+          // Network / 5xx: keep polling — the worker may still be running.
+          timer = window.setTimeout(() => void tick(), POLL_INTERVAL_MS * 2);
+          return;
+        }
+        failWith('The analysis could not be completed. You can try again.');
+      }
+    };
+
+    void tick();
+    return () => {
+      cancelled = true;
+      if (timer) window.clearTimeout(timer);
+    };
+  }, [stage, token, endSession]);
+
+  const retryAnalysis = useCallback(() => {
+    setAnalysisError(null);
+    setPhase(null);
+    analysisStartedAt.current = Date.now();
+    setStage('analyzing');
   }, []);
 
   const restart = useCallback(() => {
     clearStoredToken();
+    releaseFrontFrame();
     setToken(null);
     setVerifiedViews([]);
     setExpiredMessage(null);
     setError(null);
+    setAnalysisError(null);
+    setPhase(null);
     setStage('intro');
-  }, []);
+  }, [releaseFrontFrame]);
 
   return (
     <div className="xcape-public min-h-screen bg-background text-foreground">
@@ -191,17 +336,37 @@ const PublicSkinAnalysis = () => {
           />
         )}
 
-        {stage === 'captured' && (
+        {stage === 'analyzing' && <AnalysisScanAnimation photoUrl={frontUrl} phase={phase} />}
+
+        {stage === 'analyzed' && (
           <div className="mx-auto max-w-lg space-y-5 text-center">
             <CheckCircle2 className="mx-auto h-10 w-10 text-emerald-600" aria-hidden />
-            <h2 className="text-2xl font-semibold text-foreground">All three photos are verified</h2>
+            <h2 className="text-2xl font-semibold text-foreground">Your four XCAPE skin scores are ready.</h2>
             <p className="text-sm text-muted-foreground">
-              Your capture is complete and held securely. The analysis and your personal report are coming in the next
-              release of this page — your photos will be deleted within 24 hours in the meantime.
+              Your personal report is coming in the next release of this page. Your photos are deleted within 24
+              hours.
             </p>
             <Button asChild variant="outline" className="min-h-[44px]">
               <Link to="/">Back to XCAPE</Link>
             </Button>
+          </div>
+        )}
+
+        {stage === 'analysis_failed' && (
+          <div className="mx-auto max-w-lg space-y-5 text-center">
+            <h2 className="text-2xl font-semibold text-foreground">We could not finish your analysis</h2>
+            <p role="alert" className="text-sm text-muted-foreground">
+              {analysisError ?? 'Something interrupted the analysis. You can try again.'}
+            </p>
+            <div className="flex flex-col items-center gap-3">
+              <Button className="min-h-[44px]" onClick={retryAnalysis}>
+                <RefreshCw className="mr-2 h-4 w-4" aria-hidden />
+                Try the analysis again
+              </Button>
+              <Button variant="outline" className="min-h-[44px]" onClick={restart}>
+                Start a new session
+              </Button>
+            </div>
           </div>
         )}
 
