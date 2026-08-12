@@ -1,43 +1,47 @@
-# Public Skin Analysis — wire the real engine report into the new UI
+# Share my XCAPE report
 
-## What is actually wrong today
+Let a person who just finished the free public scan enter their name, mobile number and (optional) email, and receive their own report link — reusing the existing personal-report link machinery the staff panel already uses.
 
-The analysis itself already works. The most recent public session in the database completed successfully and stored the full engine payload: the four practitioner scores (72 / 78 / 85 / 68), per-variable notes, priority order, overall stability, combined interpretation, home-care directions and treatment directions.
+## What the visitor sees
 
-The screen still says "the scores could not be read back" because of one gap in the browser code: while the scanning animation is polling, the poll handler updates phase and stage but never stores the `scores` / `priority_category` it receives. The report stage then renders with `scores = null`. The status endpoint and database function are already returning the scores correctly.
+1. On the finished report screen, "Send my report" opens a short form: full name, mobile (country-code field, defaults +234), email (optional), and a consent checkbox for follow-up.
+2. On submit, the report is registered to them and the screen shows:
+   - "Your report is ready" with the personal link,
+   - Copy link, Share (native share sheet), and Open my report,
+   - a note that the XCAPE team may follow up.
+3. A WhatsApp message with the link is sent to the number when WhatsApp sending is configured; otherwise a "Send on WhatsApp" button opens WhatsApp pre-filled with the same message. Copy/share always works.
+4. The kit/formula section of the personal report stays hidden until a practitioner approves it — nothing invented, no price shown before approval.
 
-Separately, even once that is fixed, the public report only shows four meters. Everything else the staff outreach flow prints (concern-by-concern breakdown, interpretation, home care, treatment direction) exists in the engine payload but is never sent to the public page.
+## What happens behind the scenes
 
-## Phase A — Fix the score handoff (small, immediate)
+The anonymous session is promoted into the normal clinical records so the report is the same one staff can see and work on:
 
-- Store scores and priority in the polling path the same way the resume path already does, so a run that completes during the animation lands on a populated report.
-- Keep the "could not be read back" message as a genuine fallback only.
-- Add a regression test that a completed poll produces a report with scores.
-
-Result: the screen in the screenshot shows four real meters plus the priority band.
-
-## Phase B — Full report parity with the staff workflow
-
-Add a `public-analysis-report` edge function that, for a completed session, returns the same formatted report the staff flow builds:
-
-- per-concern cards: concern name, score, plain-language status, what it means, what it looks like
-- overall skin stability and the combined interpretation line
-- home-care directions and treatment directions
-- the priority concern
-
-It reuses the existing shared formatter (`_shared/reportConcernFormatter.ts`) so wording is identical to the practitioner report. As with the status endpoint, the payload is whitelisted field by field: no session id, no storage path, no signed URL, no `ai_raw`, no raw AI envelope.
-
-The public report screen is extended in the current dark design: score meters at the top, then the concern cards, interpretation and guidance below, keeping the existing typography and spacing.
-
-## Kit and pricing (the one deliberate difference)
-
-The Delight Express Kit formula is only valid after a practitioner accepts it and a snapshot is written. An anonymous visitor has no practitioner decision, so the public report will not print a purchasable formula, dose or price. In the customization position it shows the recommended direction plus a "Book a review with an XCAPE practitioner" call to action, and a lead-capture step (name, phone with country code, email) that creates the lead exactly as the outreach flow does today, so the visitor can be converted and receive the approved kit report.
-
-If you want the public report to show kit pricing before practitioner approval, say so and I will re-scope — it changes the safety model, not the UI.
+- Find-or-create a `clients` lead row from the phone number (matching the existing public-intake behaviour: match on normalised phone, otherwise insert as a lead with source = public skin analysis).
+- Write a `client_visit_assessments` row from the session's saved engine payload (scores, notes, interpretation, directions). No recomputation — the exact stored engine output is copied.
+- Create the persistent report link in `client_report_links` with the existing deterministic HMAC token (`REPORT_LINK_SIGNING_SECRET`), so only `sha256(token)` is stored and staff can recover the URL later from the Reports tab.
+- Stamp the session with `client_id`, `delivery_channel` and `delivered_at` (columns already exist), and log the lead journey / attribution event so the team sees a new contactable lead.
+- Log the WhatsApp send in `outreach_logs`, same as the intake acknowledgement flow.
 
 ## Technical notes
 
-- Frontend: `src/pages/PublicSkinAnalysis.tsx` (poll handler state), `src/components/xcape/public/PublicReportStage.tsx` (extended sections), new public concern-card presentation component.
-- Backend: new `supabase/functions/public-analysis-report`, reusing `_shared/reportConcernFormatter.ts`; a new whitelisting `public_analysis_report()` SECURITY DEFINER function keyed on the SHA-256 token hash, with `SET search_path` and `REVOKE EXECUTE` from anon/authenticated.
-- No schema change to `public_analysis_sessions`; no anonymous RLS grants; 24-hour image retention unchanged.
-- Existing tests stay green; new tests cover the poll-to-report handoff and the report payload whitelist.
+New edge function `public-analysis-share-report`:
+- authenticated only by the raw public session token (same pattern as `public-analysis-report`); rejects sessions that are not `complete`, expired, or already delivered (idempotent — re-submitting returns the same link).
+- validates name / E.164 phone / optional email with Zod, normalises the phone, rate-limits by session (one claim per session, small attempt cap).
+- returns only `{ report_url, delivered_channel }` — never client id, assessment id, session id or storage paths.
+
+Token derivation (`deriveToken`, `sha256Hex`) is moved from `admin-create-report-link` into `supabase/functions/_shared/reportLinkToken.ts` and imported by both, so there is one implementation.
+
+WhatsApp delivery reuses the existing pattern in `send-intake-whatsapp`: Cloud API send when `WHATSAPP_ACCESS_TOKEN` / `WHATSAPP_PHONE_NUMBER_ID` are set, otherwise a `wa.me` fallback link returned to the browser. A new `report_share` template category is used for the message body.
+
+Frontend:
+- `PublicShareReportForm.tsx` (dark public theme, mobile-first) replacing the "coming soon" button in `PublicReportStage.tsx`.
+- `shareReport()` added to `src/lib/publicAnalysisSession.ts`, with the same structured-error handling used elsewhere.
+
+Migration: an RPC (`public_analysis_claim_lead`) with row-level locking that performs the session→client/assessment promotion in one transaction so double submits cannot create duplicate leads or links. Service-role only, `SET search_path`, `REVOKE EXECUTE` from public per project convention.
+
+Tests: unit tests for phone/email normalisation and idempotent claim behaviour, plus a regression test that the share response never contains ids or storage paths.
+
+## Out of scope
+
+- Email delivery of the link (structure allows adding it later; email is captured now).
+- Any change to kit pricing, formula approval or the practitioner workflow.
