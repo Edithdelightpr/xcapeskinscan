@@ -14,6 +14,26 @@ interface Body {
   token?: string;
 }
 
+const SCORE_KEYS = [
+  'pigmentation_stability',
+  'barrier_surface_hydration',
+  'firmness_skin_support',
+  'oil_congestion_balance',
+];
+
+/** Finite integers 0-100 only; anything else is dropped, never coerced. */
+function sanitizeScores(raw: unknown): Record<string, number> | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const row = raw as Record<string, unknown>;
+  const out: Record<string, number> = {};
+  for (const key of SCORE_KEYS) {
+    const v = row[key];
+    if (typeof v !== 'number' || !Number.isInteger(v) || v < 0 || v > 100) continue;
+    out[key] = v;
+  }
+  return Object.keys(out).length > 0 ? out : null;
+}
+
 /** Belt-and-braces: the payload is rebuilt field by field before it leaves. */
 export function sanitizeStatus(row: Record<string, unknown>) {
   const views = Array.isArray(row.verified_views) ? row.verified_views : [];
@@ -29,6 +49,12 @@ export function sanitizeStatus(row: Record<string, unknown>) {
     // Safe, server-computed recovery signal. It is a boolean only: the worker
     // lease and heartbeat timestamp never leave the database.
     recoverable_stale: row.recoverable_stale === true,
+    // Only the four completed health scores and the derived weakest area.
+    // Never notes, evidence, ai_raw, ids or storage paths.
+    scores: sanitizeScores(row.scores),
+    priority_category: SCORE_KEYS.includes(String(row.priority_category))
+      ? String(row.priority_category)
+      : null,
   };
 }
 

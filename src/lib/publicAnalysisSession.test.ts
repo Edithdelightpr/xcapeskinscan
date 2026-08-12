@@ -65,6 +65,8 @@ describe('status sanitizer', () => {
       capture_method: 'camera',
       expires_at: '2026-01-01T00:00:00Z',
       recoverable_stale: false,
+      scores: null,
+      priority_category: null,
     });
     const keys = Object.keys(out);
     for (const leaked of ['id', 'session_id', 'image_paths', 'signed_url', 'images', 'engine', 'ai_raw', 'token_hash', 'ip_hmac']) {

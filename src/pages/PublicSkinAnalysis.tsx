@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { CheckCircle2, Loader2, RefreshCw } from 'lucide-react';
+import { Loader2, RefreshCw } from 'lucide-react';
 import Seo from '@/components/Seo';
 import { Button } from '@/components/ui/button';
 import PublicScanIntro from '@/components/xcape/public/PublicScanIntro';
 import PublicCaptureStage from '@/components/xcape/public/PublicCaptureStage';
 import PublicUploadFallback from '@/components/xcape/public/PublicUploadFallback';
 import AnalysisScanAnimation from '@/components/xcape/public/AnalysisScanAnimation';
+import PublicReportStage from '@/components/xcape/public/PublicReportStage';
+import type { PublicScoreKey, PublicScores } from '@/lib/publicAnalysisScores';
 import { isAnalysisPhase, type AnalysisPhase } from '@/lib/analysisPhases';
 import {
   PUBLIC_VIEWS,
@@ -58,6 +60,8 @@ const PublicSkinAnalysis = () => {
   const [expiredMessage, setExpiredMessage] = useState<string | null>(null);
   const [phase, setPhase] = useState<AnalysisPhase | null>(null);
   const [analysisError, setAnalysisError] = useState<string | null>(null);
+  const [scores, setScores] = useState<PublicScores | null>(null);
+  const [priority, setPriority] = useState<PublicScoreKey | null>(null);
 
   /** Temporary object URL for the front frame — owned and revoked here. */
   const [frontUrl, setFrontUrl] = useState<string | null>(null);
@@ -100,6 +104,10 @@ const PublicSkinAnalysis = () => {
   const applyStatus = useCallback((s: PublicAnalysisStatus) => {
     setVerifiedViews(s.verified_views);
     setPhase(isAnalysisPhase(s.phase) ? s.phase : null);
+    if (s.scores) {
+      setScores(s.scores);
+      setPriority(s.priority_category);
+    }
     if (s.status === 'complete') return 'analyzed' as const;
     if (s.status === 'failed') return 'analysis_failed' as const;
     if (s.status === 'analyzing' || s.status === 'building_report') return 'analyzing' as const;
@@ -314,6 +322,8 @@ const PublicSkinAnalysis = () => {
   const retryAnalysis = useCallback(() => {
     setAnalysisError(null);
     setPhase(null);
+    setScores(null);
+    setPriority(null);
     retryRequested.current = true;
     recoveryClaimed.current = false;
     analysisStartedAt.current = Date.now();
@@ -330,6 +340,8 @@ const PublicSkinAnalysis = () => {
     setError(null);
     setAnalysisError(null);
     setPhase(null);
+    setScores(null);
+    setPriority(null);
     setStage('intro');
   }, [releaseFrontFrame]);
 
@@ -398,20 +410,23 @@ const PublicSkinAnalysis = () => {
           />
         )}
 
-        {stage === 'analyzing' && <AnalysisScanAnimation photoUrl={frontUrl} phase={phase} />}
+        {stage === 'analyzing' && (
+          <AnalysisScanAnimation
+            photoUrl={frontUrl}
+            phase={phase}
+            capturedViews={verifiedViews}
+            onOpenReport={() => setStage('analyzed')}
+          />
+        )}
 
         {stage === 'analyzed' && (
-          <div className="mx-auto max-w-lg space-y-5 text-center">
-            <CheckCircle2 className="mx-auto h-10 w-10 text-emerald-600" aria-hidden />
-            <h2 className="text-2xl font-semibold text-foreground">Your four XCAPE skin scores are ready.</h2>
-            <p className="text-sm text-muted-foreground">
-              Your personal report is coming in the next release of this page. Your photos are deleted within 24
-              hours.
-            </p>
-            <Button asChild variant="outline" className="min-h-[44px]">
-              <Link to="/">Back to XCAPE</Link>
-            </Button>
-          </div>
+          <PublicReportStage
+            photoUrl={frontUrl}
+            scores={scores}
+            priority={priority}
+            capturedViews={verifiedViews}
+            onRestart={restart}
+          />
         )}
 
         {stage === 'analysis_failed' && (
