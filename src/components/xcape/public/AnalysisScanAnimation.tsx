@@ -125,7 +125,7 @@ const AnalysisScanAnimation = ({ photoUrl, phase }: Props) => {
 
   return (
     <section
-      className="mx-auto w-full max-w-xl rounded-3xl bg-[#16181b] p-5 text-slate-100 shadow-xl sm:p-8"
+      className="mx-auto w-full max-w-4xl rounded-3xl bg-[#16181b] p-5 text-slate-100 shadow-xl sm:p-8"
       aria-label="XCAPE skin analysis in progress"
     >
       <div className="mb-6 flex items-center justify-between gap-3">
