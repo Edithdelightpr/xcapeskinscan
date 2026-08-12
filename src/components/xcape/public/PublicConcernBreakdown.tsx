@@ -75,7 +75,7 @@ const PublicConcernBreakdown = ({ concerns, report, className }: Props) => {
                       aria-hidden
                     />
                   </span>
-                  <span className="flex min-w-0 flex-wrap items-center gap-2">
+                  <span className="flex min-w-0 flex-col items-start gap-1.5 sm:flex-row sm:items-center sm:gap-2">
                     <span
                       className={cn(
                         'shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-medium',
