@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { XCAPE_DEMO_CTA, XCAPE_DEMO_MICROCOPY, XCAPE_DEMO_PATH } from '@/lib/xcapeMarketing';
 import { BlurFade } from './BlurFade';
 import xcapeLogo from '@/assets/xcape-logo-black.png';
 import heroScan from '@/assets/xcape-hero-scan.webp';
