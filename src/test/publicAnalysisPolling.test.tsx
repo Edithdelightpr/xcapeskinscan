@@ -3,8 +3,7 @@
  * status must not auto-retry, and an explicit retry must claim exactly one
  * new attempt.
  */
-import { render, screen, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -98,9 +97,9 @@ describe('public analysis polling', () => {
     const button = await screen.findByRole('button', { name: /try the analysis again/i });
 
     fetchStatus.mockResolvedValue(status());
-    const user = userEvent.setup();
-    // Two fast clicks: the second lands after the stage already switched.
-    await user.click(button);
+    // Two fast clicks: only one attempt may be claimed.
+    fireEvent.click(button);
+    fireEvent.click(button);
 
     await waitFor(() => expect(startAnalysis).toHaveBeenCalledTimes(1));
     expect(startAnalysis).toHaveBeenCalledWith(expect.any(String), { retry: true });
