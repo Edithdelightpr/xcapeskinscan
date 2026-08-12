@@ -24,6 +24,13 @@ import { buildEnginePayload, type EngineVariableKey, type EngineVariableScore } 
 /** Short-lived signed read URLs — never returned to the browser or logged. */
 export const SIGNED_READ_TTL_S = 120;
 
+/**
+ * Periodic lease-guarded heartbeat interval used while the provider request
+ * is in flight. Comfortably below the server's 4-minute stale window, so a
+ * legitimately long AI call is never mistaken for an abandoned worker.
+ */
+export const HEARTBEAT_INTERVAL_MS = 30_000;
+
 /** Minimal surface of the service-role client this worker needs. */
 export interface WorkerAdmin {
   storage: {
@@ -45,6 +52,9 @@ export interface WorkerDeps {
   workerLease: string;
   apiKey: string | undefined;
   fetchImpl?: typeof fetch;
+  /** Test seam: defaults to the platform timer. */
+  setIntervalImpl?: (cb: () => void, ms: number) => number;
+  clearIntervalImpl?: (id: number) => void;
 }
 
 export type WorkerOutcome =
@@ -72,6 +82,8 @@ export function engineVariablesFromScores(
 export async function runPublicAnalysis(deps: WorkerDeps): Promise<WorkerOutcome> {
   const { admin, sessionId, apiKey, workerLease } = deps;
   const doFetch = deps.fetchImpl ?? fetch;
+  const setIntervalFn = deps.setIntervalImpl ?? ((cb, ms) => setInterval(cb, ms) as unknown as number);
+  const clearIntervalFn = deps.clearIntervalImpl ?? ((id: number) => clearInterval(id));
 
   /** Every real phase transition is also this worker's heartbeat. */
   const setPhase = (phase: string) =>
@@ -108,6 +120,23 @@ export async function runPublicAnalysis(deps: WorkerDeps): Promise<WorkerOutcome
 
     if (!apiKey) return await fail('ai_unavailable');
 
+    // Bounded periodic heartbeat: proves this worker is alive for the whole
+    // duration of a multi-minute provider request. Lease-guarded server-side,
+    // so a reclaimed worker's heartbeat is rejected. Stopped as soon as the
+    // fetch resolves or throws.
+    let beat: number | undefined = setIntervalFn(() => {
+      void admin.rpc('public_analysis_heartbeat', {
+        p_session_id: sessionId,
+        p_worker_lease: workerLease,
+      });
+    }, HEARTBEAT_INTERVAL_MS);
+    const stopHeartbeat = () => {
+      if (beat !== undefined) {
+        clearIntervalFn(beat);
+        beat = undefined;
+      }
+    };
+
     let resp: Response;
     try {
       resp = await doFetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
@@ -130,8 +159,10 @@ export async function runPublicAnalysis(deps: WorkerDeps): Promise<WorkerOutcome
         }),
       });
     } catch {
+      stopHeartbeat();
       return await fail('ai_unavailable');
     }
+    stopHeartbeat();
 
     if (!resp.ok) {
       // Status only — the provider envelope is never logged or stored.
