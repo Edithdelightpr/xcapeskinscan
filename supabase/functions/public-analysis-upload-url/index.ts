@@ -81,8 +81,11 @@ Deno.serve(async (req) => {
     if (!res?.ok) {
       const code = String(res?.error_code ?? 'invalid_session');
       const status = Number(res?.http ?? 400);
+      const attemptsExhausted =
+        code === 'view_attempts_exhausted' || code === 'session_attempts_exhausted';
       return json(
         {
+          ok: false,
           error: RPC_ERRORS[code] ?? 'Could not prepare the upload.',
           code,
           ...(status === 429
@@ -94,7 +97,10 @@ Deno.serve(async (req) => {
               }
             : {}),
         },
-        status,
+        // Attempt exhaustion is an expected workflow result, not an Edge
+        // Function crash. Returning it as structured 200 data prevents the
+        // preview runtime from treating the handled state as a fatal 429.
+        attemptsExhausted ? 200 : status,
         true,
       );
     }
