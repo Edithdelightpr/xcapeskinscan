@@ -27,6 +27,11 @@ interface Props {
   variant?: 'staff' | 'public';
   /** Manual shutter visibility. Public flow hides it until capture stalls. */
   showManualCapture?: boolean;
+  /**
+   * Presentation only. Hides the built-in view chips, instruction line and
+   * accepted thumbnails when the surrounding page already shows them.
+   */
+  minimalChrome?: boolean;
   onManualCapture: () => void;
   onToggleCamera: () => void;
   onCancel: () => void;
@@ -56,6 +61,7 @@ const ScanStage = ({
   reviewUrl,
   variant = 'staff',
   showManualCapture = true,
+  minimalChrome = false,
   onManualCapture,
   onToggleCamera,
   onCancel,
@@ -71,6 +77,7 @@ const ScanStage = ({
   return (
     <div className="space-y-3">
       {/* View progress */}
+      {!minimalChrome && (
       <div className="flex items-center justify-center gap-2" role="list" aria-label="Scan progress">
         {SCAN_VIEWS.map((v) => {
           const done = !!accepted[v.id];
@@ -95,13 +102,14 @@ const ScanStage = ({
           );
         })}
       </div>
+      )}
 
       {/* Camera stage */}
       <div
         className={cn(
           'relative mx-auto w-full overflow-hidden border aspect-[3/4]',
           isPublic
-            ? 'max-w-lg rounded-3xl border-black/10 bg-neutral-900'
+            ? cn('rounded-3xl border-black/10 bg-neutral-900', minimalChrome ? 'max-w-none' : 'max-w-lg')
             : 'max-w-md rounded-2xl border-border/50 bg-black/80',
         )}
       >
@@ -241,7 +249,7 @@ const ScanStage = ({
       )}
 
       {/* Accepted thumbnails */}
-      {Object.keys(accepted).length > 0 && (
+      {!minimalChrome && Object.keys(accepted).length > 0 && (
         <div className="flex items-center justify-center gap-2 pt-1">
           {SCAN_VIEWS.filter((v) => accepted[v.id]).map((v) => (
             <figure key={v.id} className="w-16 overflow-hidden rounded-lg border border-border/40">

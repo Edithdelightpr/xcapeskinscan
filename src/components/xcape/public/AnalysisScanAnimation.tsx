@@ -125,7 +125,7 @@ const AnalysisScanAnimation = ({ photoUrl, phase }: Props) => {
 
   return (
     <section
-      className="mx-auto w-full max-w-xl rounded-3xl bg-[#16181b] p-5 text-slate-100 shadow-xl sm:p-8"
+      className="mx-auto w-full max-w-4xl rounded-3xl bg-[#16181b] p-5 text-slate-100 shadow-xl sm:p-8"
       aria-label="XCAPE skin analysis in progress"
     >
       <div className="mb-6 flex items-center justify-between gap-3">
@@ -137,8 +137,9 @@ const AnalysisScanAnimation = ({ photoUrl, phase }: Props) => {
       </div>
 
 
+      <div className="grid gap-6 md:grid-cols-[minmax(0,1fr)_16rem] md:items-center">
       {/* Portrait frame */}
-      <div className="relative mx-auto aspect-[4/5] w-full max-w-sm overflow-hidden rounded-2xl border border-slate-700/70 bg-[#0f1113]">
+      <div className="relative mx-auto aspect-[4/5] w-full max-w-sm overflow-hidden rounded-2xl border border-slate-700/70 bg-[#0f1113] md:max-w-none">
         {photoUrl ? (
           <img
             src={photoUrl}
@@ -183,7 +184,7 @@ const AnalysisScanAnimation = ({ photoUrl, phase }: Props) => {
       </div>
 
       {/* Truthful phase text */}
-      <div className="mt-6 space-y-3 text-center">
+      <div className="mt-6 space-y-3 text-center md:mt-0 md:text-left">
         <p aria-live="polite" className="text-base font-medium text-slate-100">
           {label}
         </p>
@@ -207,7 +208,7 @@ const AnalysisScanAnimation = ({ photoUrl, phase }: Props) => {
           )}
         </div>
 
-        <ul className="mt-4 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-[11px] text-slate-500">
+        <ul className="mt-4 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-[11px] text-slate-500 md:flex-col md:items-start md:gap-y-2">
           {ANALYSIS_PHASES.filter((p) => p !== 'analysis_complete').map((p) => (
             <li
               key={p}
@@ -226,6 +227,7 @@ const AnalysisScanAnimation = ({ photoUrl, phase }: Props) => {
             </li>
           ))}
         </ul>
+      </div>
       </div>
     </section>
   );

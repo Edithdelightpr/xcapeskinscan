@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { AlertTriangle, ImageUp, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import ScanStage from '@/components/xcape/scan/ScanStage';
+import PublicFlowPanel from '@/components/xcape/public/PublicFlowPanel';
 import { useGuidedCapture } from '@/components/xcape/scan/useGuidedCapture';
 import { SCAN_VIEWS, type ScanViewId } from '@/lib/scan/scanQuality';
 import {
@@ -139,9 +140,17 @@ const PublicCaptureStage = ({
   }
 
   return (
-    <div className="mx-auto w-full max-w-lg space-y-4">
+    <div className="grid w-full gap-6 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start">
+      <div className="space-y-4">
+      <div className="space-y-1">
+        <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">Step 1 of 3</p>
+        <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
+          Look at the camera. We&apos;ll do the rest.
+        </h1>
+      </div>
       <ScanStage
         variant="public"
+        minimalChrome
         videoRef={capture.camera.videoRef}
         mirrored={capture.camera.facingMode === 'user'}
         guidance={capture.guidance}
@@ -204,12 +213,17 @@ const PublicCaptureStage = ({
         </p>
       )}
 
-      <p className="text-center text-xs text-muted-foreground">
-        Having trouble?{' '}
-        <button type="button" className="min-h-[44px] underline" onClick={onSwitchToUpload}>
-          Upload photos instead
-        </button>
-      </p>
+      </div>
+
+      <PublicFlowPanel
+        step="capture"
+        done={verifiedViews as ScanViewId[]}
+        current={capture.currentView}
+        thumbs={acceptedUrls}
+        guidance={capture.guidance}
+        stability={capture.stability}
+        onSwitchToUpload={onSwitchToUpload}
+      />
     </div>
   );
 };
