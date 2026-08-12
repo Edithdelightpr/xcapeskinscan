@@ -1,4 +1,5 @@
-import { Check, Send, ShieldCheck } from 'lucide-react';
+import { Check, ShieldCheck } from 'lucide-react';
+import PublicShareReportForm from '@/components/xcape/public/PublicShareReportForm';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import PublicScanPortrait from '@/components/xcape/public/PublicScanPortrait';
@@ -25,13 +26,15 @@ interface Props {
   /** Full engine report content; null while loading or unavailable. */
   report?: PublicAnalysisReport | null;
   reportLoading?: boolean;
+  /** Raw session token, required to claim the lead and issue a report link. */
+  sessionToken?: string | null;
   onRestart: () => void;
 }
 
 /**
- * The finished public analysis: the four real XCAPE health scores and the
- * single priority area. Delivery by WhatsApp or email is not wired yet —
- * nothing here promises a send that cannot happen.
+ * The finished public analysis: the four real XCAPE health scores, the single
+ * priority area, the detailed concern breakdown, and the contact-gated
+ * Personal Report link the visitor can share.
  */
 const PublicReportStage = ({
   photoUrl,
@@ -40,6 +43,7 @@ const PublicReportStage = ({
   capturedViews = [],
   report = null,
   reportLoading = false,
+  sessionToken = null,
   onRestart,
 }: Props) => {
   const key = priority ?? priorityFromScores(scores);
@@ -158,20 +162,15 @@ const PublicReportStage = ({
             </div>
           )}
 
+          <PublicShareReportForm token={sessionToken ?? null} />
+
           <div className="flex flex-col gap-3 sm:flex-row">
-            <Button
-              className="min-h-[44px] bg-slate-100 text-slate-900 hover:bg-white"
-              onClick={onRestart}
-            >
-              Start a new analysis
-            </Button>
             <Button
               variant="outline"
               className="min-h-[44px] border-slate-600 bg-transparent text-slate-200 hover:bg-slate-800 hover:text-slate-50"
-              disabled
+              onClick={onRestart}
             >
-              <Send className="mr-2 h-4 w-4" aria-hidden />
-              Send my report (coming soon)
+              Start a new analysis
             </Button>
           </div>
 

@@ -461,6 +461,7 @@ const PublicSkinAnalysis = () => {
             report={report}
             reportLoading={reportLoading}
             capturedViews={verifiedViews}
+            sessionToken={token}
             onRestart={restart}
           />
         )}

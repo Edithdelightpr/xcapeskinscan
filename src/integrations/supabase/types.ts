@@ -12434,6 +12434,16 @@ export type Database = {
         }
         Returns: string
       }
+      public_analysis_claim_lead: {
+        Args: {
+          p_consent?: boolean
+          p_email?: string
+          p_full_name: string
+          p_phone: string
+          p_token_hash: string
+        }
+        Returns: Json
+      }
       public_analysis_claim_run: {
         Args: {
           p_idempotency_key: string
