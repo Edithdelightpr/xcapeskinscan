@@ -5,6 +5,7 @@ import {
   type PublicScoreKey,
   type PublicScores,
 } from '@/lib/publicAnalysisScores';
+import { sanitizeReportPayload, type PublicAnalysisReport } from '@/lib/publicAnalysisReport';
 /**
  * Client for the anonymous XCAPE public skin-analysis session.
  *
@@ -263,6 +264,14 @@ export function sanitizeStatusPayload(raw: unknown): PublicAnalysisStatus {
 /** Resolves the server-side progress of a stored token. */
 export async function fetchStatus(token: string): Promise<PublicAnalysisStatus> {
   return sanitizeStatusPayload(await callFn<unknown>('public-analysis-status', { token }));
+}
+
+/**
+ * Pulls the finished report content (scores, per-area observations and the
+ * engine's guidance copy) for a completed session.
+ */
+export async function fetchReport(token: string): Promise<PublicAnalysisReport> {
+  return sanitizeReportPayload(await callFn<unknown>('public-analysis-report', { token }));
 }
 
 /* ------------------------------------------------------------------ */

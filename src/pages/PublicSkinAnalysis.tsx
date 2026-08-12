@@ -8,11 +8,13 @@ import PublicCaptureStage from '@/components/xcape/public/PublicCaptureStage';
 import PublicUploadFallback from '@/components/xcape/public/PublicUploadFallback';
 import AnalysisScanAnimation from '@/components/xcape/public/AnalysisScanAnimation';
 import PublicReportStage from '@/components/xcape/public/PublicReportStage';
-import type { PublicScoreKey, PublicScores } from '@/lib/publicAnalysisScores';
+import { priorityFromScores, type PublicScoreKey, type PublicScores } from '@/lib/publicAnalysisScores';
+import { scoresFromReport, type PublicAnalysisReport } from '@/lib/publicAnalysisReport';
 import { isAnalysisPhase, type AnalysisPhase } from '@/lib/analysisPhases';
 import {
   PUBLIC_VIEWS,
   clearStoredToken,
+  fetchReport,
   fetchStatus,
   readStoredToken,
   startAnalysis,
@@ -62,6 +64,8 @@ const PublicSkinAnalysis = () => {
   const [analysisError, setAnalysisError] = useState<string | null>(null);
   const [scores, setScores] = useState<PublicScores | null>(null);
   const [priority, setPriority] = useState<PublicScoreKey | null>(null);
+  const [report, setReport] = useState<PublicAnalysisReport | null>(null);
+  const [reportLoading, setReportLoading] = useState(false);
 
   /** Temporary object URL for the front frame — owned and revoked here. */
   const [frontUrl, setFrontUrl] = useState<string | null>(null);
@@ -114,6 +118,34 @@ const PublicSkinAnalysis = () => {
     if (s.status === 'queued' || allDone(s.verified_views)) return 'analyzing' as const;
     return null;
   }, []);
+
+  // ── The finished report content is fetched once the run is complete ──
+  useEffect(() => {
+    if (stage !== 'analyzed' || !token || report) return;
+    let cancelled = false;
+    setReportLoading(true);
+    void (async () => {
+      try {
+        const r = await fetchReport(token);
+        if (cancelled) return;
+        setReport(r);
+        const s = scoresFromReport(r);
+        if (s) {
+          setScores(s);
+          setPriority((prev) => prev ?? priorityFromScores(s));
+        }
+      } catch {
+        // Non-fatal: the meters still render from the status payload.
+        if (!cancelled) setReport(null);
+      } finally {
+        if (!cancelled) setReportLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [stage, token, report]);
+
 
   // ── Resume: a stored token is checked before any new session is created ──
   useEffect(() => {
@@ -324,6 +356,7 @@ const PublicSkinAnalysis = () => {
     setPhase(null);
     setScores(null);
     setPriority(null);
+    setReport(null);
     retryRequested.current = true;
     recoveryClaimed.current = false;
     analysisStartedAt.current = Date.now();
@@ -342,6 +375,7 @@ const PublicSkinAnalysis = () => {
     setPhase(null);
     setScores(null);
     setPriority(null);
+    setReport(null);
     setStage('intro');
   }, [releaseFrontFrame]);
 
@@ -424,6 +458,8 @@ const PublicSkinAnalysis = () => {
             photoUrl={frontUrl}
             scores={scores}
             priority={priority}
+            report={report}
+            reportLoading={reportLoading}
             capturedViews={verifiedViews}
             onRestart={restart}
           />

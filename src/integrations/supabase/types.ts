@@ -12473,6 +12473,7 @@ export type Database = {
         Args: { p_token_hash: string; p_view: string }
         Returns: Json
       }
+      public_analysis_report: { Args: { p_token_hash: string }; Returns: Json }
       public_analysis_resolve_view: {
         Args: { p_token_hash: string; p_view: string }
         Returns: Json
