@@ -113,11 +113,8 @@ export const SIDE_MIN_YAW_DEG = 10;
 export function poseMatches(view: ViewId, face: FaceCheck): boolean {
   const yaw = Number.isFinite(face.yawDegrees) ? face.yawDegrees : 0;
 
-  if (view === 'front') {
-    // Reject only a clearly turned head.
-    if (face.pose === 'left' || face.pose === 'right') return Math.abs(yaw) <= FRONT_MAX_YAW_DEG;
-    return Math.abs(yaw) <= FRONT_MAX_YAW_DEG;
-  }
+  // Front: reject only a head that is clearly turned away.
+  if (view === 'front') return Math.abs(yaw) <= FRONT_MAX_YAW_DEG;
 
   const wanted = view === 'left' ? 1 : -1;
   // A confident opposite-side label is always a mismatch.
