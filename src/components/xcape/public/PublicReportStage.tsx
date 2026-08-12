@@ -1,4 +1,5 @@
-import { Check, Send, ShieldCheck } from 'lucide-react';
+import { Check, ShieldCheck } from 'lucide-react';
+import PublicShareReportForm from '@/components/xcape/public/PublicShareReportForm';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import PublicScanPortrait from '@/components/xcape/public/PublicScanPortrait';
