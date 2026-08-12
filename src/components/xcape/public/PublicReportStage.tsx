@@ -26,13 +26,15 @@ interface Props {
   /** Full engine report content; null while loading or unavailable. */
   report?: PublicAnalysisReport | null;
   reportLoading?: boolean;
+  /** Raw session token, required to claim the lead and issue a report link. */
+  sessionToken?: string | null;
   onRestart: () => void;
 }
 
 /**
- * The finished public analysis: the four real XCAPE health scores and the
- * single priority area. Delivery by WhatsApp or email is not wired yet —
- * nothing here promises a send that cannot happen.
+ * The finished public analysis: the four real XCAPE health scores, the single
+ * priority area, the detailed concern breakdown, and the contact-gated
+ * Personal Report link the visitor can share.
  */
 const PublicReportStage = ({
   photoUrl,
@@ -41,6 +43,7 @@ const PublicReportStage = ({
   capturedViews = [],
   report = null,
   reportLoading = false,
+  sessionToken = null,
   onRestart,
 }: Props) => {
   const key = priority ?? priorityFromScores(scores);
