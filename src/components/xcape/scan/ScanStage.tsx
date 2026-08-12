@@ -19,6 +19,14 @@ interface Props {
   busyLabel: string;
   /** When set, the captured still is shown over the live video for review. */
   reviewUrl: string | null;
+  /**
+   * Presentation only. `staff` (default) is the existing purple workspace
+   * chrome; `public` matches the monochrome `.xcape-public` landing system.
+   * No behaviour differs between variants.
+   */
+  variant?: 'staff' | 'public';
+  /** Manual shutter visibility. Public flow hides it until capture stalls. */
+  showManualCapture?: boolean;
   onManualCapture: () => void;
   onToggleCamera: () => void;
   onCancel: () => void;
@@ -46,6 +54,8 @@ const ScanStage = ({
   busy,
   busyLabel,
   reviewUrl,
+  variant = 'staff',
+  showManualCapture = true,
   onManualCapture,
   onToggleCamera,
   onCancel,
@@ -53,8 +63,10 @@ const ScanStage = ({
   onAccept,
 }: Props) => {
   const viewMeta = SCAN_VIEWS.find((v) => v.id === currentView)!;
+  const isPublic = variant === 'public';
   // Map stability progress onto a 3-2-1 style indicator.
   const countdown = stability > 0 ? Math.max(1, 3 - Math.floor(stability * 3)) : null;
+
 
   return (
     <div className="space-y-3">
@@ -85,7 +97,15 @@ const ScanStage = ({
       </div>
 
       {/* Camera stage */}
-      <div className="relative mx-auto w-full max-w-md overflow-hidden rounded-2xl border border-border/50 bg-black/80 aspect-[3/4]">
+      <div
+        className={cn(
+          'relative mx-auto w-full overflow-hidden border aspect-[3/4]',
+          isPublic
+            ? 'max-w-lg rounded-3xl border-black/10 bg-neutral-900'
+            : 'max-w-md rounded-2xl border-border/50 bg-black/80',
+        )}
+      >
+
         <video
           ref={videoRef}
           playsInline
@@ -203,9 +223,12 @@ const ScanStage = ({
       {/* Controls */}
       {!reviewUrl && (
         <div className="flex flex-wrap items-center justify-center gap-2">
-          <Button type="button" variant="outline" size="sm" onClick={onManualCapture}>
-            <Camera className="w-4 h-4 mr-1.5" aria-hidden /> Capture now
-          </Button>
+          {showManualCapture && (
+            <Button type="button" variant="outline" size="sm" onClick={onManualCapture}>
+              <Camera className="w-4 h-4 mr-1.5" aria-hidden /> Capture now
+            </Button>
+          )}
+
           {canSwitch && (
             <Button type="button" variant="outline" size="sm" onClick={onToggleCamera}>
               <SwitchCamera className="w-4 h-4 mr-1.5" aria-hidden /> Switch camera

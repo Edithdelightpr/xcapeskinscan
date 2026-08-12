@@ -1,39 +1,17 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import {
   AlertTriangle, Camera, CheckCircle2, ImagePlus, Loader2, RefreshCw, ScanFace, ShieldCheck,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { useUploadClientMedia, type ClientMedia } from '@/hooks/useClientMedia';
 import type { RealClient } from '@/hooks/useRealClients';
-import {
-  computeYaw,
-  evaluateFrame,
-  faceBox,
-  laplacianVariance,
-  meanLuma,
-  neutralGuidance,
-  toGray,
-  SCAN_VIEWS,
-  type Guidance,
-  type ScanViewId,
-} from '@/lib/scan/scanQuality';
-import { useCameraStream } from './useCameraStream';
-import { useFaceLandmarker } from './useFaceLandmarker';
+import { SCAN_VIEWS, type ScanViewId } from '@/lib/scan/scanQuality';
+import { useGuidedCapture } from './useGuidedCapture';
 import ScanStage from './ScanStage';
 
-const HOLD_MS = 1500; // stable-hold duration before auto-capture
-const FRAME_MS = 100; // detection cadence (~10 fps)
-
-type Phase = 'consent' | 'scanning' | 'review' | 'uploading' | 'done';
-
-interface Capture {
-  view: ScanViewId;
-  blob: Blob;
-  url: string;
-}
+type Stage = 'consent' | 'capture' | 'uploading' | 'done';
 
 interface Props {
   client: RealClient;
@@ -46,31 +24,27 @@ interface Props {
 }
 
 /**
- * XCAPE Guided Facial Scan.
+ * XCAPE Guided Facial Scan (staff).
  *
  * Consent → front camera (switchable) → landmark-guided Front / Left / Right
  * captures with quality gates (single face, size, centering, yaw, lighting,
  * sharpness, stable hold) → per-view Retake/Accept → upload of exactly the
  * three accepted stills through the existing private client-media pipeline.
  *
+ * The capture state machine itself lives in `useGuidedCapture` so the public
+ * skin-analysis flow can reuse the exact same gates and progression. This
+ * component keeps the staff-specific consent copy, the explicit per-view
+ * review step and the authenticated upload.
+ *
  * Privacy: only the accepted stills leave the device. No video, frames or
  * landmark data are ever transmitted or stored; all tracks stop on
  * complete/cancel/unmount.
  */
 const GuidedFacialScan = ({ client, onUploaded, onComplete, onFallback }: Props) => {
-  const reducedMotion = useReducedMotion();
   const uploadMut = useUploadClientMedia();
+  const [stage, setStage] = useState<Stage>('consent');
 
-  const [phase, setPhase] = useState<Phase>('consent');
-  const [viewIndex, setViewIndex] = useState(0);
-  const currentView = SCAN_VIEWS[viewIndex].id;
-
-  const [accepted, setAccepted] = useState<Partial<Record<ScanViewId, Capture>>>({});
-  const [pendingCapture, setPendingCapture] = useState<Capture | null>(null);
-
-  const [guidance, setGuidance] = useState<Guidance>(() => neutralGuidance(currentView));
-  const [stability, setStability] = useState(0);
-  const [detecting, setDetecting] = useState(false);
+  const capture = useGuidedCapture({ active: stage === 'capture' });
 
   const [uploadStates, setUploadStates] = useState<Record<ScanViewId, 'pending' | 'uploading' | 'done' | 'error'>>({
     front: 'pending',
@@ -78,176 +52,20 @@ const GuidedFacialScan = ({ client, onUploaded, onComplete, onFallback }: Props)
     right: 'pending',
   });
 
-  // Camera is active during scanning + review (retake keeps the stream warm).
-  const cameraActive = phase === 'scanning' || phase === 'review';
-  const camera = useCameraStream(cameraActive);
-  const { landmarker, loading: modelLoading, error: modelError, retry: retryModel } =
-    useFaceLandmarker(cameraActive);
-
-  const validSinceRef = useRef<number | null>(null);
-  const lastFrameRef = useRef(0);
-  const rafRef = useRef(0);
-  const sampleCanvasRef = useRef<HTMLCanvasElement | null>(null);
-  const captureCanvasRef = useRef<HTMLCanvasElement | null>(null);
-  const phaseRef = useRef<Phase>(phase);
-  phaseRef.current = phase;
-
-  const resetHold = useCallback(() => {
-    validSinceRef.current = null;
-    setStability(0);
-  }, []);
-
-  /** Draw the current video frame into a JPEG blob (original orientation). */
-  const grabFrame = useCallback((): Promise<Blob | null> => {
-    const video = camera.videoRef.current;
-    if (!video || video.videoWidth === 0) return Promise.resolve(null);
-    const canvas = (captureCanvasRef.current ??= document.createElement('canvas'));
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return Promise.resolve(null);
-    ctx.drawImage(video, 0, 0);
-    return new Promise((resolve) => canvas.toBlob((b) => resolve(b), 'image/jpeg', 0.92));
-  }, [camera.videoRef]);
-
-  const beginCapture = useCallback(
-    async (view: ScanViewId) => {
-      const blob = await grabFrame();
-      if (!blob) {
-        toast.error('Could not read the camera frame — try again.');
-        return;
-      }
-      // Discard any previous pending capture for this view.
-      setPendingCapture((prev) => {
-        if (prev) URL.revokeObjectURL(prev.url);
-        return { view, blob, url: URL.createObjectURL(blob) };
-      });
-      setPhase('review');
-      resetHold();
-    },
-    [grabFrame, resetHold],
-  );
-
-  // ── Detection loop ──────────────────────────────────────────────────────
+  // The capture machine reports 'complete' once all three views are accepted.
   useEffect(() => {
-    if (phase !== 'scanning' || !camera.ready || !landmarker) return;
-    const video = camera.videoRef.current;
-    if (!video) return;
-
-    setDetecting(true);
-    resetHold();
-
-    const loop = (nowMs: number) => {
-      rafRef.current = requestAnimationFrame(loop);
-      if (nowMs - lastFrameRef.current < FRAME_MS) return;
-      lastFrameRef.current = nowMs;
-      if (phaseRef.current !== 'scanning') return;
-      if (video.readyState < 2 || video.videoWidth === 0) return;
-
-      let next: Guidance;
-      try {
-        const result = landmarker.detectForVideo(video, nowMs);
-        const faces = result.faceLandmarks ?? [];
-        const box = faces.length === 1 ? faceBox(faces[0]) : null;
-        const yaw = faces.length === 1 ? computeYaw(faces[0]) : 0;
-
-        // Sample a small frame for lighting/sharpness gates (skipped values
-        // default to passing when the 2D context is unavailable).
-        let brightness = 128;
-        let sharpness = 1000;
-        if (faces.length === 1) {
-          const canvas = (sampleCanvasRef.current ??= document.createElement('canvas'));
-          canvas.width = 96;
-          canvas.height = 96;
-          const ctx = canvas.getContext('2d', { willReadFrequently: true });
-          if (ctx) {
-            ctx.drawImage(video, 0, 0, 96, 96);
-            const { data } = ctx.getImageData(0, 0, 96, 96);
-            brightness = meanLuma(data);
-            sharpness = laplacianVariance(toGray(data), 96, 96);
-          }
-        }
-
-        next = evaluateFrame(
-          {
-            faceCount: faces.length,
-            faceHeightRatio: box?.heightRatio ?? 0,
-            centerOffsetX: box?.centerOffsetX ?? 0,
-            centerOffsetY: box?.centerOffsetY ?? 0,
-            yaw,
-            brightness,
-            sharpness,
-          },
-          currentView,
-        );
-      } catch {
-        // A transient detect failure must not break the loop.
-        return;
-      }
-
-      setGuidance(next);
-      if (next.ok) {
-        if (validSinceRef.current === null) validSinceRef.current = performance.now();
-        const held = performance.now() - validSinceRef.current;
-        const p = Math.min(1, held / HOLD_MS);
-        setStability(p);
-        if (p >= 1) {
-          validSinceRef.current = null;
-          void beginCapture(currentView);
-        }
-      } else {
-        validSinceRef.current = null;
-        setStability(0);
-      }
-    };
-
-    rafRef.current = requestAnimationFrame(loop);
-    return () => {
-      cancelAnimationFrame(rafRef.current);
-      setDetecting(false);
-      resetHold();
-    };
-  }, [phase, camera.ready, landmarker, currentView, camera.videoRef, beginCapture, resetHold]);
-
-  // ── Review actions ──────────────────────────────────────────────────────
-  const handleRetake = useCallback(() => {
-    setPendingCapture((prev) => {
-      if (prev) URL.revokeObjectURL(prev.url);
-      return null;
-    });
-    setGuidance(neutralGuidance(currentView));
-    setPhase('scanning');
-  }, [currentView]);
-
-  const handleAccept = useCallback(() => {
-    if (!pendingCapture) return;
-    setAccepted((prev) => {
-      const old = prev[pendingCapture.view];
-      if (old) URL.revokeObjectURL(old.url);
-      return { ...prev, [pendingCapture.view]: pendingCapture };
-    });
-    setPendingCapture(null);
-    if (viewIndex < SCAN_VIEWS.length - 1) {
-      setViewIndex((i) => i + 1);
-      setGuidance(neutralGuidance(SCAN_VIEWS[viewIndex + 1].id));
-      setPhase('scanning');
-    } else {
-      setPhase('uploading');
-    }
-  }, [pendingCapture, viewIndex]);
+    if (stage === 'capture' && capture.phase === 'complete') setStage('uploading');
+  }, [stage, capture.phase]);
 
   const handleCancelScan = useCallback(() => {
-    setPendingCapture((prev) => {
-      if (prev) URL.revokeObjectURL(prev.url);
-      return null;
-    });
-    setPhase('consent');
-  }, []);
+    capture.cancel();
+    setStage('consent');
+  }, [capture]);
 
   // ── Upload of the three accepted stills ─────────────────────────────────
   const uploadOne = useCallback(
     async (view: ScanViewId) => {
-      const cap = accepted[view];
+      const cap = capture.accepted[view];
       if (!cap) throw new Error('Missing capture');
       setUploadStates((s) => ({ ...s, [view]: 'uploading' }));
       try {
@@ -268,11 +86,11 @@ const GuidedFacialScan = ({ client, onUploaded, onComplete, onFallback }: Props)
         throw e;
       }
     },
-    [accepted, client.id, uploadMut, onUploaded],
+    [capture.accepted, client.id, uploadMut, onUploaded],
   );
 
   useEffect(() => {
-    if (phase !== 'uploading') return;
+    if (stage !== 'uploading') return;
     let cancelled = false;
     (async () => {
       for (const v of SCAN_VIEWS) {
@@ -286,7 +104,7 @@ const GuidedFacialScan = ({ client, onUploaded, onComplete, onFallback }: Props)
         }
       }
       if (!cancelled) {
-        setPhase('done');
+        setStage('done');
         toast.success('Facial scan saved to the client record');
         onComplete();
       }
@@ -295,20 +113,11 @@ const GuidedFacialScan = ({ client, onUploaded, onComplete, onFallback }: Props)
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- run once per upload phase entry
-  }, [phase]);
-
-  // Revoke object URLs on unmount.
-  useEffect(() => {
-    return () => {
-      Object.values(accepted).forEach((c) => c && URL.revokeObjectURL(c.url));
-      if (pendingCapture) URL.revokeObjectURL(pendingCapture.url);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [stage]);
 
   // ── Render ──────────────────────────────────────────────────────────────
 
-  if (phase === 'consent') {
+  if (stage === 'consent') {
     return (
       <section className="glass rounded-xl p-6 space-y-5 text-center">
         <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
@@ -330,7 +139,14 @@ const GuidedFacialScan = ({ client, onUploaded, onComplete, onFallback }: Props)
           </p>
         </div>
         <div className="flex flex-col items-center gap-2">
-          <Button type="button" className="glow-primary" onClick={() => setPhase('scanning')}>
+          <Button
+            type="button"
+            className="glow-primary"
+            onClick={() => {
+              setStage('capture');
+              capture.start();
+            }}
+          >
             <Camera className="mr-2 h-4 w-4" aria-hidden /> Start scan
           </Button>
           <Button type="button" variant="ghost" size="sm" onClick={onFallback}>
@@ -341,24 +157,24 @@ const GuidedFacialScan = ({ client, onUploaded, onComplete, onFallback }: Props)
     );
   }
 
-  if (phase === 'scanning' || phase === 'review') {
+  if (stage === 'capture') {
     // Hard camera / model errors get a dedicated state with recovery paths.
-    if (camera.error) {
+    if (capture.camera.error) {
       return (
         <ErrorCard
           title="Camera unavailable"
-          message={camera.error.message}
-          onRetry={camera.retry}
+          message={capture.camera.error.message}
+          onRetry={capture.camera.retry}
           onFallback={onFallback}
         />
       );
     }
-    if (modelError) {
+    if (capture.modelError) {
       return (
         <ErrorCard
           title="Alignment model unavailable"
-          message={modelError}
-          onRetry={retryModel}
+          message={capture.modelError}
+          onRetry={capture.retryModel}
           onFallback={onFallback}
         />
       );
@@ -366,31 +182,35 @@ const GuidedFacialScan = ({ client, onUploaded, onComplete, onFallback }: Props)
     return (
       <section className="glass rounded-xl p-4 sm:p-6">
         <ScanStage
-          videoRef={camera.videoRef}
-          mirrored={camera.facingMode === 'user'}
-          guidance={guidance}
-          stability={stability}
-          currentView={currentView}
+          videoRef={capture.camera.videoRef}
+          mirrored={capture.camera.facingMode === 'user'}
+          guidance={capture.guidance}
+          stability={capture.stability}
+          currentView={capture.currentView}
           accepted={Object.fromEntries(
-            Object.entries(accepted).map(([k, v]) => [k, v!.url]),
+            Object.entries(capture.accepted).map(([k, v]) => [k, v!.url]),
           )}
-          canSwitch={camera.canSwitch}
-          reducedMotion={reducedMotion}
-          detecting={detecting}
-          busy={modelLoading || camera.starting}
-          busyLabel={camera.starting ? 'Starting the camera…' : 'Preparing alignment checks…'}
-          reviewUrl={phase === 'review' ? pendingCapture?.url ?? null : null}
-          onManualCapture={() => void beginCapture(currentView)}
-          onToggleCamera={camera.toggleFacing}
+          canSwitch={capture.camera.canSwitch}
+          reducedMotion={capture.reducedMotion}
+          detecting={capture.detecting}
+          busy={capture.modelLoading || capture.camera.starting}
+          busyLabel={capture.camera.starting ? 'Starting the camera…' : 'Preparing alignment checks…'}
+          reviewUrl={capture.phase === 'review' ? capture.pendingCapture?.url ?? null : null}
+          onManualCapture={() => {
+            void capture.captureNow().then((ok) => {
+              if (!ok) toast.error('Could not read the camera frame — try again.');
+            });
+          }}
+          onToggleCamera={capture.camera.toggleFacing}
           onCancel={handleCancelScan}
-          onRetake={handleRetake}
-          onAccept={handleAccept}
+          onRetake={capture.retake}
+          onAccept={capture.accept}
         />
       </section>
     );
   }
 
-  if (phase === 'uploading') {
+  if (stage === 'uploading') {
     return (
       <section className="glass rounded-xl p-6 space-y-4">
         <h2 className="text-sm font-semibold text-foreground flex items-center gap-2">
