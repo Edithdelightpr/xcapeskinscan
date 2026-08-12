@@ -12172,6 +12172,22 @@ export type Database = {
             }
             Returns: Json
           }
+      create_public_analysis_session: {
+        Args: {
+          _capture_method: string
+          _ip_hmac: string
+          _max_per_hour: number
+          _purge_seconds: number
+          _token_hash: string
+          _ttl_seconds: number
+          _ua_hmac: string
+        }
+        Returns: {
+          expires_at: string
+          rate_limited: boolean
+          session_id: string
+        }[]
+      }
       current_impersonation: {
         Args: never
         Returns: {

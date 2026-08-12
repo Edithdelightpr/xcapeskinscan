@@ -1,0 +1,194 @@
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { AlertTriangle, ImageUp, Loader2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import ScanStage from '@/components/xcape/scan/ScanStage';
+import { useGuidedCapture } from '@/components/xcape/scan/useGuidedCapture';
+import { SCAN_VIEWS, type ScanViewId } from '@/lib/scan/scanQuality';
+import { uploadAndVerifyView, type PublicViewId } from '@/lib/publicAnalysisSession';
+
+/** How long a view may stall before the manual shutter is revealed. */
+export const MANUAL_REVEAL_MS = 20_000;
+
+interface Props {
+  token: string;
+  /** Views already verified on the server (resumed session). */
+  initialVerified?: PublicViewId[];
+  onAllVerified: () => void;
+  onSwitchToUpload: () => void;
+  onSessionExpired: (message: string) => void;
+}
+
+/**
+ * Public automatic capture: the visitor is never asked to press a shutter.
+ * The shared guided-capture hook auto-captures when every on-device quality
+ * gate holds steady; the still is then uploaded and VERIFIED SERVER-SIDE
+ * before the flow advances. A server rejection returns to the live camera
+ * with plain-language guidance — the browser check alone never counts.
+ */
+const PublicCaptureStage = ({
+  token,
+  initialVerified = [],
+  onAllVerified,
+  onSwitchToUpload,
+  onSessionExpired,
+}: Props) => {
+  const capture = useGuidedCapture({ active: true, enforceQualityOnManual: true });
+  const [verifying, setVerifying] = useState(false);
+  const [rejection, setRejection] = useState<string | null>(null);
+  const [showManual, setShowManual] = useState(false);
+  const [attempts, setAttempts] = useState(0);
+  const startedRef = useRef(false);
+  const verifiedRef = useRef<Set<string>>(new Set(initialVerified));
+  const doneRef = useRef(false);
+
+  // Enter the live stage immediately — consent was captured on the intro step.
+  useEffect(() => {
+    if (!startedRef.current) {
+      startedRef.current = true;
+      capture.start();
+    }
+  }, [capture]);
+
+  // Reveal the manual shutter only after a stalled view.
+  useEffect(() => {
+    if (capture.phase !== 'scanning') return;
+    setShowManual(false);
+    const t = window.setTimeout(() => setShowManual(true), MANUAL_REVEAL_MS);
+    return () => window.clearTimeout(t);
+  }, [capture.phase, capture.currentView, attempts]);
+
+  const { pendingCapture, accept, retake } = capture;
+
+  const verifyPending = useCallback(async () => {
+    if (!pendingCapture || verifying) return;
+    setVerifying(true);
+    setRejection(null);
+    try {
+      const res = await uploadAndVerifyView({
+        token,
+        view: pendingCapture.view as PublicViewId,
+        file: pendingCapture.blob,
+        source: 'camera',
+      });
+      if (res.ok) {
+        verifiedRef.current.add(pendingCapture.view);
+        const all = SCAN_VIEWS.every((v) => verifiedRef.current.has(v.id));
+        accept();
+        if (all && !doneRef.current) {
+          doneRef.current = true;
+          onAllVerified();
+        }
+      } else {
+        setRejection(res.guidance ?? 'That photo could not be used. Please try again.');
+        setAttempts((a) => a + 1);
+        retake();
+      }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Something went wrong.';
+      onSessionExpired(msg);
+    } finally {
+      setVerifying(false);
+    }
+  }, [pendingCapture, verifying, token, accept, retake, onAllVerified, onSessionExpired]);
+
+  // A capture is verified as soon as it exists — no manual confirmation step.
+  useEffect(() => {
+    if (pendingCapture) void verifyPending();
+  }, [pendingCapture, verifyPending]);
+
+  const acceptedUrls = Object.fromEntries(
+    Object.entries(capture.accepted).map(([k, v]) => [k, v!.url]),
+  ) as Partial<Record<ScanViewId, string>>;
+
+  const cameraFailed = !!capture.camera.error;
+
+  if (cameraFailed) {
+    return (
+      <div className="mx-auto w-full max-w-lg space-y-5 text-center">
+        <AlertTriangle className="mx-auto h-8 w-8 text-foreground" aria-hidden />
+        <h2 className="text-xl font-semibold text-foreground">The camera could not be used</h2>
+        <p role="alert" className="text-sm text-muted-foreground">
+          {capture.camera.error?.message}
+        </p>
+        <div className="space-y-3">
+          <Button className="min-h-[44px] w-full" onClick={() => capture.camera.retry()}>
+            Try the camera again
+          </Button>
+          <Button variant="outline" className="min-h-[44px] w-full" onClick={onSwitchToUpload}>
+            <ImageUp className="mr-2 h-4 w-4" aria-hidden />
+            Upload photos instead
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mx-auto w-full max-w-lg space-y-4">
+      <ScanStage
+        variant="public"
+        videoRef={capture.camera.videoRef}
+        mirrored={capture.camera.facingMode === 'user'}
+        guidance={capture.guidance}
+        stability={capture.stability}
+        currentView={capture.currentView}
+        accepted={acceptedUrls}
+        canSwitch={capture.camera.canSwitch}
+        reducedMotion={capture.reducedMotion}
+        detecting={capture.detecting}
+        busy={capture.modelLoading || !capture.camera.ready || verifying}
+        busyLabel={
+          verifying
+            ? 'Checking your photo…'
+            : capture.modelLoading
+              ? 'Preparing the guide…'
+              : 'Starting camera…'
+        }
+        reviewUrl={null}
+        showManualCapture={showManual && !verifying}
+        onManualCapture={() => void capture.captureNow()}
+        onToggleCamera={capture.camera.toggleFacing}
+        onCancel={onSwitchToUpload}
+        onRetake={capture.retake}
+        onAccept={capture.accept}
+      />
+
+      <div aria-live="polite" className="min-h-[1.25rem] text-center">
+        {verifying && (
+          <p className="inline-flex items-center gap-2 text-sm text-muted-foreground">
+            <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
+            Checking your photo…
+          </p>
+        )}
+        {!verifying && rejection && (
+          <p role="alert" className="text-sm font-medium text-destructive">
+            {rejection}
+          </p>
+        )}
+      </div>
+
+      {capture.modelError && (
+        <p className="text-center text-xs text-muted-foreground">
+          The on-screen guide is unavailable.{' '}
+          <button type="button" className="underline" onClick={capture.retryModel}>
+            Retry
+          </button>{' '}
+          or{' '}
+          <button type="button" className="underline" onClick={onSwitchToUpload}>
+            upload photos instead
+          </button>
+          .
+        </p>
+      )}
+
+      <p className="text-center text-xs text-muted-foreground">
+        Having trouble?{' '}
+        <button type="button" className="min-h-[44px] underline" onClick={onSwitchToUpload}>
+          Upload photos instead
+        </button>
+      </p>
+    </div>
+  );
+};
+
+export default PublicCaptureStage;

@@ -55,7 +55,12 @@ Deno.serve(async (req) => {
     if (body.image_processing_consent !== true) {
       return json({ error: 'Image-processing consent is required to start an analysis.' }, 400);
     }
-    const captureMethod = body.capture_method === 'upload' ? 'upload' : 'camera';
+    // Fail closed: an absent or unrecognised capture_method is rejected —
+    // never silently defaulted.
+    if (body.capture_method !== 'camera' && body.capture_method !== 'upload') {
+      return json({ error: "capture_method must be 'camera' or 'upload'." }, 400);
+    }
+    const captureMethod = body.capture_method;
     if (captureMethod === 'camera' && body.camera_consent !== true) {
       return json({ error: 'Camera consent is required to use the camera.' }, 400);
     }
@@ -67,56 +72,51 @@ Deno.serve(async (req) => {
       auth: { autoRefreshToken: false, persistSession: false },
     });
 
-    const since = new Date(Date.now() - 60 * 60 * 1000).toISOString();
-    const { count, error: countErr } = await admin
-      .from('public_analysis_sessions')
-      .select('id', { count: 'exact', head: true })
-      .eq('ip_hmac', ip_hmac)
-      .gte('created_at', since);
-    if (countErr) return json({ error: 'Could not start the analysis.' }, 500);
-    if ((count ?? 0) >= MAX_SESSIONS_PER_IP_HOUR) {
-      return json({ error: 'Too many analyses from this connection. Please try again later.' }, 429);
-    }
-
     const token = randomSessionToken();
     const token_hash = await sha256Hex(token);
-    const now = Date.now();
 
-    const { data: row, error } = await admin
-      .from('public_analysis_sessions')
-      .insert({
-        token_hash,
-        status: 'created',
-        phase: 'awaiting_capture',
-        ip_hmac,
-        ua_hmac,
-        capture_method: captureMethod,
-        expires_at: new Date(now + SESSION_TTL_MS).toISOString(),
-        purge_at: new Date(now + SESSION_PURGE_MS).toISOString(),
-      })
-      .select('id, expires_at')
-      .single();
+    // Atomic, advisory-locked create: the hourly per-IP ceiling cannot be
+    // bypassed by concurrent session-start requests.
+    const { data: created, error } = await admin.rpc('create_public_analysis_session', {
+      _token_hash: token_hash,
+      _ip_hmac: ip_hmac,
+      _ua_hmac: ua_hmac,
+      _capture_method: captureMethod,
+      _ttl_seconds: Math.floor(SESSION_TTL_MS / 1000),
+      _purge_seconds: Math.floor(SESSION_PURGE_MS / 1000),
+      _max_per_hour: MAX_SESSIONS_PER_IP_HOUR,
+    });
+    const row = Array.isArray(created) ? created[0] : created;
     if (error || !row) return json({ error: 'Could not start the analysis.' }, 500);
+    if (row.rate_limited) {
+      return json({ error: 'Too many analyses from this connection. Please try again later.' }, 429);
+    }
+    const sessionId = row.session_id as string;
 
     // image_processing is always recorded; camera consent ONLY when the
     // camera method was selected (the upload fallback must not fake it).
     const consents = [
       {
-        session_id: row.id,
+        session_id: sessionId,
         consent_type: 'image_processing',
         granted: true,
         ip_hmac,
         evidence: { surface: 'public_skin_analysis', version: 'v1', capture_method: captureMethod },
       },
       {
-        session_id: row.id,
+        session_id: sessionId,
         consent_type: captureMethod === 'camera' ? 'camera' : 'upload',
         granted: true,
         ip_hmac,
         evidence: { surface: 'public_skin_analysis', version: 'v1' },
       },
     ];
-    await admin.from('public_analysis_consents').insert(consents);
+    const { error: consentErr } = await admin.from('public_analysis_consents').insert(consents);
+    if (consentErr) {
+      // Fail closed: a session may never exist without its consent record.
+      await admin.from('public_analysis_sessions').delete().eq('id', sessionId);
+      return json({ error: 'Could not record your consent. Please try again.' }, 500);
+    }
 
     // The session id is deliberately NOT returned — every later call resolves
     // it from the token hash server-side.

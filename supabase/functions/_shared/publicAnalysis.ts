@@ -87,10 +87,19 @@ export function randomSessionToken(): string {
     .replace(/=+$/, '');
 }
 
+/**
+ * Visitor IP for pseudonymised rate limiting.
+ *
+ * The platform-set `cf-connecting-ip` is trusted first because it cannot be
+ * forged by the client; `x-forwarded-for` is only a last-resort fallback.
+ */
 export function clientIp(req: Request): string {
+  const trusted = req.headers.get('cf-connecting-ip')?.trim();
+  if (trusted) return trusted;
   const fwd = req.headers.get('x-forwarded-for') ?? '';
-  return fwd.split(',')[0]?.trim() || req.headers.get('cf-connecting-ip') || 'unknown';
+  return fwd.split(',')[0]?.trim() || 'unknown';
 }
+
 
 /** Storage object path for a view. Always derived from the session id. */
 export function objectPath(sessionId: string, view: ViewId): string {
@@ -99,4 +108,72 @@ export function objectPath(sessionId: string, view: ViewId): string {
 
 export function isViewId(v: unknown): v is ViewId {
   return typeof v === 'string' && (VIEWS as readonly string[]).includes(v);
+}
+
+/* ------------------------------------------------------------------ */
+/* Server-side verification constants (P2)                             */
+/* ------------------------------------------------------------------ */
+
+/** Minimum usable pixel dimensions of a verified view. */
+export const MIN_IMAGE_DIM = 480;
+/** Longest edge of the normalized JPEG stored after verification. */
+export const NORMALIZED_MAX_DIM = 1600;
+export const NORMALIZED_MIME = 'image/jpeg';
+
+/** Lighting / sharpness floors, mirroring the browser gates. */
+export const SERVER_THRESHOLDS = {
+  minBrightness: 45,
+  maxBrightness: 245,
+  minSharpness: 4,
+} as const;
+
+/** Structured, safe guidance codes returned to the anonymous visitor. */
+export type VerifyCode =
+  | 'ok'
+  | 'missing_upload'
+  | 'too_large'
+  | 'unsupported_format'
+  | 'corrupt_image'
+  | 'too_small'
+  | 'no_face'
+  | 'multiple_faces'
+  | 'wrong_pose'
+  | 'lighting_low'
+  | 'lighting_glare'
+  | 'blurry'
+  | 'verification_unavailable';
+
+export const VERIFY_GUIDANCE: Record<VerifyCode, string> = {
+  ok: 'Looks good.',
+  missing_upload: 'We did not receive that photo. Please try again.',
+  too_large: 'That image is too large. Use a photo under 8 MB.',
+  unsupported_format: 'Use a JPEG or PNG photo taken with a normal camera.',
+  corrupt_image: 'That file could not be read. Please retake or choose another photo.',
+  too_small: 'That photo is too small. Use a larger, closer photo of your face.',
+  no_face: 'No face was detected. Make sure your whole face is visible.',
+  multiple_faces: 'Only one face should be in the photo.',
+  wrong_pose: 'The head position does not match this view. Follow the on-screen guide.',
+  lighting_low: 'Too dark — move to brighter, even light.',
+  lighting_glare: 'Too bright — reduce glare or direct light.',
+  blurry: 'The photo is blurry. Hold still and try again.',
+  verification_unavailable: 'We could not check that image right now. Please try again.',
+};
+
+/** Detects the real container from magic bytes (never the supplied MIME). */
+export function sniffImageMime(bytes: Uint8Array): 'image/jpeg' | 'image/png' | null {
+  if (bytes.length > 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) {
+    return 'image/jpeg';
+  }
+  if (
+    bytes.length > 8 &&
+    bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47 &&
+    bytes[4] === 0x0d && bytes[5] === 0x0a && bytes[6] === 0x1a && bytes[7] === 0x0a
+  ) {
+    return 'image/png';
+  }
+  return null;
+}
+
+export function isCaptureSource(v: unknown): v is 'camera' | 'upload' {
+  return v === 'camera' || v === 'upload';
 }
