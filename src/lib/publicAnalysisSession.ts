@@ -5,6 +5,7 @@ import {
   type PublicScoreKey,
   type PublicScores,
 } from '@/lib/publicAnalysisScores';
+import { sanitizeReportPayload, type PublicAnalysisReport } from '@/lib/publicAnalysisReport';
 /**
  * Client for the anonymous XCAPE public skin-analysis session.
  *
