@@ -61,10 +61,7 @@ export function runIdempotencyKey(): string {
   } catch {
     /* ignore */
   }
-  const key =
-    typeof crypto !== 'undefined' && 'randomUUID' in crypto
-      ? crypto.randomUUID()
-      : `run-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+  const key = freshKey();
   try {
     sessionStorage.setItem(RUN_KEY, key);
   } catch {
@@ -72,6 +69,24 @@ export function runIdempotencyKey(): string {
   }
   return key;
 }
+
+function freshKey(): string {
+  return typeof crypto !== 'undefined' && 'randomUUID' in crypto
+    ? crypto.randomUUID()
+    : `run-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+/** A new key for an explicit visitor retry only. */
+export function newRunIdempotencyKey(): string {
+  const key = freshKey();
+  try {
+    sessionStorage.setItem(RUN_KEY, key);
+  } catch {
+    /* ignore */
+  }
+  return key;
+}
+
 
 
 export interface StartResult {
