@@ -12,6 +12,8 @@ import {
   type PublicScores,
 } from '@/lib/publicAnalysisScores';
 import { SCAN_VIEWS, type ScanViewId } from '@/lib/scan/scanQuality';
+import PublicConcernBreakdown from '@/components/xcape/public/PublicConcernBreakdown';
+import { concernsFromReport, type PublicAnalysisReport } from '@/lib/publicAnalysisReport';
 
 interface Props {
   photoUrl: string | null;
@@ -20,6 +22,9 @@ interface Props {
   /** Server-named weakest area; falls back to the lowest local score. */
   priority?: PublicScoreKey | null;
   capturedViews?: ScanViewId[];
+  /** Full engine report content; null while loading or unavailable. */
+  report?: PublicAnalysisReport | null;
+  reportLoading?: boolean;
   onRestart: () => void;
 }
 
@@ -28,8 +33,17 @@ interface Props {
  * single priority area. Delivery by WhatsApp or email is not wired yet —
  * nothing here promises a send that cannot happen.
  */
-const PublicReportStage = ({ photoUrl, scores, priority, capturedViews = [], onRestart }: Props) => {
+const PublicReportStage = ({
+  photoUrl,
+  scores,
+  priority,
+  capturedViews = [],
+  report = null,
+  reportLoading = false,
+  onRestart,
+}: Props) => {
   const key = priority ?? priorityFromScores(scores);
+  const concerns = concernsFromReport(report);
 
   return (
     <section
@@ -87,6 +101,60 @@ const PublicReportStage = ({ photoUrl, scores, priority, capturedViews = [], onR
                 Priority detected: {PUBLIC_SCORE_LABEL[key]}
               </p>
               <p className="mt-1.5 text-sm text-slate-200">{PUBLIC_SCORE_PRIORITY_NOTE[key]}</p>
+            </div>
+          )}
+
+          {reportLoading && concerns.length === 0 && (
+            <p className="text-sm text-slate-400">Preparing your detailed breakdown…</p>
+          )}
+
+          <PublicConcernBreakdown concerns={concerns} report={report} />
+
+          {report && (report.combinedInterpretation || report.homeCareDirections.length > 0) && (
+            <div className="space-y-4 rounded-2xl border border-slate-700/80 bg-slate-900/40 p-4">
+              {report.combinedInterpretation && (
+                <div className="space-y-1">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+                    Overall reading
+                    {report.overallSkinStability != null && (
+                      <span className="ml-2 text-slate-300">
+                        {report.overallSkinStability}/100 stability
+                      </span>
+                    )}
+                  </p>
+                  <p className="text-sm leading-relaxed text-slate-200">
+                    {report.combinedInterpretation}
+                  </p>
+                </div>
+              )}
+              {report.homeCareDirections.length > 0 && (
+                <div className="space-y-1.5">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+                    Home-care direction
+                  </p>
+                  <ul className="list-disc space-y-1 pl-4 text-sm text-slate-200">
+                    {report.homeCareDirections.map((d) => (
+                      <li key={d}>{d}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {report.treatmentDirections.length > 0 && (
+                <div className="space-y-1.5">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+                    In-clinic direction
+                  </p>
+                  <ul className="list-disc space-y-1 pl-4 text-sm text-slate-200">
+                    {report.treatmentDirections.map((d) => (
+                      <li key={d}>{d}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              <p className="text-xs text-slate-500">
+                Your personalised XCAPE kit formula is confirmed by a practitioner before it is
+                prepared.
+              </p>
             </div>
           )}
 
