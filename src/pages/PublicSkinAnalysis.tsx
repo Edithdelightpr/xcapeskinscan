@@ -8,7 +8,8 @@ import PublicCaptureStage from '@/components/xcape/public/PublicCaptureStage';
 import PublicUploadFallback from '@/components/xcape/public/PublicUploadFallback';
 import AnalysisScanAnimation from '@/components/xcape/public/AnalysisScanAnimation';
 import PublicReportStage from '@/components/xcape/public/PublicReportStage';
-import type { PublicScoreKey, PublicScores } from '@/lib/publicAnalysisScores';
+import { priorityFromScores, type PublicScoreKey, type PublicScores } from '@/lib/publicAnalysisScores';
+import { scoresFromReport, type PublicAnalysisReport } from '@/lib/publicAnalysisReport';
 import { isAnalysisPhase, type AnalysisPhase } from '@/lib/analysisPhases';
 import {
   PUBLIC_VIEWS,
