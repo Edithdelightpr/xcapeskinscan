@@ -115,6 +115,34 @@ const PublicSkinAnalysis = () => {
     return null;
   }, []);
 
+  // ── The finished report content is fetched once the run is complete ──
+  useEffect(() => {
+    if (stage !== 'analyzed' || !token || report) return;
+    let cancelled = false;
+    setReportLoading(true);
+    void (async () => {
+      try {
+        const r = await fetchReport(token);
+        if (cancelled) return;
+        setReport(r);
+        const s = scoresFromReport(r);
+        if (s) {
+          setScores(s);
+          setPriority((prev) => prev ?? priorityFromScores(s));
+        }
+      } catch {
+        // Non-fatal: the meters still render from the status payload.
+        if (!cancelled) setReport(null);
+      } finally {
+        if (!cancelled) setReportLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [stage, token, report]);
+
+
   // ── Resume: a stored token is checked before any new session is created ──
   useEffect(() => {
     if (stage !== 'resuming') return;
