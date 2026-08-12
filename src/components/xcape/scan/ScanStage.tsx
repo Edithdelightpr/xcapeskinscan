@@ -19,6 +19,14 @@ interface Props {
   busyLabel: string;
   /** When set, the captured still is shown over the live video for review. */
   reviewUrl: string | null;
+  /**
+   * Presentation only. `staff` (default) is the existing purple workspace
+   * chrome; `public` matches the monochrome `.xcape-public` landing system.
+   * No behaviour differs between variants.
+   */
+  variant?: 'staff' | 'public';
+  /** Manual shutter visibility. Public flow hides it until capture stalls. */
+  showManualCapture?: boolean;
   onManualCapture: () => void;
   onToggleCamera: () => void;
   onCancel: () => void;
@@ -46,6 +54,8 @@ const ScanStage = ({
   busy,
   busyLabel,
   reviewUrl,
+  variant = 'staff',
+  showManualCapture = true,
   onManualCapture,
   onToggleCamera,
   onCancel,
@@ -53,8 +63,10 @@ const ScanStage = ({
   onAccept,
 }: Props) => {
   const viewMeta = SCAN_VIEWS.find((v) => v.id === currentView)!;
+  const isPublic = variant === 'public';
   // Map stability progress onto a 3-2-1 style indicator.
   const countdown = stability > 0 ? Math.max(1, 3 - Math.floor(stability * 3)) : null;
+
 
   return (
     <div className="space-y-3">
