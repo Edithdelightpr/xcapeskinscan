@@ -62,7 +62,7 @@ export function XcapeLandingNav() {
           <Link
             to={XCAPE_DEMO_PATH}
             tabIndex={shown ? 0 : -1}
-            aria-label="Try the free XCAPE skin analysis demo — no signup required"
+            title="Free skin analysis demo — no signup required"
             className="inline-flex min-h-[44px] items-center rounded-full bg-foreground px-4 text-sm font-medium text-background transition-opacity hover:opacity-85 md:hidden"
           >
             {XCAPE_DEMO_CTA_SHORT}
