@@ -228,6 +228,7 @@ const AnalysisScanAnimation = ({ photoUrl, phase }: Props) => {
           ))}
         </ul>
       </div>
+      </div>
     </section>
   );
 };
