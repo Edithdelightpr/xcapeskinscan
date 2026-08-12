@@ -142,11 +142,14 @@ const PublicCaptureStage = ({
   return (
     <div className="grid w-full gap-6 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start">
       <div className="space-y-4">
-      <div className="space-y-1">
-        <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">Step 1 of 3</p>
+      <div className="space-y-3">
         <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
           Look at the camera. We&apos;ll do the rest.
         </h1>
+        <p className="inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-900">
+          <span className="h-1.5 w-1.5 rounded-full bg-amber-500" aria-hidden />
+          Capture {Math.min(verifiedViews.length + 1, SCAN_VIEWS.length)} of {SCAN_VIEWS.length} · automatic
+        </p>
       </div>
       <ScanStage
         variant="public"
