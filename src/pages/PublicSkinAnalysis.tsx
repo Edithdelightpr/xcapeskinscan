@@ -65,6 +65,9 @@ const PublicSkinAnalysis = () => {
   const [frontUrl, setFrontUrl] = useState<string | null>(null);
   const frontUrlRef = useRef<string | null>(null);
   const analysisStartedAt = useRef<number | null>(null);
+  /** Set only by the visitor's explicit "Try again" action. */
+  const retryRequested = useRef(false);
+
 
   const setFrontFrame = useCallback((blob: Blob) => {
     if (frontUrlRef.current) URL.revokeObjectURL(frontUrlRef.current);

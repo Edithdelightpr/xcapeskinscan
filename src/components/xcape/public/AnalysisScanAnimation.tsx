@@ -1,7 +1,8 @@
 import { useMemo } from 'react';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { cn } from '@/lib/utils';
-import xcapeLogoGold from '@/assets/xcape-logo-gold.png';
+import xcapeWordmark from '@/assets/xcape-logo-black.png';
+
 
 /** The real backend phases — the UI never invents one. */
 export type AnalysisPhase =
