@@ -225,6 +225,7 @@ export function sanitizeStatusPayload(raw: unknown): PublicAnalysisStatus {
         ? row.capture_method
         : null,
     expires_at: typeof row.expires_at === 'string' ? row.expires_at : null,
+    recoverable_stale: row.recoverable_stale === true,
   };
 }
 
