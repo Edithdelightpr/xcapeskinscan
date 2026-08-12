@@ -128,9 +128,13 @@ const AnalysisScanAnimation = ({ photoUrl, phase }: Props) => {
       aria-label="XCAPE skin analysis in progress"
     >
       <div className="mb-6 flex items-center justify-between gap-3">
-        <img src={xcapeLogoGold} alt="XCAPE" className="h-5 w-auto opacity-90" />
+        {/* The exact black wordmark inside a restrained white surface. */}
+        <span className="inline-flex items-center rounded-md bg-white px-2.5 py-1.5">
+          <img src={xcapeWordmark} alt="XCAPE" className="h-4 w-auto" />
+        </span>
         <span className="text-[11px] uppercase tracking-[0.18em] text-slate-400">Analysis</span>
       </div>
+
 
       {/* Portrait frame */}
       <div className="relative mx-auto aspect-[4/5] w-full max-w-sm overflow-hidden rounded-2xl border border-slate-700/70 bg-[#0f1113]">
