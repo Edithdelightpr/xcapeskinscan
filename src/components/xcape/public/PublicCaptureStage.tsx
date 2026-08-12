@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { AlertTriangle, ImageUp, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import ScanStage from '@/components/xcape/scan/ScanStage';
+import PublicFlowPanel from '@/components/xcape/public/PublicFlowPanel';
 import { useGuidedCapture } from '@/components/xcape/scan/useGuidedCapture';
 import { SCAN_VIEWS, type ScanViewId } from '@/lib/scan/scanQuality';
 import {
