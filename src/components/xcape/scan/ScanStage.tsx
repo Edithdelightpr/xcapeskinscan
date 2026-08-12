@@ -97,7 +97,15 @@ const ScanStage = ({
       </div>
 
       {/* Camera stage */}
-      <div className="relative mx-auto w-full max-w-md overflow-hidden rounded-2xl border border-border/50 bg-black/80 aspect-[3/4]">
+      <div
+        className={cn(
+          'relative mx-auto w-full overflow-hidden border aspect-[3/4]',
+          isPublic
+            ? 'max-w-lg rounded-3xl border-black/10 bg-neutral-900'
+            : 'max-w-md rounded-2xl border-border/50 bg-black/80',
+        )}
+      >
+
         <video
           ref={videoRef}
           playsInline
