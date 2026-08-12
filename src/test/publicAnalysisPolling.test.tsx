@@ -115,7 +115,9 @@ describe('public analysis polling', () => {
     fetchStatus.mockResolvedValue(status({ recoverable_stale: true }));
     renderPage();
 
-    await waitFor(() => expect(startAnalysis).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(fetchStatus).toHaveBeenCalled());
+    for (let i = 0; i < 5; i++) await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS);
+    expect(startAnalysis).toHaveBeenCalledTimes(1);
     // The stable idempotency key is used: no retry flag, no fresh key.
     expect(startAnalysis).toHaveBeenCalledWith(expect.any(String));
 
