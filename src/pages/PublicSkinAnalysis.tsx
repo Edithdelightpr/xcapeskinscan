@@ -402,7 +402,7 @@ const PublicSkinAnalysis = () => {
         </div>
       </header>
 
-      <main className="mx-auto max-w-6xl px-5 py-8 sm:py-12">
+      <main className="mx-auto max-w-6xl px-4 py-6 sm:px-5 sm:py-12">
         {/* Bot honeypot — visually hidden, never focusable */}
         <input
           type="text"

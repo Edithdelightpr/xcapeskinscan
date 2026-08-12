@@ -96,7 +96,7 @@ const PublicScanPortrait = ({ photoUrl, scanning = false, className }: Props) =>
   return (
     <div
       className={cn(
-        'relative mx-auto aspect-[4/5] w-full overflow-hidden rounded-2xl border border-slate-700/70 bg-[#0f1113]',
+        'relative mx-auto aspect-[4/5] w-full max-w-[15rem] overflow-hidden rounded-2xl border border-slate-700/70 bg-[#0f1113] sm:max-w-none',
         className,
       )}
     >

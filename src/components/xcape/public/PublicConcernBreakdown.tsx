@@ -61,32 +61,36 @@ const PublicConcernBreakdown = ({ concerns, report, className }: Props) => {
               value={c.key}
               className="overflow-hidden rounded-2xl border border-slate-700/80 bg-slate-900/40 px-0"
             >
-              <AccordionTrigger className="group gap-3 px-4 py-3.5 text-left hover:no-underline [&>svg:last-child]:hidden">
-                <span className="flex min-w-0 flex-1 flex-col gap-1">
-                  <span className="truncate text-sm font-semibold text-slate-100">
-                    {c.clinicalName}
+              <AccordionTrigger className="group items-start gap-3 px-3.5 py-3 text-left hover:no-underline sm:px-4 sm:py-3.5 [&>svg:last-child]:hidden">
+                <span className="flex min-w-0 flex-1 flex-col gap-1.5">
+                  <span className="flex min-w-0 items-center gap-2">
+                    <span className="min-w-0 flex-1 text-sm font-semibold text-slate-100">
+                      {c.clinicalName}
+                    </span>
+                    <span className="shrink-0 text-sm font-semibold tabular-nums text-slate-100">
+                      {c.score}
+                    </span>
+                    <ChevronDown
+                      className="h-4 w-4 shrink-0 text-slate-400 transition-transform duration-200 group-data-[state=open]:rotate-180"
+                      aria-hidden
+                    />
                   </span>
-                  <span className="truncate text-xs text-slate-400">{c.plainDescription}</span>
-                </span>
-                <span className="flex shrink-0 items-center gap-2">
-                  <span
-                    className={cn(
-                      'rounded-full border px-2 py-0.5 text-[11px] font-medium',
-                      BAND_STYLE[c.band],
-                    )}
-                  >
-                    {c.bandLabel}
+                  <span className="flex min-w-0 flex-col items-start gap-1.5 sm:flex-row sm:items-center sm:gap-2">
+                    <span
+                      className={cn(
+                        'shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-medium',
+                        BAND_STYLE[c.band],
+                      )}
+                    >
+                      {c.bandLabel}
+                    </span>
+                    <span className="min-w-0 flex-1 text-xs leading-snug text-slate-400">
+                      {c.plainDescription}
+                    </span>
                   </span>
-                  <span className="text-sm font-semibold tabular-nums text-slate-100">
-                    {c.score}
-                  </span>
-                  <ChevronDown
-                    className="h-4 w-4 text-slate-400 transition-transform duration-200 group-data-[state=open]:rotate-180"
-                    aria-hidden
-                  />
                 </span>
               </AccordionTrigger>
-              <AccordionContent className="space-y-4 border-t border-slate-800 px-4 pb-4 pt-4">
+              <AccordionContent className="space-y-4 border-t border-slate-800 px-3.5 pb-4 pt-4 sm:px-4">
                 {observation && (
                   <div className="rounded-xl border border-slate-700/70 bg-slate-800/40 p-3">
                     <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">

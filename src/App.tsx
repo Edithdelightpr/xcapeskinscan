@@ -16,6 +16,7 @@ import AdminReportPreview from "./pages/AdminReportPreview.tsx";
 import BookAppointment from "./pages/BookAppointment.tsx";
 import PublicScheduling from "./pages/PublicScheduling.tsx";
 import PublicIntake from "./pages/PublicIntake.tsx";
+import ScanPreviewHarness from '@/pages/__ScanPreviewHarness';
 import PublicSkinAnalysis from "./pages/PublicSkinAnalysis.tsx";
 import SocialMediaIntake from "./pages/SocialMediaIntake.tsx";
 import About from "./pages/About.tsx";
@@ -121,6 +122,7 @@ const App = () => (
             <Route path="/consultation" element={<Consultation />} />
             {/* Public outreach intake — captures leads from QR scans */}
             <Route path="/skin-analysis" element={<PublicSkinAnalysis />} />
+            <Route path="/__scan-preview" element={<ScanPreviewHarness />} />
             <Route path="/intake" element={<PublicIntake />} />
             <Route path="/intake/:slug" element={<PublicIntake />} />
             {/* Social-media / ManyChat campaign intake — separate from outreach */}

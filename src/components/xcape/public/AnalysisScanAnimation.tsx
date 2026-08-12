@@ -33,30 +33,30 @@ const AnalysisScanAnimation = ({ photoUrl, phase, capturedViews = [], onOpenRepo
 
   return (
     <section
-      className="mx-auto w-full max-w-5xl rounded-3xl bg-[#16181b] p-5 text-slate-100 shadow-xl sm:p-8"
+      className="mx-auto w-full max-w-5xl rounded-2xl bg-[#16181b] p-4 text-slate-100 shadow-xl sm:rounded-3xl sm:p-8"
       aria-label="XCAPE skin analysis in progress"
     >
       <PublicStageBreadcrumb active="analyze" />
 
-      <div className="grid gap-8 md:grid-cols-[minmax(0,20rem)_minmax(0,1fr)] md:items-start">
+      <div className="grid gap-6 md:grid-cols-[minmax(0,20rem)_minmax(0,1fr)] md:items-start md:gap-8">
         <div className="space-y-3">
           <PublicScanPortrait photoUrl={photoUrl} scanning={!complete} />
 
-          <ul className="grid grid-cols-3 gap-2">
+          <ul className="grid grid-cols-3 gap-1.5 sm:gap-2">
             {SCAN_VIEWS.map((v) => {
               const done = capturedViews.includes(v.id);
               return (
                 <li
                   key={v.id}
                   className={cn(
-                    'flex items-center justify-center gap-1.5 rounded-xl border px-2 py-1.5 text-[11px]',
+                    'flex min-w-0 items-center justify-center gap-1 rounded-xl border px-1.5 py-1.5 text-[10px] sm:gap-1.5 sm:px-2 sm:text-[11px]',
                     done
                       ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-200'
                       : 'border-slate-700 text-slate-500',
                   )}
                 >
-                  {done && <Check className="h-3 w-3" aria-hidden />}
-                  {v.label}
+                  {done && <Check className="h-3 w-3 shrink-0" aria-hidden />}
+                  <span className="truncate">{v.label}</span>
                 </li>
               );
             })}
