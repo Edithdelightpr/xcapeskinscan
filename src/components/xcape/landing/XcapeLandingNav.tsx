@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import xcapeLogo from '@/assets/xcape-logo-black.png';
+import { XCAPE_DEMO_CTA_SHORT, XCAPE_DEMO_PATH } from '@/lib/xcapeMarketing';
 
 const NAV_LINKS = [
   { label: 'How it works', href: '#how-it-works' },
@@ -48,9 +49,24 @@ export function XcapeLandingNav() {
               {link.label}
             </a>
           ))}
+          <Link
+            to={XCAPE_DEMO_PATH}
+            tabIndex={shown ? 0 : -1}
+            className="inline-flex min-h-[44px] items-center text-sm font-medium text-foreground underline-offset-4 transition-colors hover:underline"
+          >
+            {XCAPE_DEMO_CTA_SHORT}
+          </Link>
         </nav>
 
         <div className="flex items-center gap-2">
+          <Link
+            to={XCAPE_DEMO_PATH}
+            tabIndex={shown ? 0 : -1}
+            title="Free skin analysis demo — no signup required"
+            className="inline-flex min-h-[44px] items-center rounded-full bg-foreground px-4 text-sm font-medium text-background transition-opacity hover:opacity-85 md:hidden"
+          >
+            {XCAPE_DEMO_CTA_SHORT}
+          </Link>
           {loading ? (
             // Fixed-size placeholder prevents layout shift / flicker while the session loads.
             <span className="inline-block h-11 w-24" aria-hidden />

@@ -1,6 +1,12 @@
 import { Link } from 'react-router-dom';
 import { BlurFade } from './BlurFade';
-import { XCAPE_PUBLIC_ROLES, roleAuthHref } from '@/lib/xcapeMarketing';
+import {
+  XCAPE_DEMO_CTA,
+  XCAPE_DEMO_MICROCOPY,
+  XCAPE_DEMO_PATH,
+  XCAPE_PUBLIC_ROLES,
+  roleAuthHref,
+} from '@/lib/xcapeMarketing';
 
 /** Closing conversion: the three explicit role choices, not one ambiguous button. */
 export function XcapeClosingCta() {
@@ -23,6 +29,18 @@ export function XcapeClosingCta() {
               {role.cta}
             </Link>
           ))}
+        </div>
+      </BlurFade>
+
+      <BlurFade delay={0.25}>
+        <div className="mt-10 flex flex-col items-center gap-3">
+          <Link
+            to={XCAPE_DEMO_PATH}
+            className="inline-flex min-h-[48px] w-full items-center justify-center rounded-full bg-foreground px-7 text-base font-medium text-background transition-opacity hover:opacity-85 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foreground sm:w-auto"
+          >
+            {XCAPE_DEMO_CTA}
+          </Link>
+          <p className="text-sm text-muted-foreground">{XCAPE_DEMO_MICROCOPY}</p>
         </div>
       </BlurFade>
     </section>

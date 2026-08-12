@@ -119,3 +119,9 @@ export const clearJoinRole = (): void => {
     /* ignore */
   }
 };
+
+/** Public, no-signup skin-analysis demo entry point. */
+export const XCAPE_DEMO_PATH = '/skin-analysis';
+export const XCAPE_DEMO_CTA = 'Try Free Skin Analysis';
+export const XCAPE_DEMO_CTA_SHORT = 'Try Free Analysis';
+export const XCAPE_DEMO_MICROCOPY = 'No signup required · About 2 minutes.';
