@@ -82,6 +82,13 @@ Deno.serve(async (req) => {
       .from(BUCKET)
       .createSignedUploadUrl(path); // insert-only, no upsert
     if (signErr || !signed) {
+      // Storage refuses a signed upload token for an object that already
+      // exists — a successfully uploaded view can therefore never be
+      // overwritten, only a failed/incomplete one can be re-issued.
+      const msg = (signErr?.message ?? '').toLowerCase();
+      if (msg.includes('exist') || msg.includes('duplicate')) {
+        return json({ error: 'That view has already been uploaded.' }, 409);
+      }
       return json({ error: 'Could not prepare the upload.' }, 500);
     }
 
