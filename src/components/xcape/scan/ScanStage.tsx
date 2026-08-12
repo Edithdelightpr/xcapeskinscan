@@ -223,9 +223,12 @@ const ScanStage = ({
       {/* Controls */}
       {!reviewUrl && (
         <div className="flex flex-wrap items-center justify-center gap-2">
-          <Button type="button" variant="outline" size="sm" onClick={onManualCapture}>
-            <Camera className="w-4 h-4 mr-1.5" aria-hidden /> Capture now
-          </Button>
+          {showManualCapture && (
+            <Button type="button" variant="outline" size="sm" onClick={onManualCapture}>
+              <Camera className="w-4 h-4 mr-1.5" aria-hidden /> Capture now
+            </Button>
+          )}
+
           {canSwitch && (
             <Button type="button" variant="outline" size="sm" onClick={onToggleCamera}>
               <SwitchCamera className="w-4 h-4 mr-1.5" aria-hidden /> Switch camera
