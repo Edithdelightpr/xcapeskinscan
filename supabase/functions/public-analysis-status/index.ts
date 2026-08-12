@@ -26,6 +26,9 @@ export function sanitizeStatus(row: Record<string, unknown>) {
         ? row.capture_method
         : null,
     expires_at: typeof row.expires_at === 'string' ? row.expires_at : null,
+    // Safe, server-computed recovery signal. It is a boolean only: the worker
+    // lease and heartbeat timestamp never leave the database.
+    recoverable_stale: row.recoverable_stale === true,
   };
 }
 

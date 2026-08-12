@@ -67,6 +67,8 @@ const PublicSkinAnalysis = () => {
   const analysisStartedAt = useRef<number | null>(null);
   /** Set only by the visitor's explicit "Try again" action. */
   const retryRequested = useRef(false);
+  /** At most one server-sanctioned stale recovery claim per analysis mount. */
+  const recoveryClaimed = useRef(false);
 
 
   const setFrontFrame = useCallback((blob: Blob) => {
@@ -229,11 +231,29 @@ const PublicSkinAnalysis = () => {
       return false;
     };
 
+    /**
+     * Bounded recovery: the SERVER decides staleness (`recoverable_stale`),
+     * never a browser timer. When it says the worker that holds the lease has
+     * stopped heartbeating, this makes exactly ONE claim with the stable
+     * idempotency key — not `retry: true`, not a fresh key — and the row lock
+     * plus lease inside `public_analysis_claim_run` remains the authority, so
+     * concurrent tabs still produce a single winner.
+     */
+    const recoverIfStale = async (s: PublicAnalysisStatus): Promise<void> => {
+      if (!s.recoverable_stale || recoveryClaimed.current) return;
+      recoveryClaimed.current = true;
+      const run = await startAnalysis(token);
+      if (cancelled) return;
+      if (isAnalysisPhase(run.phase)) setPhase(run.phase);
+    };
+
     const poll = async () => {
       try {
         const s = await fetchStatus(token);
         if (cancelled) return;
         if (applyPolled(s)) return;
+        await recoverIfStale(s);
+        if (cancelled) return;
         timer = window.setTimeout(() => void poll(), POLL_INTERVAL_MS);
       } catch (e) {
         if (cancelled) return;
@@ -273,8 +293,10 @@ const PublicSkinAnalysis = () => {
           const run = await startAnalysis(token, { retry });
           if (cancelled) return;
           if (isAnalysisPhase(run.phase)) setPhase(run.phase);
-        } else if (applyPolled(s)) {
-          return;
+        } else {
+          if (applyPolled(s)) return;
+          await recoverIfStale(s);
+          if (cancelled) return;
         }
         timer = window.setTimeout(() => void poll(), POLL_INTERVAL_MS);
       } catch (e) {
@@ -295,6 +317,7 @@ const PublicSkinAnalysis = () => {
     setAnalysisError(null);
     setPhase(null);
     retryRequested.current = true;
+    recoveryClaimed.current = false;
     analysisStartedAt.current = Date.now();
     setStage('analyzing');
   }, []);
