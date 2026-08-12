@@ -1,7 +1,9 @@
 import { useState } from 'react';
-import { Camera, ImageUp, Loader2, ShieldCheck, Timer, Trash2 } from 'lucide-react';
+import { Camera, ImageUp, Loader2, Lock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
+import { cn } from '@/lib/utils';
+import { SCAN_VIEWS } from '@/lib/scan/scanQuality';
 
 interface Props {
   starting: boolean;
@@ -10,99 +12,143 @@ interface Props {
   onStart: (method: 'camera' | 'upload') => void;
 }
 
-const POINTS = [
-  {
-    icon: ShieldCheck,
-    text: 'Your photos are sent over an encrypted connection and stored in a private area only the analysis service can read.',
-  },
-  { icon: Trash2, text: 'Original photos are deleted within 24 hours. The anonymous session is deleted after 30 days.' },
-  { icon: Timer, text: 'No account is created and no one is identified. Nothing is posted anywhere.' },
-];
+const STEPS = ['Capture', 'Analyze', 'Report'];
 
 /**
- * Public entry step: explains what happens, takes explicit image-processing
- * consent (and camera consent when the camera is chosen) and carries the
- * medical disclaimer. Nothing starts — no camera, no session — until a
- * choice is made here.
+ * Public entry step: a split start screen that shows the framed camera panel
+ * the visitor is about to use, takes explicit image-processing consent (and
+ * camera consent when the camera is chosen) and carries the medical
+ * disclaimer. Nothing starts — no camera, no session — until a choice is made.
  */
 const PublicScanIntro = ({ starting, error, onStart }: Props) => {
   const [consent, setConsent] = useState(false);
 
   return (
-    <div className="mx-auto w-full max-w-xl space-y-8">
-      <div className="space-y-4 text-center">
-        <h1 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
-          Analyse your skin in about two minutes
+    <div className="grid w-full gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,26rem)] lg:items-center">
+      <div className="space-y-6">
+        <p className="text-xs font-medium uppercase tracking-[0.22em] text-muted-foreground">
+          XCAPE quick analysis
+        </p>
+        <h1 className="text-3xl font-semibold tracking-tight text-foreground sm:text-5xl">
+          Look at the camera. We&apos;ll do the rest.
         </h1>
-        <p className="text-base text-muted-foreground">
-          Three guided photos — front, left and right — produce your four XCAPE skin-health scores and a full
-          personal report. No account needed.
+        <p className="max-w-md text-base text-muted-foreground">
+          We automatically capture your front, left and right views, then produce your four XCAPE
+          skin-health scores in about two minutes. No account needed.
+        </p>
+
+        <ol className="flex flex-wrap items-center gap-3">
+          {STEPS.map((s, i) => (
+            <li key={s} className="flex items-center gap-3">
+              {i > 0 && <span className="h-px w-6 bg-border" aria-hidden />}
+              <span className="flex items-center gap-2 rounded-full border border-border px-3 py-1.5">
+                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-foreground text-[11px] font-semibold text-background">
+                  {i + 1}
+                </span>
+                <span className="text-sm font-medium text-foreground">{s}</span>
+              </span>
+            </li>
+          ))}
+        </ol>
+
+        <label className="flex max-w-md cursor-pointer gap-3 rounded-2xl border border-border p-3.5">
+          <Checkbox
+            checked={consent}
+            onCheckedChange={(v) => setConsent(v === true)}
+            className="mt-0.5"
+            aria-describedby="xcape-consent-text"
+          />
+          <span id="xcape-consent-text" className="text-sm text-foreground">
+            I agree to my photos being temporarily stored and processed by XCAPE and its third-party
+            AI service to generate my skin analysis.
+          </span>
+        </label>
+
+        {error && (
+          <p
+            role="alert"
+            className="max-w-md rounded-xl border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive"
+          >
+            {error}
+          </p>
+        )}
+
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <Button
+            size="lg"
+            className="min-h-[44px] sm:min-w-56"
+            disabled={!consent || starting}
+            onClick={() => onStart('camera')}
+          >
+            {starting ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />
+            ) : (
+              <Camera className="mr-2 h-4 w-4" aria-hidden />
+            )}
+            Start my analysis
+          </Button>
+          <button
+            type="button"
+            disabled={!consent || starting}
+            onClick={() => onStart('upload')}
+            className="inline-flex min-h-[44px] items-center gap-2 text-sm font-medium text-foreground underline underline-offset-4 disabled:opacity-50"
+          >
+            <ImageUp className="h-4 w-4" aria-hidden />
+            Upload photos instead
+          </button>
+        </div>
+
+        <p className="flex max-w-md items-start gap-2 text-xs leading-relaxed text-muted-foreground">
+          <Lock className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
+          Photos travel over an encrypted connection into a private area only the analysis service
+          can read, and are deleted within 24 hours. No account is created and nothing is posted
+          anywhere. Choosing the camera also confirms you allow camera access for this session.
+        </p>
+
+        <p className="max-w-md rounded-xl bg-muted/50 p-4 text-xs leading-relaxed text-muted-foreground">
+          XCAPE provides cosmetic skin-health guidance only. It is not a medical device and does not
+          diagnose, treat or cure any condition. For any medical concern, consult a qualified
+          healthcare professional.
         </p>
       </div>
-
-      <ul className="space-y-3 rounded-2xl border border-border bg-muted/30 p-5">
-        {POINTS.map(({ icon: Icon, text }) => (
-          <li key={text} className="flex gap-3">
-            <Icon className="mt-0.5 h-4 w-4 shrink-0 text-foreground" aria-hidden />
-            <span className="text-sm text-muted-foreground">{text}</span>
-          </li>
-        ))}
-        <li className="flex gap-3">
-          <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-foreground" aria-hidden />
-          <span className="text-sm text-muted-foreground">
-            Your photos are processed by a third-party AI service to check image quality and produce the analysis.
-          </span>
-        </li>
-      </ul>
-
-      <label className="flex cursor-pointer gap-3 rounded-2xl border border-border p-4">
-        <Checkbox
-          checked={consent}
-          onCheckedChange={(v) => setConsent(v === true)}
-          className="mt-0.5"
-          aria-describedby="xcape-consent-text"
-        />
-        <span id="xcape-consent-text" className="text-sm text-foreground">
-          I agree to my photos being temporarily stored and processed by XCAPE and its third-party AI service to
-          generate my skin analysis.
-        </span>
-      </label>
-
-      {error && (
-        <p role="alert" className="rounded-xl border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
-          {error}
-        </p>
-      )}
 
       <div className="space-y-3">
-        <Button
-          size="lg"
-          className="min-h-[44px] w-full"
-          disabled={!consent || starting}
-          onClick={() => onStart('camera')}
-        >
-          {starting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : <Camera className="mr-2 h-4 w-4" aria-hidden />}
-          Use my camera
-        </Button>
-        <Button
-          size="lg"
-          variant="outline"
-          className="min-h-[44px] w-full"
-          disabled={!consent || starting}
-          onClick={() => onStart('upload')}
-        >
-          <ImageUp className="mr-2 h-4 w-4" aria-hidden />
-          Upload photos instead
-        </Button>
-        <p className="text-center text-xs text-muted-foreground">
-          Choosing the camera also confirms you allow camera access for this session.
-        </p>
-      </div>
+        <div className="relative aspect-[4/5] w-full overflow-hidden rounded-3xl border border-border bg-muted/40">
+          <svg viewBox="0 0 100 125" className="h-full w-full text-muted-foreground/35" aria-hidden>
+            <ellipse
+              cx="50"
+              cy="58"
+              rx="27"
+              ry="38"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="0.7"
+              strokeDasharray="3 3"
+            />
+            <path d="M16 125 Q50 90 84 125" fill="none" stroke="currentColor" strokeWidth="0.7" />
+            <path d="M50 24 L50 34 M50 82 L50 92 M18 58 L28 58 M72 58 L82 58" stroke="currentColor" strokeWidth="0.7" />
+          </svg>
+          <span className="absolute left-1/2 top-4 -translate-x-1/2 rounded-full bg-background/90 px-3 py-1 text-[11px] font-medium text-muted-foreground">
+            Alignment guide · auto-capture
+          </span>
+          <span className="absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full bg-foreground px-4 py-1.5 text-xs font-medium text-background">
+            Hold still — no button to press
+          </span>
+        </div>
 
-      <p className="rounded-xl bg-muted/50 p-4 text-xs leading-relaxed text-muted-foreground">
-        XCAPE provides cosmetic skin-health guidance only. It is not a medical device and does not diagnose, treat or
-        cure any condition. For any medical concern, consult a qualified healthcare professional.
-      </p>
+        <ul className="grid grid-cols-3 gap-2">
+          {SCAN_VIEWS.map((v) => (
+            <li
+              key={v.id}
+              className={cn(
+                'rounded-xl border border-border py-2 text-center text-xs font-medium text-muted-foreground',
+              )}
+            >
+              {v.label}
+            </li>
+          ))}
+        </ul>
+      </div>
     </div>
   );
 };
