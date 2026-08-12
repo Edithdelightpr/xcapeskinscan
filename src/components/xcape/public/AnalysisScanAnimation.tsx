@@ -184,7 +184,7 @@ const AnalysisScanAnimation = ({ photoUrl, phase }: Props) => {
       </div>
 
       {/* Truthful phase text */}
-      <div className="mt-6 space-y-3 text-center">
+      <div className="mt-6 space-y-3 text-center md:mt-0 md:text-left">
         <p aria-live="polite" className="text-base font-medium text-slate-100">
           {label}
         </p>
