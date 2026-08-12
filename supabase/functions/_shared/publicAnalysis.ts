@@ -8,6 +8,11 @@
 //  - Storage paths are always derived server-side from the session id; a
 //    client-supplied path or session id is never accepted.
 
+// The pure helpers below are also exercised by the app's vitest suite, which
+// typechecks without Deno's global types — this module-scoped ambient
+// declaration keeps both toolchains happy and has no runtime effect.
+declare const Deno: { env: { get(key: string): string | undefined } };
+
 export const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-cleanup-key',
