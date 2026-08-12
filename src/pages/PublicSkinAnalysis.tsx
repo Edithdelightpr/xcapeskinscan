@@ -343,18 +343,22 @@ const PublicSkinAnalysis = () => {
         path="/skin-analysis"
       />
 
-      <header className="border-b border-border">
-        <div className="mx-auto flex h-16 max-w-5xl items-center justify-between px-5">
-          <Link to="/" aria-label="XCAPE home">
+      <header className="sticky top-0 z-30 border-b border-border bg-background/90 backdrop-blur">
+        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-5">
+          <Link to="/" aria-label="XCAPE home" className="flex items-center">
             <img src={xcapeLogo} alt="XCAPE" className="h-6 w-auto" />
           </Link>
-          <Link to="/" className="text-sm text-muted-foreground underline-offset-4 hover:underline">
+          <p className="hidden text-sm font-medium text-muted-foreground sm:block">Quick skin analysis</p>
+          <Link
+            to="/"
+            className="inline-flex min-h-[44px] items-center rounded-full border border-border px-4 text-sm text-foreground transition-colors hover:bg-muted"
+          >
             Exit
           </Link>
         </div>
       </header>
 
-      <main className="mx-auto max-w-5xl px-5 py-10 sm:py-14">
+      <main className="mx-auto max-w-6xl px-5 py-8 sm:py-12">
         {/* Bot honeypot — visually hidden, never focusable */}
         <input
           type="text"
