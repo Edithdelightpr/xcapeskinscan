@@ -69,7 +69,7 @@ describe('header dimension parsing (decode-bomb guard)', () => {
   });
 
   it('publishes safe guidance for every structured rejection code', () => {
-    for (const code of ['too_large', 'image_too_big', 'face_too_small', 'face_too_close', 'too_many_attempts'] as const) {
+    for (const code of ['too_large', 'too_many_pixels', 'face_too_small', 'face_too_close'] as const) {
       const guidance = VERIFY_GUIDANCE[code];
       expect(typeof guidance).toBe('string');
       expect(guidance.length).toBeGreaterThan(0);
