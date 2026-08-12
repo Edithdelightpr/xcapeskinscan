@@ -356,6 +356,7 @@ const PublicSkinAnalysis = () => {
     setPhase(null);
     setScores(null);
     setPriority(null);
+    setReport(null);
     retryRequested.current = true;
     recoveryClaimed.current = false;
     analysisStartedAt.current = Date.now();
@@ -374,6 +375,7 @@ const PublicSkinAnalysis = () => {
     setPhase(null);
     setScores(null);
     setPriority(null);
+    setReport(null);
     setStage('intro');
   }, [releaseFrontFrame]);
 
@@ -456,6 +458,8 @@ const PublicSkinAnalysis = () => {
             photoUrl={frontUrl}
             scores={scores}
             priority={priority}
+            report={report}
+            reportLoading={reportLoading}
             capturedViews={verifiedViews}
             onRestart={restart}
           />
