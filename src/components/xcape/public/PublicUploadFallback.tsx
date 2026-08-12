@@ -81,7 +81,7 @@ const PublicUploadFallback = ({
           // 422 rejection, 429 ceiling and recoverable network/5xx/storage
           // failures all keep the session — only the guidance differs.
           const failure: VerifyFailure = res;
-          if (failure.code === 'view_attempts_exhausted') {
+          if (failure.code === 'view_attempts_exhausted' || failure.code === 'session_attempts_exhausted') {
             // Ceiling reached for this photo — the session cannot recover.
             onSessionEnded(failure.guidance);
             return;

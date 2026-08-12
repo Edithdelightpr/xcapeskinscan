@@ -90,7 +90,7 @@ const PublicCaptureStage = ({
         return;
       }
       const failure: VerifyFailure = res;
-      if (failure.code === 'view_attempts_exhausted') {
+      if (failure.code === 'view_attempts_exhausted' || failure.code === 'session_attempts_exhausted') {
         // The per-photo ceiling is final: retaking can only fail again, so the
         // session ends here with a clear "start again" exit instead of looping.
         onSessionEnded(failure.guidance);

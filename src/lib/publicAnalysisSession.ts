@@ -140,6 +140,21 @@ async function callFn<T>(name: string, body: unknown): Promise<T> {
         /* non-JSON error body */
       }
     }
+    // Some backend-client versions expose only a message such as
+    // `Edge function returned 429: Error, {"code":"..."}`. Recover the
+    // structured body so expected workflow errors retain their code/status.
+    if (!payload && error instanceof Error) {
+      const jsonStart = error.message.indexOf('{');
+      if (jsonStart >= 0) {
+        try {
+          payload = JSON.parse(error.message.slice(jsonStart)) as Record<string, unknown>;
+        } catch {
+          /* message did not end in a valid JSON object */
+        }
+      }
+      const statusMatch = error.message.match(/returned\s+(\d{3})/i);
+      if (!status && statusMatch) status = Number(statusMatch[1]);
+    }
     if (payload && typeof payload.error === 'string') message = payload.error;
     if (payload && typeof payload.guidance === 'string') message = payload.guidance;
     const kind = kindForStatus(status);
@@ -274,6 +289,18 @@ export interface VerifyFailure {
 
 export type VerifyResult = VerifyOk | VerifyFailure;
 
+interface UploadUrlOk {
+  ok?: true;
+  path: string;
+  upload_token: string;
+}
+
+interface UploadUrlFailure {
+  ok: false;
+  error?: string;
+  code?: string;
+}
+
 /**
  * Uploads one view and asks the server to verify it.
  *
@@ -298,12 +325,22 @@ export async function uploadAndVerifyView(input: {
     };
   }
 
-  let signed: { path: string; upload_token: string };
+  let signed: UploadUrlOk;
   try {
-    signed = await callFn<{ path: string; upload_token: string }>('public-analysis-upload-url', {
+    const uploadUrl = await callFn<UploadUrlOk | UploadUrlFailure>('public-analysis-upload-url', {
       token,
       view,
     });
+    if (uploadUrl.ok === false) {
+      return {
+        ok: false,
+        view,
+        kind: uploadUrl.code?.includes('attempts_exhausted') ? 'rate_limited' : 'rejected',
+        code: uploadUrl.code,
+        guidance: uploadUrl.error ?? 'This photo cannot be uploaded. Start a new analysis and try again.',
+      };
+    }
+    signed = uploadUrl;
   } catch (e) {
     if (e instanceof PublicAnalysisError && e.kind !== 'invalid') {
       return { ok: false, view, kind: e.kind, code: e.code, guidance: e.message };

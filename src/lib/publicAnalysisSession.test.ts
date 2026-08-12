@@ -179,6 +179,28 @@ describe('error semantics', () => {
     expect((res as VerifyFailure).kind).toBe('rate_limited');
   });
 
+  it('handles attempt exhaustion returned as an expected workflow result', async () => {
+    invoke.mockResolvedValueOnce(
+      ok({
+        ok: false,
+        code: 'view_attempts_exhausted',
+        error: 'You have used all the attempts for this photo. Start a new analysis to try again.',
+      }),
+    );
+    const res = await uploadAndVerifyView({
+      token: 'tok_abcdefghijklmnopqrstuvwxyz',
+      view: 'right',
+      file: new Blob(['x']),
+      source: 'camera',
+    });
+    expect(res).toMatchObject({
+      ok: false,
+      kind: 'rate_limited',
+      code: 'view_attempts_exhausted',
+    });
+    expect(uploadToSignedUrl).not.toHaveBeenCalled();
+  });
+
   it('only 401/410 throw an invalid-session error', async () => {
     invoke.mockResolvedValueOnce(httpError(410, { error: 'This analysis session has expired.' }));
     await expect(
