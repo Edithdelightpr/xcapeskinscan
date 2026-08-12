@@ -90,6 +90,12 @@ const PublicCaptureStage = ({
         return;
       }
       const failure: VerifyFailure = res;
+      if (failure.code === 'view_attempts_exhausted') {
+        // The per-photo ceiling is final: retaking can only fail again, so the
+        // session ends here with a clear "start again" exit instead of looping.
+        onSessionEnded(failure.guidance);
+        return;
+      }
       if (failure.kind === 'recoverable') {
         // Network, 5xx or a storage failure: keep the session, retry the view.
         setRecoverable(failure.guidance);
