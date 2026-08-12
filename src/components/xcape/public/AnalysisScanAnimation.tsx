@@ -110,13 +110,14 @@ const AnalysisScanAnimation = ({ photoUrl, phase }: Props) => {
           />
         ))}
 
-        {/* Restrained tracking points */}
+        {/* Restrained tracking points — cool blue only, never gold/amber */}
         {TRACKING_POINTS.map((p, i) => (
           <g key={`${p.x}-${p.y}`} className={reduced ? undefined : 'xcape-scan-track'} style={{ animationDelay: `${i * 0.18}s` }}>
-            <circle cx={p.x} cy={p.y} r="0.9" fill="rgba(251,191,36,0.85)" />
-            <circle cx={p.x} cy={p.y} r="2.2" fill="none" stroke="rgba(251,191,36,0.35)" strokeWidth="0.25" />
+            <circle cx={p.x} cy={p.y} r="0.9" fill="rgba(191,219,254,0.9)" />
+            <circle cx={p.x} cy={p.y} r="2.2" fill="none" stroke="rgba(96,165,250,0.45)" strokeWidth="0.25" />
           </g>
         ))}
+
       </svg>
     ),
     [reduced],
