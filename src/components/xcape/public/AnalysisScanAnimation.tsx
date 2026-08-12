@@ -208,7 +208,7 @@ const AnalysisScanAnimation = ({ photoUrl, phase }: Props) => {
           )}
         </div>
 
-        <ul className="mt-4 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-[11px] text-slate-500">
+        <ul className="mt-4 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-[11px] text-slate-500 md:flex-col md:items-start md:gap-y-2">
           {ANALYSIS_PHASES.filter((p) => p !== 'analysis_complete').map((p) => (
             <li
               key={p}
