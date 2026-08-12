@@ -19,7 +19,7 @@ const report = sanitizeReportPayload({
 
 const ScanPreviewHarness = () => (
   <div className="xcape-public min-h-screen space-y-8 bg-background px-5 py-8">
-    <AnalysisScanAnimation photoUrl={null} phase="mapping_regions" capturedViews={['front', 'left', 'right']} onOpenReport={() => {}} />
+    <AnalysisScanAnimation photoUrl={null} phase="analyzing_views" capturedViews={['front', 'left', 'right']} onOpenReport={() => {}} />
     <PublicReportStage
       photoUrl={null}
       scores={{ pigmentation_stability: 18, barrier_surface_hydration: 44, firmness_skin_support: 71, oil_congestion_balance: 58 }}
