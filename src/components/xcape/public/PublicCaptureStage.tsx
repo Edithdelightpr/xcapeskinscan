@@ -212,12 +212,17 @@ const PublicCaptureStage = ({
         </p>
       )}
 
-      <p className="text-center text-xs text-muted-foreground">
-        Having trouble?{' '}
-        <button type="button" className="min-h-[44px] underline" onClick={onSwitchToUpload}>
-          Upload photos instead
-        </button>
-      </p>
+      </div>
+
+      <PublicFlowPanel
+        step="capture"
+        done={verifiedViews as ScanViewId[]}
+        current={capture.currentView}
+        thumbs={acceptedUrls}
+        guidance={capture.guidance}
+        stability={capture.stability}
+        onSwitchToUpload={onSwitchToUpload}
+      />
     </div>
   );
 };
