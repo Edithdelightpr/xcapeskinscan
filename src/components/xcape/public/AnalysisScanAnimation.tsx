@@ -137,8 +137,9 @@ const AnalysisScanAnimation = ({ photoUrl, phase }: Props) => {
       </div>
 
 
+      <div className="grid gap-6 md:grid-cols-[minmax(0,1fr)_16rem] md:items-center">
       {/* Portrait frame */}
-      <div className="relative mx-auto aspect-[4/5] w-full max-w-sm overflow-hidden rounded-2xl border border-slate-700/70 bg-[#0f1113]">
+      <div className="relative mx-auto aspect-[4/5] w-full max-w-sm overflow-hidden rounded-2xl border border-slate-700/70 bg-[#0f1113] md:max-w-none">
         {photoUrl ? (
           <img
             src={photoUrl}
