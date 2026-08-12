@@ -68,6 +68,8 @@ describe('public analysis polling', () => {
 
   it('claims exactly once when it enters with a queued session, then only polls', async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
+    // Resume lookup + boot lookup both see a queued session.
+    fetchStatus.mockResolvedValueOnce(status({ status: 'queued', phase: null }));
     fetchStatus.mockResolvedValueOnce(status({ status: 'queued', phase: null }));
     fetchStatus.mockResolvedValue(status());
     renderPage();
@@ -96,7 +98,6 @@ describe('public analysis polling', () => {
     renderPage();
     const button = await screen.findByRole('button', { name: /try the analysis again/i });
 
-    fetchStatus.mockResolvedValue(status());
     // Two fast clicks: only one attempt may be claimed.
     fireEvent.click(button);
     fireEvent.click(button);
