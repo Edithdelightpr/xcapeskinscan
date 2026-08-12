@@ -4,18 +4,23 @@ import { Button } from '@/components/ui/button';
 import ScanStage from '@/components/xcape/scan/ScanStage';
 import { useGuidedCapture } from '@/components/xcape/scan/useGuidedCapture';
 import { SCAN_VIEWS, type ScanViewId } from '@/lib/scan/scanQuality';
-import { uploadAndVerifyView, type PublicViewId } from '@/lib/publicAnalysisSession';
+import {
+  uploadAndVerifyView,
+  type PublicViewId,
+  type VerifyFailure,
+} from '@/lib/publicAnalysisSession';
 
 /** How long a view may stall before the manual shutter is revealed. */
 export const MANUAL_REVEAL_MS = 20_000;
 
 interface Props {
   token: string;
-  /** Views already verified on the server (resumed session). */
-  initialVerified?: PublicViewId[];
-  onAllVerified: () => void;
+  /** Shared, page-owned list of views already verified on the server. */
+  verifiedViews: PublicViewId[];
+  onViewVerified: (view: PublicViewId) => void;
   onSwitchToUpload: () => void;
-  onSessionExpired: (message: string) => void;
+  /** Called ONLY when the session itself is invalid or expired. */
+  onSessionEnded: (message: string) => void;
 }
 
 /**
@@ -27,19 +32,25 @@ interface Props {
  */
 const PublicCaptureStage = ({
   token,
-  initialVerified = [],
-  onAllVerified,
+  verifiedViews,
+  onViewVerified,
   onSwitchToUpload,
-  onSessionExpired,
+  onSessionEnded,
 }: Props) => {
-  const capture = useGuidedCapture({ active: true, enforceQualityOnManual: true });
+  // Views already final server-side are never asked for again — this is what
+  // makes camera -> upload -> camera round trips preserve progress.
+  const capture = useGuidedCapture({
+    active: true,
+    enforceQualityOnManual: true,
+    skipViews: verifiedViews as ScanViewId[],
+  });
   const [verifying, setVerifying] = useState(false);
   const [rejection, setRejection] = useState<string | null>(null);
   const [showManual, setShowManual] = useState(false);
   const [attempts, setAttempts] = useState(0);
+  /** Recoverable failure (network / 5xx / storage) — the session survives. */
+  const [recoverable, setRecoverable] = useState<string | null>(null);
   const startedRef = useRef(false);
-  const verifiedRef = useRef<Set<string>>(new Set(initialVerified));
-  const doneRef = useRef(false);
 
   // Enter the live stage immediately — consent was captured on the intro step.
   useEffect(() => {
@@ -63,6 +74,7 @@ const PublicCaptureStage = ({
     if (!pendingCapture || verifying) return;
     setVerifying(true);
     setRejection(null);
+    setRecoverable(null);
     try {
       const res = await uploadAndVerifyView({
         token,
@@ -70,26 +82,28 @@ const PublicCaptureStage = ({
         file: pendingCapture.blob,
         source: 'camera',
       });
-      if (res.ok) {
-        verifiedRef.current.add(pendingCapture.view);
-        const all = SCAN_VIEWS.every((v) => verifiedRef.current.has(v.id));
+      if (res.ok === true) {
         accept();
-        if (all && !doneRef.current) {
-          doneRef.current = true;
-          onAllVerified();
-        }
-      } else {
-        setRejection(res.guidance ?? 'That photo could not be used. Please try again.');
-        setAttempts((a) => a + 1);
-        retake();
+        onViewVerified(pendingCapture.view as PublicViewId);
+        return;
       }
+      const failure: VerifyFailure = res;
+      if (failure.kind === 'recoverable') {
+        // Network, 5xx or a storage failure: keep the session, retry the view.
+        setRecoverable(failure.guidance);
+      } else {
+        // 422 image rejection or a 429 attempt ceiling — both keep the session.
+        setRejection(failure.guidance);
+        setAttempts((a) => a + 1);
+      }
+      retake();
     } catch (e) {
-      const msg = e instanceof Error ? e.message : 'Something went wrong.';
-      onSessionExpired(msg);
+      // Only an invalid/expired session reaches here.
+      onSessionEnded(e instanceof Error ? e.message : 'Your analysis session is no longer valid.');
     } finally {
       setVerifying(false);
     }
-  }, [pendingCapture, verifying, token, accept, retake, onAllVerified, onSessionExpired]);
+  }, [pendingCapture, verifying, token, accept, retake, onViewVerified, onSessionEnded]);
 
   // A capture is verified as soon as it exists — no manual confirmation step.
   useEffect(() => {
@@ -163,6 +177,14 @@ const PublicCaptureStage = ({
         {!verifying && rejection && (
           <p role="alert" className="text-sm font-medium text-destructive">
             {rejection}
+          </p>
+        )}
+        {!verifying && recoverable && (
+          <p role="alert" className="text-sm font-medium text-foreground">
+            {recoverable}{' '}
+            <button type="button" className="underline" onClick={() => void capture.captureNow()}>
+              Try again
+            </button>
           </p>
         )}
       </div>

@@ -2,23 +2,24 @@
 // skin-analysis session.
 //
 // The caller supplies only { token, view, source }. The session and the
-// storage path are derived server-side from the SHA-256 token hash — a
-// client-supplied session id or object path is never accepted, so one
-// visitor can never touch another visitor's object.
+// storage path are resolved server-side from the SHA-256 token hash through
+// service-role-only RPCs — a client-supplied session id or object path is
+// never accepted, so one visitor can never touch another visitor's object.
 //
-// Pipeline: size → magic bytes → decode → EXIF orientation applied →
-// metadata-free JPEG re-encode → minimum dimensions → lighting/sharpness →
-// exactly-one-face + pose (Lovable AI Gateway vision, the same capability
-// the authenticated flow uses).
+// Pipeline: size → magic bytes → header dimensions (decompression-bomb guard)
+// → decode → EXIF orientation applied → metadata-free JPEG re-encode →
+// minimum dimensions → lighting/sharpness → exactly-one-face + pose +
+// face-size window (Lovable AI Gateway vision).
 //
-// Rejection deletes the object immediately and leaves views_captured unset
-// so the visitor can retry at the same assigned path. Success replaces the
-// original with the normalized JPEG and is idempotent: a verified view can
-// never be replaced.
+// Every state write goes through `public_analysis_commit_view()`, which locks
+// the session row: concurrent verifications of different views can never lose
+// each other's entry or path, and a duplicate verification is idempotent.
+//
+// Nothing sensitive is logged: never the raw token, the signed URL, image
+// bytes or the AI response.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
 import {
   BUCKET,
-  IMAGE_TTL_MS,
   MAX_IMAGE_BYTES,
   NORMALIZED_MIME,
   VERIFY_GUIDANCE,
@@ -27,12 +28,11 @@ import {
   isCaptureSource,
   isViewId,
   json,
-  objectPath,
   sha256Hex,
   type VerifyCode,
 } from '../_shared/publicAnalysis.ts';
 import { checkExposure, normalizeImage, toBase64 } from '../_shared/imageVerify.ts';
-import { checkFace } from '../_shared/faceCheck.ts';
+import { checkFace, faceSizeCode } from '../_shared/faceCheck.ts';
 
 interface Body {
   token?: string;
@@ -42,6 +42,19 @@ interface Body {
 
 const reject = (code: VerifyCode, status = 422) =>
   json({ ok: false, code, guidance: VERIFY_GUIDANCE[code], retry: true }, status, true);
+
+const RPC_ERRORS: Record<string, { message: string; status: number }> = {
+  invalid_session: { message: 'Invalid session', status: 401 },
+  session_expired: { message: 'This analysis session has expired. Please start again.', status: 410 },
+  not_accepting: { message: 'This session is no longer accepting images.', status: 409 },
+  invalid_view: { message: 'Invalid view', status: 400 },
+};
+
+const rpcFailure = (res: Record<string, unknown>) => {
+  const code = String(res?.error_code ?? 'invalid_session');
+  const mapped = RPC_ERRORS[code] ?? { message: 'Could not verify the session', status: 500 };
+  return json({ error: mapped.message, code }, Number(res?.http ?? mapped.status), true);
+};
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
@@ -75,30 +88,28 @@ Deno.serve(async (req) => {
     const source = body.source;
     const token_hash = await sha256Hex(body.token);
 
-    const { data: session, error: sessErr } = await admin
-      .from('public_analysis_sessions')
-      .select('id, status, expires_at, views_captured, image_paths, capture_method')
-      .eq('token_hash', token_hash)
-      .maybeSingle();
-    if (sessErr) return json({ error: 'Could not verify the session' }, 500);
-    if (!session) return json({ error: 'Invalid session' }, 401);
-    if (new Date(session.expires_at).getTime() < Date.now() || session.status === 'expired') {
-      return json({ error: 'This analysis session has expired. Please start again.' }, 410);
+    // ── Resolve the session + the path assigned to this view ─────────────
+    const { data: resolved, error: resErr } = await admin.rpc('public_analysis_resolve_view', {
+      p_token_hash: token_hash,
+      p_view: view,
+    });
+    if (resErr) {
+      console.error('[public-analysis-verify-view] resolve rpc failed');
+      return json({ error: 'Could not verify the session' }, 500);
     }
-
-    const captured = { ...((session.views_captured ?? {}) as Record<string, unknown>) };
+    const resolvedRes = resolved as Record<string, unknown>;
+    if (!resolvedRes?.ok) return rpcFailure(resolvedRes);
 
     // Idempotent: a verified view is final and can never be replaced.
-    if (captured[view]) {
-      const done = VIEWS.every((v) => !!captured[v]);
-      return json({ ok: true, view, already_verified: true, all_verified: done }, 200, true);
+    if (resolvedRes.already_verified) {
+      return json(
+        { ok: true, view, already_verified: true, all_verified: !!resolvedRes.all_verified },
+        200,
+        true,
+      );
     }
 
-    if (!['created', 'uploading'].includes(session.status)) {
-      return json({ error: 'This session is no longer accepting images.' }, 409);
-    }
-
-    path = objectPath(session.id, view);
+    path = String(resolvedRes.path);
 
     // ── Download only the object assigned to this session + view ─────────
     const { data: file, error: dlErr } = await admin.storage.from(BUCKET).download(path);
@@ -110,10 +121,12 @@ Deno.serve(async (req) => {
       return reject('too_large', 413);
     }
 
+    // Header dimensions are checked inside normalizeImage BEFORE any RGBA
+    // surface is allocated (decompression-bomb guard).
     const normalized = normalizeImage(raw);
     if (!normalized.ok) {
       await admin.storage.from(BUCKET).remove([path]);
-      return reject(normalized.code);
+      return reject(normalized.code, normalized.code === 'too_many_pixels' ? 413 : 422);
     }
 
     const exposure = checkExposure(normalized.image);
@@ -140,6 +153,11 @@ Deno.serve(async (req) => {
       await admin.storage.from(BUCKET).remove([path]);
       return reject('wrong_pose');
     }
+    const sizeCode = faceSizeCode(face.faceFraction);
+    if (sizeCode !== 'ok') {
+      await admin.storage.from(BUCKET).remove([path]);
+      return reject(sizeCode);
+    }
 
     // ── Success: replace the original with the metadata-free JPEG ────────
     const { error: upErr } = await admin.storage
@@ -147,44 +165,35 @@ Deno.serve(async (req) => {
       .upload(path, normalized.image.bytes, { contentType: NORMALIZED_MIME, upsert: true });
     if (upErr) return reject('verification_unavailable', 503);
 
-    captured[view] = {
-      verified_at: new Date().toISOString(),
-      source,
-      width: normalized.image.width,
-      height: normalized.image.height,
-      bytes: normalized.image.bytes.byteLength,
-      mime: NORMALIZED_MIME,
-    };
-
-    const paths = new Set<string>([...((session.image_paths as string[]) ?? []), path]);
-    const allVerified = VIEWS.every((v) => !!captured[v]);
-    const sources = new Set(
-      Object.values(captured).map((c) => (c as { source?: string })?.source).filter(Boolean),
-    );
-    const captureMethod =
-      sources.size > 1 ? 'mixed' : (sources.values().next().value as string | undefined) ?? source;
-
-    const { error: updErr } = await admin
-      .from('public_analysis_sessions')
-      .update({
-        views_captured: captured,
-        image_paths: Array.from(paths),
-        capture_method: captureMethod,
-        status: allVerified ? 'queued' : 'uploading',
-        phase: allVerified ? 'capture_complete' : `capturing_${view}`,
-        images_purge_at: new Date(Date.now() + IMAGE_TTL_MS).toISOString(),
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', session.id);
-    if (updErr) return reject('verification_unavailable', 503);
+    // ── Atomic commit under a row lock ───────────────────────────────────
+    const { data: committed, error: commitErr } = await admin.rpc('public_analysis_commit_view', {
+      p_token_hash: token_hash,
+      p_view: view,
+      p_meta: {
+        verified_at: new Date().toISOString(),
+        source,
+        width: normalized.image.width,
+        height: normalized.image.height,
+        bytes: normalized.image.bytes.byteLength,
+        mime: NORMALIZED_MIME,
+      },
+    });
+    if (commitErr) {
+      console.error('[public-analysis-verify-view] commit rpc failed');
+      return reject('verification_unavailable', 503);
+    }
+    const commit = committed as Record<string, unknown>;
+    if (!commit?.ok) return rpcFailure(commit);
 
     return json(
       {
         ok: true,
         view,
-        all_verified: allVerified,
-        status: allVerified ? 'queued' : 'uploading',
-        phase: allVerified ? 'capture_complete' : `capturing_${view}`,
+        already_verified: !!commit.already_verified,
+        all_verified: !!commit.all_verified,
+        verified_views: commit.verified_views ?? [],
+        status: commit.status,
+        phase: commit.phase,
       },
       200,
       true,
@@ -192,6 +201,14 @@ Deno.serve(async (req) => {
   } catch (e) {
     console.error('[public-analysis-verify-view] failed', e instanceof Error ? e.message : e);
     if (path) await admin.storage.from(BUCKET).remove([path]).catch(() => undefined);
-    return json({ ok: false, code: 'verification_unavailable', guidance: VERIFY_GUIDANCE.verification_unavailable, retry: true }, 500);
+    return json(
+      {
+        ok: false,
+        code: 'verification_unavailable',
+        guidance: VERIFY_GUIDANCE.verification_unavailable,
+        retry: true,
+      },
+      500,
+    );
   }
 });
