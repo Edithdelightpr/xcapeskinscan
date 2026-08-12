@@ -109,7 +109,7 @@ const ScanStage = ({
         className={cn(
           'relative mx-auto w-full overflow-hidden border aspect-[3/4]',
           isPublic
-            ? 'max-w-lg rounded-3xl border-black/10 bg-neutral-900'
+            ? cn('rounded-3xl border-black/10 bg-neutral-900', minimalChrome ? 'max-w-none' : 'max-w-lg')
             : 'max-w-md rounded-2xl border-border/50 bg-black/80',
         )}
       >
