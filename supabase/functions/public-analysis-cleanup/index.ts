@@ -46,7 +46,12 @@ Deno.serve(async (req) => {
       fileSizeLimit: BUCKET_CONFIG.fileSizeLimit,
       allowedMimeTypes: [...BUCKET_CONFIG.allowedMimeTypes],
     });
-    if (bucketErr) console.error('[public-analysis-cleanup] bucket reconcile failed');
+    if (bucketErr) {
+      // Fail closed: never report success while the bucket restrictions
+      // (private, size cap, MIME allow-list) are unconfirmed.
+      console.error('[public-analysis-cleanup] bucket reconcile failed');
+      return json({ ok: false, error: 'Bucket reconciliation failed' }, 500);
+    }
 
     // ── 1. Images past their deadline (or whose session is due for purge) ─
     let imagesDeleted = 0;
@@ -68,15 +73,21 @@ Deno.serve(async (req) => {
         .eq('id', row.id);
     }
 
-    // ── 2. Orphan prefixes (session row already deleted), paginated ───────
+    // ── 2. Orphan prefixes (session row already deleted) ─────────────────
+    // Deleting a folder shifts every later entry, so the cursor only ever
+    // advances past folders that were deliberately KEPT. Deleted folders
+    // disappear from the listing, which keeps the walk complete and the
+    // whole pass idempotent.
     let orphansDeleted = 0;
     let scanned = 0;
-    for (let offset = 0; offset < MAX_ORPHAN_FOLDERS; offset += PAGE) {
+    let offset = 0;
+    while (scanned < MAX_ORPHAN_FOLDERS) {
       const { data: page } = await admin.storage.from(BUCKET).list('', { limit: PAGE, offset });
       const entries = page ?? [];
       if (entries.length === 0) break;
       const folders = entries.filter((p) => p.id === null).map((p) => p.name);
-      scanned += folders.length;
+      scanned += entries.length;
+      let kept = entries.length - folders.length; // non-folder entries stay put
       if (folders.length > 0) {
         const { data: live } = await admin
           .from('public_analysis_sessions')
@@ -84,14 +95,23 @@ Deno.serve(async (req) => {
           .in('id', folders);
         const liveIds = new Set((live ?? []).map((r: { id: string }) => r.id));
         for (const folder of folders) {
-          if (liveIds.has(folder)) continue;
+          if (liveIds.has(folder)) {
+            kept++;
+            continue;
+          }
           const { data: objs } = await admin.storage.from(BUCKET).list(folder, { limit: 100 });
           const objPaths = (objs ?? []).filter((o) => o.id !== null).map((o) => `${folder}/${o.name}`);
-          if (objPaths.length === 0) continue;
-          const { error: rmErr } = await admin.storage.from(BUCKET).remove(objPaths);
-          if (!rmErr) orphansDeleted += objPaths.length;
+          if (objPaths.length > 0) {
+            const { error: rmErr } = await admin.storage.from(BUCKET).remove(objPaths);
+            if (rmErr) {
+              kept++; // retry next run; do not skip past it
+              continue;
+            }
+            orphansDeleted += objPaths.length;
+          }
         }
       }
+      offset += kept;
       if (entries.length < PAGE) break;
     }
 

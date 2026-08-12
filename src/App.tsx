@@ -16,6 +16,7 @@ import AdminReportPreview from "./pages/AdminReportPreview.tsx";
 import BookAppointment from "./pages/BookAppointment.tsx";
 import PublicScheduling from "./pages/PublicScheduling.tsx";
 import PublicIntake from "./pages/PublicIntake.tsx";
+import PublicSkinAnalysis from "./pages/PublicSkinAnalysis.tsx";
 import SocialMediaIntake from "./pages/SocialMediaIntake.tsx";
 import About from "./pages/About.tsx";
 import Treatments from "./pages/Treatments.tsx";
@@ -119,6 +120,7 @@ const App = () => (
             <Route path="/outreach/portal" element={<AuthGuard><OutreachPortal /></AuthGuard>} />
             <Route path="/consultation" element={<Consultation />} />
             {/* Public outreach intake — captures leads from QR scans */}
+            <Route path="/skin-analysis" element={<PublicSkinAnalysis />} />
             <Route path="/intake" element={<PublicIntake />} />
             <Route path="/intake/:slug" element={<PublicIntake />} />
             {/* Social-media / ManyChat campaign intake — separate from outreach */}

@@ -93,7 +93,7 @@ Deno.serve(async (req) => {
     }
 
     const paths = new Set<string>([...(session.image_paths as string[] ?? []), path]);
-    await admin
+    const { error: bookErr } = await admin
       .from('public_analysis_sessions')
       .update({
         status: 'uploading',
@@ -110,6 +110,12 @@ Deno.serve(async (req) => {
         images_purge_at: new Date(Date.now() + IMAGE_TTL_MS).toISOString(),
       })
       .eq('id', session.id);
+    // Fail closed: never hand out an upload token whose bookkeeping (issued
+    // views, image paths, purge deadline) was not durably recorded.
+    if (bookErr) {
+      console.error('[public-analysis-upload-url] bookkeeping update failed');
+      return json({ error: 'Could not prepare the upload.' }, 500);
+    }
 
     return json({
       ok: true,
