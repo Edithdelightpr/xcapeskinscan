@@ -265,6 +265,14 @@ export async function fetchStatus(token: string): Promise<PublicAnalysisStatus> 
   return sanitizeStatusPayload(await callFn<unknown>('public-analysis-status', { token }));
 }
 
+/**
+ * Pulls the finished report content (scores, per-area observations and the
+ * engine's guidance copy) for a completed session.
+ */
+export async function fetchReport(token: string): Promise<PublicAnalysisReport> {
+  return sanitizeReportPayload(await callFn<unknown>('public-analysis-report', { token }));
+}
+
 /* ------------------------------------------------------------------ */
 /* Upload + verify                                                     */
 /* ------------------------------------------------------------------ */
