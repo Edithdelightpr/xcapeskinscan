@@ -32,7 +32,7 @@ import {
   type VerifyCode,
 } from '../_shared/publicAnalysis.ts';
 import { checkExposure, normalizeImage, toBase64 } from '../_shared/imageVerify.ts';
-import { checkFace, faceSizeCode } from '../_shared/faceCheck.ts';
+import { checkFace, faceSizeCode, poseMatches } from '../_shared/faceCheck.ts';
 
 interface Body {
   token?: string;
@@ -149,7 +149,7 @@ Deno.serve(async (req) => {
       await admin.storage.from(BUCKET).remove([path]);
       return reject('multiple_faces');
     }
-    if (face.pose !== view) {
+    if (!poseMatches(view, face)) {
       await admin.storage.from(BUCKET).remove([path]);
       return reject('wrong_pose');
     }
