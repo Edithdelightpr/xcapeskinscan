@@ -78,6 +78,7 @@ Deno.serve(async (req) => {
     const { data, error } = await admin.rpc('public_analysis_claim_run', {
       p_token_hash: await sha256Hex(body.token),
       p_idempotency_key: body.idempotency_key,
+      p_retry: body.retry === true,
     });
     if (error) {
       console.error('[public-analysis-run] claim rpc failed');
@@ -95,11 +96,14 @@ Deno.serve(async (req) => {
       const work = runPublicAnalysis({
         admin: admin as unknown as WorkerAdmin,
         sessionId: String(res.session_id),
+        // Stays server-side: never serialized into the HTTP response.
+        workerLease: String(res.worker_lease),
         apiKey: Deno.env.get('LOVABLE_API_KEY'),
       });
       if (typeof EdgeRuntime !== 'undefined') EdgeRuntime.waitUntil(work);
       else await work;
     }
+
 
     return json(
       {
