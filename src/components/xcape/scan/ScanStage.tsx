@@ -27,6 +27,11 @@ interface Props {
   variant?: 'staff' | 'public';
   /** Manual shutter visibility. Public flow hides it until capture stalls. */
   showManualCapture?: boolean;
+  /**
+   * Presentation only. Hides the built-in view chips, instruction line and
+   * accepted thumbnails when the surrounding page already shows them.
+   */
+  minimalChrome?: boolean;
   onManualCapture: () => void;
   onToggleCamera: () => void;
   onCancel: () => void;
