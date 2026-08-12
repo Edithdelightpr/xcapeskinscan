@@ -64,6 +64,8 @@ const PublicSkinAnalysis = () => {
   const [analysisError, setAnalysisError] = useState<string | null>(null);
   const [scores, setScores] = useState<PublicScores | null>(null);
   const [priority, setPriority] = useState<PublicScoreKey | null>(null);
+  const [report, setReport] = useState<PublicAnalysisReport | null>(null);
+  const [reportLoading, setReportLoading] = useState(false);
 
   /** Temporary object URL for the front frame — owned and revoked here. */
   const [frontUrl, setFrontUrl] = useState<string | null>(null);
