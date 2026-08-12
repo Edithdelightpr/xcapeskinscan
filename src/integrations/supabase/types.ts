@@ -6842,6 +6842,164 @@ export type Database = {
           },
         ]
       }
+      public_analysis_consents: {
+        Row: {
+          consent_type: string
+          created_at: string
+          evidence: Json
+          granted: boolean
+          granted_at: string
+          id: string
+          ip_hmac: string | null
+          session_id: string
+        }
+        Insert: {
+          consent_type: string
+          created_at?: string
+          evidence?: Json
+          granted: boolean
+          granted_at?: string
+          id?: string
+          ip_hmac?: string | null
+          session_id: string
+        }
+        Update: {
+          consent_type?: string
+          created_at?: string
+          evidence?: Json
+          granted?: boolean
+          granted_at?: string
+          id?: string
+          ip_hmac?: string | null
+          session_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "public_analysis_consents_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "public_analysis_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      public_analysis_sessions: {
+        Row: {
+          ai_raw: Json | null
+          ai_raw_purge_at: string | null
+          attempt_count: number
+          client_id: string | null
+          created_at: string
+          delivered_at: string | null
+          delivery_channel: string | null
+          engine: Json | null
+          engine_version: string | null
+          expires_at: string
+          failure_code: string | null
+          id: string
+          idempotency_key: string | null
+          image_paths: Json
+          images_purge_at: string | null
+          ip_hmac: string | null
+          phase: string | null
+          prompt_version: string | null
+          purge_at: string
+          status: string
+          token_hash: string
+          ua_hmac: string | null
+          updated_at: string
+          views_captured: Json
+        }
+        Insert: {
+          ai_raw?: Json | null
+          ai_raw_purge_at?: string | null
+          attempt_count?: number
+          client_id?: string | null
+          created_at?: string
+          delivered_at?: string | null
+          delivery_channel?: string | null
+          engine?: Json | null
+          engine_version?: string | null
+          expires_at: string
+          failure_code?: string | null
+          id?: string
+          idempotency_key?: string | null
+          image_paths?: Json
+          images_purge_at?: string | null
+          ip_hmac?: string | null
+          phase?: string | null
+          prompt_version?: string | null
+          purge_at: string
+          status?: string
+          token_hash: string
+          ua_hmac?: string | null
+          updated_at?: string
+          views_captured?: Json
+        }
+        Update: {
+          ai_raw?: Json | null
+          ai_raw_purge_at?: string | null
+          attempt_count?: number
+          client_id?: string | null
+          created_at?: string
+          delivered_at?: string | null
+          delivery_channel?: string | null
+          engine?: Json | null
+          engine_version?: string | null
+          expires_at?: string
+          failure_code?: string | null
+          id?: string
+          idempotency_key?: string | null
+          image_paths?: Json
+          images_purge_at?: string | null
+          ip_hmac?: string | null
+          phase?: string | null
+          prompt_version?: string | null
+          purge_at?: string
+          status?: string
+          token_hash?: string
+          ua_hmac?: string | null
+          updated_at?: string
+          views_captured?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "public_analysis_sessions_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "client_media_usage"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "public_analysis_sessions_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "public_analysis_sessions_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "member_spend_monthly"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "public_analysis_sessions_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "membership_lifecycle_status"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "public_analysis_sessions_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "stale_leads_view"
+            referencedColumns: ["client_id"]
+          },
+        ]
+      }
       recipe_ingredients: {
         Row: {
           created_at: string
@@ -12159,6 +12317,13 @@ export type Database = {
           id: string
         }[]
       }
+      list_public_analysis_image_purge: {
+        Args: { _limit?: number }
+        Returns: {
+          id: string
+          image_paths: Json
+        }[]
+      }
       log_accountability_event: {
         Args: {
           _appointment_id?: string
@@ -12232,6 +12397,7 @@ export type Database = {
         }
         Returns: string
       }
+      purge_public_analysis_expired: { Args: never; Returns: Json }
       read_email_batch: {
         Args: { batch_size: number; queue_name: string; vt: number }
         Returns: {
