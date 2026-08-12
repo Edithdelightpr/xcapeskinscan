@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { Camera, ImageUp, Loader2, ShieldCheck, Timer, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import xcapeLogo from '@/assets/xcape-logo-black.png';
 
 interface Props {
   starting: boolean;
@@ -32,7 +31,6 @@ const PublicScanIntro = ({ starting, error, onStart }: Props) => {
   return (
     <div className="mx-auto w-full max-w-xl space-y-8">
       <div className="space-y-4 text-center">
-        <img src={xcapeLogo} alt="XCAPE" className="mx-auto h-8 w-auto" />
         <h1 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
           Analyse your skin in about two minutes
         </h1>
