@@ -77,6 +77,7 @@ const ScanStage = ({
   return (
     <div className="space-y-3">
       {/* View progress */}
+      {!minimalChrome && (
       <div className="flex items-center justify-center gap-2" role="list" aria-label="Scan progress">
         {SCAN_VIEWS.map((v) => {
           const done = !!accepted[v.id];
@@ -101,6 +102,7 @@ const ScanStage = ({
           );
         })}
       </div>
+      )}
 
       {/* Camera stage */}
       <div
