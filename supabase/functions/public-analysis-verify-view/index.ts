@@ -110,7 +110,7 @@ Deno.serve(async (req) => {
       return reject('too_large', 413);
     }
 
-    const normalized = await normalizeImage(raw);
+    const normalized = normalizeImage(raw);
     if (!normalized.ok) {
       await admin.storage.from(BUCKET).remove([path]);
       return reject(normalized.code);

@@ -1,13 +1,15 @@
 // Server-side image normalization + quality metrics for the anonymous
 // public skin-analysis demo.
 //
-// Everything here runs in the Supabase Edge (Deno) runtime:
-//  - decode/encode via ImageScript (pinned) — pure WASM, no native deps
+// Everything here runs in the Supabase Edge (Deno) runtime using pure-JS
+// codecs (no WASM, no native deps):
+//  - JPEG decode/encode via jpeg-js, PNG decode via upng-js
 //  - EXIF orientation is parsed from the original bytes and applied
 //  - re-encoding to JPEG drops EXIF/GPS and every other metadata segment
 //
 // No landmarks, embeddings or other biometric data are produced or stored.
-import { Image } from 'https://deno.land/x/imagescript@1.3.0/mod.ts';
+import jpeg from 'https://esm.sh/jpeg-js@0.4.4';
+import UPNG from 'https://esm.sh/upng-js@2.1.0';
 import {
   MIN_IMAGE_DIM,
   NORMALIZED_MAX_DIM,
@@ -15,6 +17,13 @@ import {
   sniffImageMime,
   type VerifyCode,
 } from './publicAnalysis.ts';
+
+/** Raw RGBA surface used between decode, orientation and resize. */
+interface Surface {
+  width: number;
+  height: number;
+  data: Uint8Array; // RGBA
+}
 
 export interface NormalizedImage {
   bytes: Uint8Array;
@@ -61,25 +70,76 @@ export function exifOrientation(bytes: Uint8Array): number {
   return 1;
 }
 
-function applyOrientation(image: Image, orientation: number): Image {
-  switch (orientation) {
-    case 2:
-      return image.flip('horizontal');
-    case 3:
-      return image.rotate(180);
-    case 4:
-      return image.flip('vertical');
-    case 5:
-      return image.flip('horizontal').rotate(270);
-    case 6:
-      return image.rotate(90);
-    case 7:
-      return image.flip('horizontal').rotate(90);
-    case 8:
-      return image.rotate(270);
-    default:
-      return image;
+function decodeSurface(raw: Uint8Array, mime: 'image/jpeg' | 'image/png'): Surface {
+  if (mime === 'image/jpeg') {
+    const out = jpeg.decode(raw, { useTArray: true, maxMemoryUsageInMB: 256 });
+    return { width: out.width, height: out.height, data: new Uint8Array(out.data) };
   }
+  const png = UPNG.decode(raw.buffer.slice(raw.byteOffset, raw.byteOffset + raw.byteLength));
+  const rgba = new Uint8Array(UPNG.toRGBA8(png)[0]);
+  return { width: png.width, height: png.height, data: rgba };
+}
+
+/** Applies an EXIF orientation (1–8) by remapping pixels. */
+function applyOrientation(src: Surface, orientation: number): Surface {
+  if (orientation === 1) return src;
+  const swap = orientation >= 5;
+  const w = swap ? src.height : src.width;
+  const h = swap ? src.width : src.height;
+  const out = new Uint8Array(w * h * 4);
+  for (let y = 0; y < src.height; y++) {
+    for (let x = 0; x < src.width; x++) {
+      let nx = x;
+      let ny = y;
+      switch (orientation) {
+        case 2: nx = src.width - 1 - x; break;
+        case 3: nx = src.width - 1 - x; ny = src.height - 1 - y; break;
+        case 4: ny = src.height - 1 - y; break;
+        case 5: nx = y; ny = x; break;
+        case 6: nx = src.height - 1 - y; ny = x; break;
+        case 7: nx = src.height - 1 - y; ny = src.width - 1 - x; break;
+        case 8: nx = y; ny = src.width - 1 - x; break;
+      }
+      const si = (y * src.width + x) * 4;
+      const di = (ny * w + nx) * 4;
+      out[di] = src.data[si];
+      out[di + 1] = src.data[si + 1];
+      out[di + 2] = src.data[si + 2];
+      out[di + 3] = src.data[si + 3];
+    }
+  }
+  return { width: w, height: h, data: out };
+}
+
+/** Box-filtered downscale (never upscales). */
+function resizeSurface(src: Surface, w: number, h: number): Surface {
+  const out = new Uint8Array(w * h * 4);
+  const sx = src.width / w;
+  const sy = src.height / h;
+  for (let y = 0; y < h; y++) {
+    const y0 = Math.floor(y * sy);
+    const y1 = Math.max(y0 + 1, Math.floor((y + 1) * sy));
+    for (let x = 0; x < w; x++) {
+      const x0 = Math.floor(x * sx);
+      const x1 = Math.max(x0 + 1, Math.floor((x + 1) * sx));
+      let r = 0, g = 0, b = 0, n = 0;
+      for (let yy = y0; yy < y1 && yy < src.height; yy++) {
+        for (let xx = x0; xx < x1 && xx < src.width; xx++) {
+          const i = (yy * src.width + xx) * 4;
+          r += src.data[i];
+          g += src.data[i + 1];
+          b += src.data[i + 2];
+          n++;
+        }
+      }
+      const di = (y * w + x) * 4;
+      out[di] = r / n;
+      out[di + 1] = g / n;
+      out[di + 2] = b / n;
+      out[di + 3] = 255;
+    }
+  }
+  return { width: w, height: h, data: out };
 }
 
 /** Mean luminance (Rec. 601) of an RGBA buffer, 0–255. */
@@ -117,52 +177,53 @@ export function laplacianVariance(gray: Float32Array, width: number, height: num
  * Decode → orient → downscale → re-encode as a metadata-free JPEG, and
  * measure lighting + sharpness on the normalized pixels.
  */
-export async function normalizeImage(raw: Uint8Array): Promise<NormalizeResult> {
+export function normalizeImage(raw: Uint8Array): NormalizeResult {
   const mime = sniffImageMime(raw);
   if (!mime) return { ok: false, code: 'unsupported_format' };
 
-  let image: Image;
+  let surface: Surface;
   try {
-    const decoded = await Image.decode(raw);
-    image = decoded as Image;
+    surface = decodeSurface(raw, mime);
+    if (!surface.width || !surface.height) return { ok: false, code: 'corrupt_image' };
+    surface = applyOrientation(surface, exifOrientation(raw));
   } catch {
     return { ok: false, code: 'corrupt_image' };
   }
 
-  try {
-    image = applyOrientation(image, exifOrientation(raw));
-  } catch {
-    return { ok: false, code: 'corrupt_image' };
-  }
-
-  if (Math.min(image.width, image.height) < MIN_IMAGE_DIM) {
+  if (Math.min(surface.width, surface.height) < MIN_IMAGE_DIM) {
     return { ok: false, code: 'too_small' };
   }
 
-  const longest = Math.max(image.width, image.height);
+  const longest = Math.max(surface.width, surface.height);
   if (longest > NORMALIZED_MAX_DIM) {
     const scale = NORMALIZED_MAX_DIM / longest;
-    image = image.resize(Math.round(image.width * scale), Math.round(image.height * scale));
+    surface = resizeSurface(
+      surface,
+      Math.max(1, Math.round(surface.width * scale)),
+      Math.max(1, Math.round(surface.height * scale)),
+    );
   }
 
-  const rgba = image.bitmap;
-  const brightness = meanLuma(rgba);
-  const gray = new Float32Array(rgba.length / 4);
-  for (let i = 0, g = 0; i < rgba.length; i += 4, g++) {
-    gray[g] = 0.299 * rgba[i] + 0.587 * rgba[i + 1] + 0.114 * rgba[i + 2];
+  const brightness = meanLuma(surface.data);
+  const gray = new Float32Array(surface.data.length / 4);
+  for (let i = 0, g = 0; i < surface.data.length; i += 4, g++) {
+    gray[g] = 0.299 * surface.data[i] + 0.587 * surface.data[i + 1] + 0.114 * surface.data[i + 2];
   }
-  const sharpness = laplacianVariance(gray, image.width, image.height);
+  const sharpness = laplacianVariance(gray, surface.width, surface.height);
 
   let bytes: Uint8Array;
   try {
-    bytes = await image.encodeJPEG(88);
+    // Re-encoding produces a bare JFIF JPEG — every EXIF/GPS segment of the
+    // original is dropped here.
+    const encoded = jpeg.encode({ data: surface.data, width: surface.width, height: surface.height }, 88);
+    bytes = new Uint8Array(encoded.data);
   } catch {
     return { ok: false, code: 'corrupt_image' };
   }
 
   return {
     ok: true,
-    image: { bytes, width: image.width, height: image.height, brightness, sharpness },
+    image: { bytes, width: surface.width, height: surface.height, brightness, sharpness },
   };
 }
 
