@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { CheckCircle2, Loader2, RefreshCw } from 'lucide-react';
+import { Loader2, RefreshCw } from 'lucide-react';
 import Seo from '@/components/Seo';
 import { Button } from '@/components/ui/button';
 import PublicScanIntro from '@/components/xcape/public/PublicScanIntro';
