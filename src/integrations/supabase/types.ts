@@ -12465,6 +12465,10 @@ export type Database = {
         }
         Returns: Json
       }
+      public_analysis_heartbeat: {
+        Args: { p_session_id: string; p_worker_lease: string }
+        Returns: Json
+      }
       public_analysis_issue_view: {
         Args: { p_token_hash: string; p_view: string }
         Returns: Json
