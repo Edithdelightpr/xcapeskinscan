@@ -184,7 +184,13 @@ const PublicSkinAnalysis = () => {
     [setFrontFrame],
   );
 
-  // ── Analysis: idempotent start + honest polling ──────────────────────────
+  // ── Analysis: start at most once, then poll status only ─────────────────
+  //
+  // `startAnalysis()` runs only when this effect mounts with a session that
+  // is not already running, or when the visitor explicitly retried. While the
+  // status is `analyzing`, polling calls `fetchStatus()` and nothing else, so
+  // no amount of polling can trigger another AI request. A `failed` status is
+  // shown as-is — it never auto-claims another run.
   useEffect(() => {
     if (stage !== 'analyzing' || !token) return;
     if (analysisStartedAt.current === null) analysisStartedAt.current = Date.now();
@@ -204,52 +210,78 @@ const PublicSkinAnalysis = () => {
       settle('analysis_failed');
     };
 
-    const tick = async () => {
-      try {
-        // Idempotent: starts the job, resumes a stale one, or just reports.
-        const run = await startAnalysis(token);
-        if (cancelled) return;
-        if (isAnalysisPhase(run.phase)) setPhase(run.phase);
+    /** Returns true when the run reached a terminal state. */
+    const applyPolled = (s: PublicAnalysisStatus): boolean => {
+      setVerifiedViews(s.verified_views);
+      if (isAnalysisPhase(s.phase)) setPhase(s.phase);
+      if (s.status === 'complete') {
+        setPhase('analysis_complete');
+        settle('analyzed');
+        return true;
+      }
+      if (s.status === 'failed') {
+        failWith('The analysis could not be completed. You can try again.');
+        return true;
+      }
+      return false;
+    };
 
+    const poll = async () => {
+      try {
+        const s = await fetchStatus(token);
+        if (cancelled) return;
+        if (applyPolled(s)) return;
+        timer = window.setTimeout(() => void poll(), POLL_INTERVAL_MS);
+      } catch (e) {
+        if (cancelled) return;
+        handleError(e, POLL_INTERVAL_MS * 2, poll);
+      }
+    };
+
+    const handleError = (e: unknown, backoff: number, resume: () => Promise<void>) => {
+      if (e instanceof PublicAnalysisError) {
+        if (e.kind === 'invalid') {
+          endSession(e.message);
+          return;
+        }
+        if (e.kind === 'rate_limited' || e.kind === 'rejected') {
+          failWith(e.message);
+          return;
+        }
+        // Network / 5xx: keep polling status — the worker may still be running.
+        timer = window.setTimeout(() => void resume(), backoff);
+        return;
+      }
+      failWith('The analysis could not be completed. You can try again.');
+    };
+
+    const boot = async () => {
+      const retry = retryRequested.current;
+      retryRequested.current = false;
+      try {
         const s = await fetchStatus(token);
         if (cancelled) return;
         setVerifiedViews(s.verified_views);
         if (isAnalysisPhase(s.phase)) setPhase(s.phase);
 
-        if (s.status === 'complete') {
-          setPhase('analysis_complete');
-          settle('analyzed');
+        const running = s.status === 'analyzing' || s.status === 'building_report';
+        if (!running && !(s.status === 'failed' && !retry)) {
+          // Queued (or an explicit retry of a failed run): claim exactly once.
+          const run = await startAnalysis(token, { retry });
+          if (cancelled) return;
+          if (isAnalysisPhase(run.phase)) setPhase(run.phase);
+        } else if (applyPolled(s)) {
           return;
         }
-        if (s.status === 'failed') {
-          failWith('The analysis could not be completed. You can try again.');
-          return;
-        }
-        timer = window.setTimeout(() => void tick(), POLL_INTERVAL_MS);
+        timer = window.setTimeout(() => void poll(), POLL_INTERVAL_MS);
       } catch (e) {
         if (cancelled) return;
-        if (e instanceof PublicAnalysisError) {
-          if (e.kind === 'invalid') {
-            endSession(e.message);
-            return;
-          }
-          if (e.kind === 'rate_limited') {
-            failWith(e.message);
-            return;
-          }
-          if (e.kind === 'rejected') {
-            failWith(e.message);
-            return;
-          }
-          // Network / 5xx: keep polling — the worker may still be running.
-          timer = window.setTimeout(() => void tick(), POLL_INTERVAL_MS * 2);
-          return;
-        }
-        failWith('The analysis could not be completed. You can try again.');
+        // A recoverable boot failure falls back to status polling only.
+        handleError(e, POLL_INTERVAL_MS * 2, poll);
       }
     };
 
-    void tick();
+    void boot();
     return () => {
       cancelled = true;
       if (timer) window.clearTimeout(timer);
@@ -259,9 +291,11 @@ const PublicSkinAnalysis = () => {
   const retryAnalysis = useCallback(() => {
     setAnalysisError(null);
     setPhase(null);
+    retryRequested.current = true;
     analysisStartedAt.current = Date.now();
     setStage('analyzing');
   }, []);
+
 
   const restart = useCallback(() => {
     clearStoredToken();
