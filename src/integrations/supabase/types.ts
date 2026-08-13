@@ -12572,7 +12572,7 @@ export type Database = {
       public_analysis_status: { Args: { p_token_hash: string }; Returns: Json }
       public_analysis_store_protocol_snapshot: {
         Args: { p_assessment_id: string; p_snapshot: Json }
-        Returns: boolean
+        Returns: Json
       }
       purge_public_analysis_expired: { Args: never; Returns: Json }
       read_email_batch: {
