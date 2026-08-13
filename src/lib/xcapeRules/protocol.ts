@@ -447,40 +447,69 @@ export function resolveProtocol(input: ResolveProtocolInput): ProtocolResult {
       }
 
       if (!card.additions.some((a) => a.category === category && !a.companion)) {
-        card.additions.push({
-          category,
-          concern: CONCERN_LABEL[category],
-          ds_sku: active.sku,
-          ds_name: active.name,
-          dose_ml: dose,
-          score,
-          tier_label: tier.label,
-          companion: false,
-        });
+        if (dsMapped(active.sku)) {
+          card.additions.push({
+            category,
+            concern: CONCERN_LABEL[category],
+            ds_sku: active.sku,
+            ds_name: active.name,
+            dose_ml: dose,
+            score,
+            tier_label: tier.label,
+            companion: false,
+          });
+        } else {
+          recordGap({
+            category,
+            concern: CONCERN_LABEL[category],
+            area,
+            product_sku: row.product_sku,
+            product_name: row.product_name,
+            ds_sku: active.sku,
+            ds_name: active.name,
+            companion: false,
+          });
+        }
       }
 
       // Required companion: always paired with the pigmentation and
       // oil/congestion primaries at the same tier dose, never on its own.
       if (ANTI_INFLAMMATORY_CATEGORIES.includes(category)) {
         if (!card.additions.some((a) => a.category === category && a.companion)) {
-          card.additions.push({
-            category,
-            concern: CONCERN_LABEL[category],
-            ds_sku: DS_ANTI_INFLAMMATORY.sku,
-            ds_name: DS_ANTI_INFLAMMATORY.name,
-            dose_ml: dose,
-            score,
-            tier_label: tier.label,
-            companion: true,
-          });
-          antiInflammatoryApplied = true;
+          if (dsMapped(DS_ANTI_INFLAMMATORY.sku)) {
+            card.additions.push({
+              category,
+              concern: CONCERN_LABEL[category],
+              ds_sku: DS_ANTI_INFLAMMATORY.sku,
+              ds_name: DS_ANTI_INFLAMMATORY.name,
+              dose_ml: dose,
+              score,
+              tier_label: tier.label,
+              companion: true,
+            });
+            antiInflammatoryApplied = true;
+          } else {
+            recordGap({
+              category,
+              concern: CONCERN_LABEL[category],
+              area,
+              product_sku: row.product_sku,
+              product_name: row.product_name,
+              ds_sku: DS_ANTI_INFLAMMATORY.sku,
+              ds_name: DS_ANTI_INFLAMMATORY.name,
+              companion: true,
+            });
+          }
         }
       }
     }
   }
 
   const order = (list: ProtocolProduct[]): ProtocolProduct[] =>
-    list.sort((a, b) => a.sort_order - b.sort_order || a.product_name.localeCompare(b.product_name));
+    list
+      // A base product with no resolvable DS line is not a customization.
+      .filter((p) => p.additions.length > 0)
+      .sort((a, b) => a.sort_order - b.sort_order || a.product_name.localeCompare(b.product_name));
 
   const addons = [...addonMap.values()].sort(
     (a, b) =>
@@ -490,6 +519,8 @@ export function resolveProtocol(input: ResolveProtocolInput): ProtocolResult {
       a.product_name.localeCompare(b.product_name),
   );
 
+  const mappingGaps = [...gapMap.values()];
+
   return {
     version: PROTOCOL_VERSION,
     face: order([...byArea.face.values()]),
@@ -497,8 +528,11 @@ export function resolveProtocol(input: ResolveProtocolInput): ProtocolResult {
     addons,
     categories: scored.map((s) => s.category),
     anti_inflammatory_applied: antiInflammatoryApplied,
+    mapping_gaps: mappingGaps,
+    mapping_required: mappingGaps.length > 0,
   };
 }
+
 
 
 /** Flat immutable snapshot lines (one row per product + DS addition). */
