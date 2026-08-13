@@ -55,7 +55,10 @@ export function formulaLabel(formula: ReportFormula): string {
 export function buildFormulaCartItem(
   formula: ReportFormula,
 ): Omit<CartItem, 'quantity'> | null {
+  // A zero / negative price means the local catalogue price has not been
+  // entered yet — the kit stays internal and can never enter the cart.
   if (formula.kit_product_id == null || formula.kit_unit_price == null) return null;
+  if (!(formula.kit_unit_price > 0)) return null;
   return {
     product_id: formula.kit_product_id,
     name: formula.kit_name ?? 'Customized kit',
