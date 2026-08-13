@@ -9,6 +9,7 @@ import type {
   ProtocolDisplayAddon,
   ProtocolDisplayProduct,
 } from '@/components/xcape/protocol/ProtocolRecommendations';
+import type { ReasoningResult } from '@/lib/xcapeRules/reasoning';
 
 /**
  * "Your XCAPE Protocol" — the single client-facing presentation of the
@@ -27,6 +28,8 @@ interface Props {
   face: ProtocolDisplayProduct[];
   body: ProtocolDisplayProduct[];
   addons?: ProtocolDisplayAddon[];
+  /** Reasoning trace; when supplied, the "what your scan found" panel shows. */
+  reasoning?: ReasoningResult | null;
   tone?: 'light' | 'dark';
   /** Status line under the heading (approval / purchasability context). */
   footnote?: string;
@@ -172,11 +175,12 @@ const ClientProtocolPlan = ({
   face,
   body,
   addons = [],
+  reasoning = null,
   tone = 'light',
   footnote,
   className,
 }: Props) => {
-  const plan = buildProtocolPlan({ face, body, addons });
+  const plan = buildProtocolPlan({ face, body, addons, reasoning });
   if (plan.steps.length === 0) return null;
   const dark = tone === 'dark';
 
@@ -217,6 +221,54 @@ const ClientProtocolPlan = ({
           XCAPE product/kit mapping required for part of this protocol. XCAPE confirms the mapping
           before that item can be approved or purchased.
         </p>
+      )}
+
+      {plan.summary && plan.summary.findings.length > 0 && (
+        <div
+          className={cn(
+            'space-y-2 rounded-xl border p-3',
+            dark ? 'border-slate-800 bg-slate-900/40' : 'border-border/50 bg-muted/30',
+          )}
+        >
+          <p
+            className={cn(
+              'text-[11px] font-semibold uppercase tracking-[0.12em]',
+              dark ? 'text-slate-300' : 'text-muted-foreground',
+            )}
+          >
+            What your scan found
+          </p>
+          <ul className={cn('space-y-1 text-[12px]', dark ? 'text-slate-200' : 'text-foreground')}>
+            {plan.summary.findings.map((f) => (
+              <li key={f.concern} className="flex items-baseline justify-between gap-3">
+                <span>{f.concern}</span>
+                <span className={dark ? 'text-slate-400' : 'text-muted-foreground'}>
+                  {f.band_label} · {f.severity}/100
+                </span>
+              </li>
+            ))}
+          </ul>
+          {plan.summary.focus && (
+            <p className={cn('text-[11.5px]', dark ? 'text-slate-400' : 'text-muted-foreground')}>
+              This protocol is built around <span className="font-medium">{plan.summary.focus}</span>
+              {plan.summary.secondary_focus
+                ? `, with support for ${plan.summary.secondary_focus}.`
+                : '.'}
+            </p>
+          )}
+          {plan.summary.observations.map((o) => (
+            <p key={o} className={cn('text-[11.5px]', dark ? 'text-slate-400' : 'text-muted-foreground')}>
+              {o}
+            </p>
+          ))}
+          {plan.summary.not_targeted.length > 0 && (
+            <p className={cn('text-[11.5px]', dark ? 'text-slate-500' : 'text-muted-foreground')}>
+              Not targeted right now:{' '}
+              {plan.summary.not_targeted.map((n) => `${n.concern} (${n.band_label})`).join(', ')} —
+              your current protocol already supports these.
+            </p>
+          )}
+        </div>
       )}
 
       <ul className={cn('divide-y', dark ? 'divide-slate-800' : 'divide-border/50')}>
