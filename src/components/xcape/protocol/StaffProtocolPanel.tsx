@@ -59,7 +59,7 @@ const StaffProtocolPanel = ({ skin }: Props) => {
     <ProtocolRecommendations
       face={result.face}
       body={result.body}
-      footnote="Deterministic XCAPE protocol resolved from the approved scores and the admin product alignment. Body accompanies face at 3× the face dose. Approve in the proposal flow to snapshot it for fulfilment."
+      footnote="Deterministic XCAPE protocol resolved from the approved scores and the admin product alignment. Body accompanies face at 3× the face dose. Accepting a formula proposal below stores these exact lines in the immutable snapshot that the client report and PDF read."
     />
   );
 };
