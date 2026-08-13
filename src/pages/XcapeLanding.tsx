@@ -45,7 +45,10 @@ const XcapeLanding = () => {
         <XcapeClosingCta />
       </main>
 
+      <InstallXcape />
+
       <footer className="border-t border-border">
+
         <div className="mx-auto max-w-6xl px-6 py-10">
           <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground">
             {XCAPE_DISCLAIMER}
