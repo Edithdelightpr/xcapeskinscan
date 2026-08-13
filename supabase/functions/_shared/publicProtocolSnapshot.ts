@@ -15,6 +15,7 @@ import {
   type ProtocolAlignment,
   type ProtocolArea,
   type ProtocolCategory,
+  sanitizeProductImageUrl,
   type ProtocolProduct,
 } from './xcapeProtocol.ts';
 
@@ -31,6 +32,8 @@ export interface PublicProtocolAddition {
 
 export interface PublicProtocolProduct {
   product_name: string;
+  /** Catalogue packaging image (same-origin asset path or https). */
+  product_image_url?: string | null;
   area: ProtocolArea;
   additions: PublicProtocolAddition[];
 }
@@ -51,6 +54,7 @@ export interface PublicProtocolSnapshot {
 export function publicProtocolProducts(items: ProtocolProduct[]): PublicProtocolProduct[] {
   return items.map((p) => ({
     product_name: p.product_name,
+    product_image_url: sanitizeProductImageUrl(p.product_image_url),
     area: p.area,
     additions: p.additions.map((a) => ({
       concern: a.concern,
@@ -71,19 +75,20 @@ export async function loadAlignments(
   try {
     const { data, error } = await admin
       .from('xcape_product_alignments')
-      .select('category, area, dose_multiplier, is_active, sort_order, product:products(name,sku,active)')
+      .select('category, area, dose_multiplier, is_active, sort_order, product:products(name,sku,active,image_url)')
       .eq('is_active', true);
     if (error || !Array.isArray(data)) return DEFAULT_ALIGNMENTS;
     const rows: ProtocolAlignment[] = [];
     // deno-lint-ignore no-explicit-any
     for (const r of data as Record<string, any>[]) {
-      const product = r.product as { name?: string; sku?: string; active?: boolean } | null;
+      const product = r.product as { name?: string; sku?: string; active?: boolean; image_url?: string | null } | null;
       if (!product?.sku || !product?.name || product.active === false) continue;
       rows.push({
         category: r.category as ProtocolCategory,
         area: (r.area === 'body' ? 'body' : 'face') as ProtocolArea,
         product_sku: product.sku,
         product_name: product.name,
+        product_image_url: sanitizeProductImageUrl(product.image_url),
         dose_multiplier: Number(r.dose_multiplier) || (r.area === 'body' ? 3 : 1),
         is_active: true,
         sort_order: Number(r.sort_order) || 0,
@@ -177,7 +182,12 @@ export function sanitizePublicProtocolSnapshot(value: unknown): PublicProtocolSn
         }
       }
       if (additions.length === 0) continue;
-      out.push({ product_name: name, area: area(p?.area) ?? expected, additions });
+      out.push({
+        product_name: name,
+        product_image_url: sanitizeProductImageUrl(p?.product_image_url),
+        area: area(p?.area) ?? expected,
+        additions,
+      });
     }
     return out;
   };

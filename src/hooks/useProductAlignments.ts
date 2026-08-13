@@ -24,7 +24,7 @@ export interface ProductAlignmentRow {
   dose_multiplier: number;
   is_active: boolean;
   sort_order: number;
-  product: { id: string; name: string; sku: string | null } | null;
+  product: { id: string; name: string; sku: string | null; image_url?: string | null } | null;
 }
 
 const KEY = ['xcape-product-alignments'] as const;
@@ -35,7 +35,7 @@ export const useProductAlignments = () =>
     queryFn: async (): Promise<ProductAlignmentRow[]> => {
       const { data, error } = await (supabase as any)
         .from('xcape_product_alignments')
-        .select('*, product:products(id,name,sku)')
+        .select('*, product:products(id,name,sku,image_url)')
         .order('category', { ascending: true })
         .order('area', { ascending: true })
         .order('sort_order', { ascending: true });
@@ -53,6 +53,7 @@ export const toProtocolAlignments = (rows: ProductAlignmentRow[]): ProtocolAlign
       area: r.area,
       product_sku: r.product!.sku!,
       product_name: r.product!.name,
+      product_image_url: r.product!.image_url ?? null,
       dose_multiplier: Number(r.dose_multiplier),
       is_active: r.is_active,
       sort_order: r.sort_order,
