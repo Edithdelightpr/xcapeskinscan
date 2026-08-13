@@ -38,6 +38,7 @@ import {
   type ResolvedFormula,
 } from '@/lib/xcapeRules/customization';
 import { useDsAvailability, useProtocolAlignments } from '@/hooks/useProductAlignments';
+import { useRecommendationConfig } from '@/hooks/useRecommendationConfig';
 import { protocolFormulaLines, resolveProtocol } from '@/lib/xcapeRules/protocol';
 import { scoresFromSkin } from '@/components/xcape/protocol/StaffProtocolPanel';
 import type { RuleOutputs, XcapeProposal } from '@/lib/xcapeRules/types';
@@ -123,6 +124,7 @@ const XcapeProposalsPanel = ({
   const snapshotMut = useCreateFormulaSnapshot();
   const { alignments } = useProtocolAlignments();
   const { dsAvailable } = useDsAvailability();
+  const { config } = useRecommendationConfig();
 
   /** Deterministic protocol resolved from the approved scores + admin
    *  alignment. Snapshotted per approved formula so the issued report keeps
@@ -133,8 +135,9 @@ const XcapeProposalsPanel = ({
         scores: scoresFromSkin(skin),
         alignments,
         ds_available: dsAvailable,
+        config,
       }),
-    [skin, alignments, dsAvailable],
+    [skin, alignments, dsAvailable, config],
   );
 
   const [rejecting, setRejecting] = useState<XcapeProposal | null>(null);
@@ -287,6 +290,8 @@ const XcapeProposalsPanel = ({
             (l) => l.category === formula.category,
           ),
           protocolVersion: protocolResult.version,
+          recommendationRuleVersion: protocolResult.reasoning.config_version,
+          decisions: protocolResult.reasoning,
           rule: { rule_id: p.rule_id, rule_version_id: p.rule_version_id, rule_version: p.rule_version },
           decisionReason: reason,
         });
