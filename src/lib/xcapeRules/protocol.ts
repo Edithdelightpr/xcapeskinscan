@@ -380,6 +380,18 @@ export function resolveProtocol(input: ResolveProtocolInput): ProtocolResult {
   const addonMap = new Map<string, ProtocolAddon>();
   let antiInflammatoryApplied = false;
 
+  // A DS solution is only usable when it is an ACTIVE catalogue product.
+  // Omitting ds_available keeps pure rule evaluation (everything mapped).
+  const dsAllowList = Array.isArray(input.ds_available) ? new Set(input.ds_available) : null;
+  const dsMapped = (sku: string) => dsAllowList == null || dsAllowList.has(sku);
+  const gapMap = new Map<string, ProtocolMappingGap>();
+  const recordGap = (g: ProtocolMappingGap) => {
+    const key = `${g.area}:${g.product_sku}:${g.ds_sku}:${g.category}`;
+    if (!gapMap.has(key)) gapMap.set(key, g);
+  };
+
+
+
   for (const { category, score, tier } of scored) {
     const active = DS_ACTIVE_BY_CATEGORY[category];
     const rows = alignments
