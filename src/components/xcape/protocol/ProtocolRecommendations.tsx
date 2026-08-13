@@ -66,48 +66,70 @@ const AreaGroup = ({
           <li
             key={`${p.area}-${p.product_name}`}
             className={cn(
-              'rounded-2xl border p-3 sm:p-4',
+              'flex gap-3 rounded-2xl border p-3 sm:gap-4 sm:p-4',
               dark ? 'border-slate-700/80 bg-slate-900/40' : 'border-border/60 bg-surface/40',
             )}
           >
-            <p
-              className={cn(
-                'text-sm font-medium',
-                dark ? 'text-slate-100' : 'text-foreground',
-              )}
-            >
-              {p.product_name}
-            </p>
-            <ul className="mt-2 space-y-1.5">
-              {p.additions.map((a, i) => (
-                <li
-                  key={`${a.ds_name}-${a.concern}-${i}`}
-                  className={cn(
-                    'flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-[12.5px]',
-                    dark ? 'text-slate-300' : 'text-muted-foreground',
-                  )}
-                >
-                  <span className={dark ? 'text-slate-100' : 'text-foreground'}>
-                    {a.ds_name}
-                    {a.companion && ' (companion)'}
-                  </span>
-                  <span
+            {p.product_image_url && (
+              <img
+                src={p.product_image_url}
+                alt={p.product_name}
+                loading="lazy"
+                className={cn(
+                  'h-16 w-16 shrink-0 rounded-xl border object-cover sm:h-20 sm:w-20',
+                  dark ? 'border-slate-700/80' : 'border-border/60',
+                )}
+              />
+            )}
+            <div className="min-w-0 flex-1">
+              <p
+                className={cn(
+                  'text-sm font-medium',
+                  dark ? 'text-slate-100' : 'text-foreground',
+                )}
+              >
+                {p.product_name}
+              </p>
+              <p
+                className={cn(
+                  'text-[10px] uppercase tracking-[0.16em]',
+                  dark ? 'text-slate-500' : 'text-muted-foreground/80',
+                )}
+              >
+                Customized for you with
+              </p>
+              <ul className="mt-1.5 space-y-1.5">
+                {p.additions.map((a, i) => (
+                  <li
+                    key={`${a.ds_name}-${a.concern}-${i}`}
                     className={cn(
-                      'font-semibold tabular-nums',
-                      dark ? 'text-sky-300' : 'text-primary',
+                      'flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-[12.5px]',
+                      dark ? 'text-slate-300' : 'text-muted-foreground',
                     )}
                   >
-                    {a.dose_ml} ml
-                  </span>
-                  <span className="text-[11px]">
-                    {a.concern} · score {a.score}/100 · tier {a.tier_label}
-                  </span>
-                </li>
-              ))}
-            </ul>
+                    <span className={dark ? 'text-slate-100' : 'text-foreground'}>
+                      {a.ds_name}
+                      {a.companion && ' (companion)'}
+                    </span>
+                    <span
+                      className={cn(
+                        'font-semibold tabular-nums',
+                        dark ? 'text-sky-300' : 'text-primary',
+                      )}
+                    >
+                      {a.dose_ml} ml
+                    </span>
+                    <span className="text-[11px]">
+                      {a.concern} · score {a.score}/100 · tier {a.tier_label}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
           </li>
         ))}
       </ul>
+
     </div>
   );
 };
