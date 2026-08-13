@@ -11,6 +11,7 @@ import {
   DEFAULT_ALIGNMENTS,
   resolveProtocol,
   sanitizeProductImageUrl,
+  publicProtocolAddons,
   type ProtocolAlignment,
   type ProtocolArea,
   type ProtocolCategory,
@@ -181,10 +182,11 @@ Deno.serve(async (req) => {
       // and oil/congestion line — the resolver applies it automatically.
     });
     const protocol =
-      resolved.face.length > 0 || resolved.body.length > 0
+      resolved.face.length > 0 || resolved.body.length > 0 || resolved.addons.length > 0
         ? {
             face: publicProtocolProducts(resolved.face),
             body: publicProtocolProducts(resolved.body),
+            addons: publicProtocolAddons(resolved.addons),
           }
         : null;
 

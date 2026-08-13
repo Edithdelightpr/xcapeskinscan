@@ -98,6 +98,7 @@ const PersonalReportView = ({ data, token, onDownloadPdf, downloadDisabled }: Pr
             <ProtocolRecommendations
               face={data.protocol_recommendation.face}
               body={data.protocol_recommendation.body}
+              addons={data.protocol_recommendation.addons ?? []}
               tone="light"
               footnote="Derived from your four skin-health scores using the XCAPE customization protocol. Your practitioner reviews and confirms this before anything is prepared or purchased."
             />
