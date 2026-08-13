@@ -177,8 +177,8 @@ describe('formatter still receives everything it needs', () => {
     expect(report.concerns.map((c) => c.key)).toEqual([
       'firmness_skin_support',
       'pigmentation_stability',
-      'barrier_surface_hydration',
       'oil_congestion_balance',
+      'barrier_surface_hydration',
     ]);
   });
 
