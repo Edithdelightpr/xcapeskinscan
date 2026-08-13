@@ -4,6 +4,7 @@
 // network font loading). Logs `pdf_downloaded` (deduped within 60s).
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
 import { resolveClientFirstName } from '../_shared/clientName.ts';
+import { sanitizeSnapshotLines } from '../_shared/xcapeProtocol.ts';
 import { PDFDocument, StandardFonts, rgb } from 'npm:pdf-lib@1.17.1';
 import {
   formatReport,
@@ -85,6 +86,15 @@ async function buildPdf(payload: {
     companion_dose_ml?: number | null;
     instructions?: string | null;
     warnings?: string[] | null;
+    formula_lines?: Array<{
+      area: string;
+      product_name: string;
+      concern: string;
+      ds_name: string;
+      dose_ml: number;
+      tier_label: string;
+      companion: boolean;
+    }> | null;
   }>;
 }): Promise<Uint8Array> {
   const pdf = await PDFDocument.create();
@@ -200,6 +210,21 @@ async function buildPdf(payload: {
               `Active solution: ${formula.active_name}${formula.dose_ml != null ? ` — ${formula.dose_ml} ml` : ''}`,
               { size: 10.5, color: COCOA_SOFT, x: MARGIN + 12, maxWidth: CONTENT_W - 12 },
             );
+          }
+          // Immutable multi-product protocol lines (when snapshotted).
+          const lines = formula.formula_lines ?? [];
+          for (const area of ['face', 'body'] as const) {
+            const group = lines.filter((l) => l.area === area);
+            if (group.length === 0) continue;
+            drawText(area === 'face' ? 'Face' : 'Body (always alongside face)', {
+              size: 10, bold: true, color: COCOA, x: MARGIN + 12, maxWidth: CONTENT_W - 12,
+            });
+            for (const l of group) {
+              drawText(
+                `${l.product_name} + ${l.ds_name} — ${l.dose_ml} ml${l.companion ? ' (companion)' : ''}`,
+                { size: 10.5, color: COCOA_SOFT, x: MARGIN + 22, maxWidth: CONTENT_W - 22 },
+              );
+            }
           }
           if (formula.companion_name) {
             drawText(
@@ -350,7 +375,7 @@ Deno.serve(async (req) => {
       svcIds.length ? admin.from('services').select('id, name, description, price_per_session').in('id', svcIds) : Promise.resolve({ data: [] as any[] }),
       prodIds.length ? admin.from('products').select('id, name, short_description, selling_price').in('id', prodIds) : Promise.resolve({ data: [] as any[] }),
       admin.from('xcape_formula_snapshots')
-        .select('category, kit_name, kit_unit_price, base_product_name, active_name, dose_ml, companion_name, companion_dose_ml, instructions, warnings')
+        .select('category, kit_name, kit_unit_price, base_product_name, active_name, dose_ml, companion_name, companion_dose_ml, instructions, warnings, formula_lines')
         .eq('assessment_id', assessment.id)
         .eq('status', 'approved')
         .eq('is_demo', false)
@@ -382,7 +407,11 @@ Deno.serve(async (req) => {
       nextVisitInWeeks: assessment.next_visit_in_weeks,
       services: (services ?? []) as any[],
       products: (products ?? []) as any[],
-      formulas: (formulas ?? []) as any[],
+      // deno-lint-ignore no-explicit-any
+      formulas: (formulas ?? []).map((f: any) => ({
+        ...f,
+        formula_lines: sanitizeSnapshotLines(f.formula_lines),
+      })) as any[],
     });
 
     // Dedupe pdf_downloaded within 60s
