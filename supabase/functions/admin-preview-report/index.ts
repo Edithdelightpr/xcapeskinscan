@@ -7,6 +7,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
 import { resolveClientFirstName } from '../_shared/clientName.ts';
 import { buildTreatmentPlanBlock } from '../_shared/reportTreatmentPlan.ts';
 import { buildCareJourneyBlock } from '../_shared/reportCareJourney.ts';
+import { sanitizeSnapshotLines } from '../_shared/xcapeProtocol.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -123,7 +124,7 @@ Deno.serve(async (req) => {
     // ones too — so admins can verify mappings before going live.
     const { data: formulas } = await admin
       .from('xcape_formula_snapshots')
-      .select('id, category, score, kit_product_id, kit_name, kit_unit_price, base_product_name, active_name, dose_ml, companion_name, companion_dose_ml, instructions, warnings, rule_version, approved_at, is_demo')
+      .select('id, category, score, kit_product_id, kit_name, kit_unit_price, base_product_name, active_name, dose_ml, companion_name, companion_dose_ml, instructions, warnings, formula_lines, protocol_version, rule_version, approved_at, is_demo')
       .eq('assessment_id', assessment.id)
       .eq('status', 'approved')
       .order('created_at', { ascending: true });
@@ -153,6 +154,8 @@ Deno.serve(async (req) => {
         kit_image_url: kit?.image_url ?? kit?.thumbnail_url ?? null,
         kit_public_slug: kit?.public_slug ?? null,
         kit_short_description: kit?.short_description ?? null,
+        // Immutable protocol lines, whitelisted to display fields only.
+        formula_lines: sanitizeSnapshotLines(f.formula_lines),
       };
     });
 

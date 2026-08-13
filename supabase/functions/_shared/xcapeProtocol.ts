@@ -380,3 +380,38 @@ export function protocolFormulaLines(result: ProtocolResult): ProtocolFormulaLin
   }
   return out;
 }
+
+/**
+ * Client-safe view of immutable snapshot lines: display fields only — no
+ * product ids, no SKUs, no prices, no internal flags.
+ */
+export function sanitizeSnapshotLines(value: unknown): Array<{
+  area: string;
+  product_name: string;
+  concern: string;
+  ds_name: string;
+  dose_ml: number;
+  tier_label: string;
+  companion: boolean;
+}> {
+  if (!Array.isArray(value)) return [];
+  const out = [];
+  for (const raw of value.slice(0, 40)) {
+    const l = raw as Record<string, unknown>;
+    const area = l?.area === 'body' ? 'body' : l?.area === 'face' ? 'face' : null;
+    const product_name = typeof l?.product_name === 'string' ? l.product_name.slice(0, 120) : null;
+    const ds_name = typeof l?.ds_name === 'string' ? l.ds_name.slice(0, 120) : null;
+    const dose = Number(l?.dose_ml);
+    if (!area || !product_name || !ds_name || !Number.isFinite(dose) || dose <= 0) continue;
+    out.push({
+      area,
+      product_name,
+      concern: typeof l?.concern === 'string' ? l.concern.slice(0, 120) : '',
+      ds_name,
+      dose_ml: dose,
+      tier_label: typeof l?.tier_label === 'string' ? l.tier_label.slice(0, 24) : '',
+      companion: l?.companion === true,
+    });
+  }
+  return out;
+}
