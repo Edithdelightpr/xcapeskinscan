@@ -10,6 +10,7 @@ import { corsHeaders, json, sha256Hex } from '../_shared/publicAnalysis.ts';
 import {
   DEFAULT_ALIGNMENTS,
   resolveProtocol,
+  sanitizeProductImageUrl,
   type ProtocolAlignment,
   type ProtocolArea,
   type ProtocolCategory,
