@@ -334,7 +334,7 @@ async function buildPdf(payload: {
       { size: 10, italic: true, color: COCOA_SOFT },
     );
     y -= 4;
-    for (const [label, items] of [['Face', payload.protocol.face], ['Body (3× the face dose)', payload.protocol.body]] as const) {
+    for (const [label, items] of [['Face', payload.protocol.face], ['Your XCAPE Body Protocol (derived from the facial findings)', payload.protocol.body]] as const) {
       if (items.length === 0) continue;
       drawText(label, { size: 10.5, bold: true, color: COCOA });
       for (const prod of items) {

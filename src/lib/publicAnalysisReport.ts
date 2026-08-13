@@ -18,8 +18,10 @@ import {
 } from '@/lib/publicAnalysisScores';
 import { formatConcerns, type FormattedConcern } from '@/lib/reportConcernFormatter';
 import {
+  sanitizeDerivation,
   sanitizeProductImageUrl,
   sanitizeProtocolAddons,
+  type BodyDerivation,
   type ProtocolAddonDisplay,
 } from '@/lib/xcapeRules/protocol';
 
@@ -37,6 +39,8 @@ export interface PublicProtocolAddition {
   tier_label: string;
   score: number;
   companion: boolean;
+  /** How a BODY line was derived from a facial finding (body lines only). */
+  derivation?: BodyDerivation | null;
 }
 
 export interface PublicProtocolProduct {
@@ -119,6 +123,7 @@ function protocolProducts(raw: unknown, area: 'face' | 'body'): PublicProtocolPr
         tier_label: text(add.tier_label, 20) ?? '',
         score: add.score,
         companion: add.companion === true,
+        derivation: sanitizeDerivation(add.derivation),
       });
       if (additions.length >= MAX_ADDITIONS) break;
     }

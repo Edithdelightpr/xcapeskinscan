@@ -8,15 +8,24 @@
  *
  * Rules encoded here (confirmed with the protocol owner — not provisional):
  *  1. Each analysis category maps to exactly one DS active solution.
- *  2. The health score (100 = healthiest) resolves the FACE dose per aligned
- *     product; BODY is always recommended alongside face at 3x the face dose.
- *  3. The DS active is added to EVERY product aligned with that concern —
+ *  2. The four values are HEALTH scores: 100 = healthiest, 0 = most
+ *     compromised. A LOWER score means a HIGHER treatment priority.
+ *  3. The health score resolves the FACE dose per aligned product.
+ *  4. The BODY protocol is DERIVED from the facial findings (the body is not
+ *     independently scanned) and has exactly two pathways:
+ *       - pigmentation health < 75 -> XCAPE Advanced Serum body pathway at
+ *         the same health-score tier dose (1.0 / 1.5 / 2.0 ml).
+ *       - firmness health < 75 -> XCAPE Body Milk customized with the
+ *         weak-elasticity line at EXACTLY 5x the Face Cream anti-aging dose.
+ *     (This supersedes the older "body = 3x face" rule.)
+ *  5. The DS active is added to EVERY product aligned with that concern —
  *     the dose is never divided across products.
- *  4. DS Anti-Inflammatory is a REQUIRED companion on every pigmentation and
+ *  6. DS Anti-Inflammatory is a REQUIRED companion on every pigmentation and
  *     oil/congestion line, at the same tier dose as that category's primary
  *     DS solution. It is automatic — it does not depend on any inflammation
  *     or sensitivity score, flag, AI wording or practitioner toggle — and it
  *     is never standalone.
+
  */
 
 /* ---------- Categories & DS actives ---------- */
@@ -78,7 +87,16 @@ export const ANTI_INFLAMMATORY_CATEGORIES: ProtocolCategory[] = [
  * solutions. Every other catalogue product may be RECOMMENDED for a concern,
  * but must never carry DS ingredients, ml quantities or dose tiers.
  */
-export const CUSTOMIZABLE_PRODUCT_SKUS = ['XC-FACE-CREAM', 'XC-BODY-MILK'] as const;
+/**
+ * Products that may ever carry a customization line: the two face/body bases
+ * plus the Advanced Serum, which is customized on the DERIVED body
+ * pigmentation pathway only (never on the face).
+ */
+export const CUSTOMIZABLE_PRODUCT_SKUS = [
+  'XC-FACE-CREAM',
+  'XC-BODY-MILK',
+  'XC-ADVANCED-SERUM',
+] as const;
 
 export function isCustomizableProductSku(sku: unknown): boolean {
   return typeof sku === 'string' && (CUSTOMIZABLE_PRODUCT_SKUS as readonly string[]).includes(sku);
@@ -130,7 +148,25 @@ export const CONFIRMED_FACE_DOSE_TIERS: ProtocolDoseTier[] = [
 ];
 
 export const FACE_DOSE_MULTIPLIER = 1;
+/**
+ * @deprecated Legacy alignment multiplier. The derived body protocol no
+ * longer uses a blanket 3x rule; see ELASTICITY_BODY_MULTIPLIER.
+ */
 export const BODY_DOSE_MULTIPLIER = 3;
+
+/** Body Milk weak-elasticity line = 5x the Face Cream anti-aging line. */
+export const ELASTICITY_BODY_MULTIPLIER = 5;
+
+/**
+ * A derived body pathway only activates when the source facial HEALTH score
+ * is BELOW this value (75–100 = healthy enough, no body activation).
+ */
+export const BODY_ACTIVATION_MAX_SCORE = 75;
+
+/** Body pathway product SKUs derived from the facial findings. */
+export const BODY_SERUM_SKU = 'XC-ADVANCED-SERUM';
+export const BODY_MILK_SKU = 'XC-BODY-MILK';
+
 
 const round2 = (n: number): number => Math.round(n * 100) / 100;
 
@@ -248,6 +284,22 @@ export const DEFAULT_ALIGNMENTS: ProtocolAlignment[] = [
 
 /* ---------- Resolution ---------- */
 
+/**
+ * How a BODY line was derived from a FACIAL finding. Present on body lines
+ * only; the body is never independently scanned.
+ */
+export interface BodyDerivation {
+  rule: 'body_milk_elasticity_x5' | 'advanced_serum_pigmentation';
+  source_category: ProtocolCategory;
+  source_concern: string;
+  /** Facial health score that triggered the body pathway (100 = healthiest). */
+  source_score: number;
+  /** The corresponding FACE customization amount for this line, in ml. */
+  base_face_dose_ml: number;
+  /** Multiplier applied to the face amount (Body Milk elasticity = 5). */
+  multiplier: number;
+}
+
 /** One DS addition applied to one product. */
 export interface ProtocolAddition {
   category: ProtocolCategory;
@@ -259,7 +311,10 @@ export interface ProtocolAddition {
   tier_label: string;
   /** True for the DS Anti-Inflammatory companion line. */
   companion: boolean;
+  /** Present on derived BODY lines only. */
+  derivation?: BodyDerivation | null;
 }
+
 
 /**
  * One de-duplicated CUSTOMIZABLE product card (Face Cream / Body Milk only),
@@ -361,10 +416,171 @@ export interface ResolveProtocolInput {
 const isProtocolCategory = (v: unknown): v is ProtocolCategory =>
   typeof v === 'string' && (PROTOCOL_CATEGORIES as string[]).includes(v);
 
+export interface DerivedBodyResult {
+  body: ProtocolProduct[];
+  mapping_gaps: ProtocolMappingGap[];
+  anti_inflammatory_applied: boolean;
+  /** Body SKUs owned by the derived pathway (never re-rendered as add-ons). */
+  skus: string[];
+}
+
+/**
+ * "Your XCAPE Body Protocol" — DERIVED from the facial health findings.
+ *
+ *  A) pigmentation health < 75  -> Advanced Serum body pathway at the same
+ *     health-score tier dose (50–74 = 1.0, 25–49 = 1.5, 0–24 = 2.0 ml), with
+ *     the required DS Anti-Inflammatory companion at the same dose.
+ *  B) firmness health < 75      -> Body Milk weak-elasticity line at EXACTLY
+ *     5x the Face Cream anti-aging amount for that same score.
+ *
+ * A health score of 75–100 never activates its body pathway. Missing DS
+ * catalogue mappings are recorded as gaps and the line is withheld — never
+ * substituted or invented.
+ */
+export function deriveBodyProtocol(input: {
+  scores: Partial<Record<ProtocolCategory, number | null | undefined>>;
+  alignments?: ProtocolAlignment[];
+  ds_available?: string[] | null;
+}): DerivedBodyResult {
+  const alignments = (input.alignments ?? DEFAULT_ALIGNMENTS).filter((a) => a.is_active);
+  const dsAllowList = Array.isArray(input.ds_available) ? new Set(input.ds_available) : null;
+  const dsMapped = (sku: string) => dsAllowList == null || dsAllowList.has(sku);
+
+  const gaps: ProtocolMappingGap[] = [];
+  const cards: ProtocolProduct[] = [];
+  const skus: string[] = [];
+  let antiInflammatoryApplied = false;
+
+  const bodyRow = (sku: string) =>
+    alignments.find((a) => a.area === 'body' && a.product_sku === sku) ??
+    alignments.find((a) => a.product_sku === sku) ??
+    null;
+
+  const makeCard = (sku: string, fallbackName: string, sort_order: number): ProtocolProduct => {
+    const row = bodyRow(sku);
+    const card: ProtocolProduct = {
+      product_sku: sku,
+      product_name: row?.product_name ?? fallbackName,
+      product_image_url: sanitizeProductImageUrl(row?.product_image_url),
+      area: 'body',
+      additions: [],
+      sort_order,
+      customizable: true,
+    };
+    cards.push(card);
+    skus.push(sku);
+    return card;
+  };
+
+  const addLine = (
+    card: ProtocolProduct,
+    category: ProtocolCategory,
+    ds: DsActive,
+    dose_ml: number,
+    score: number,
+    tier_label: string,
+    companion: boolean,
+    derivation: BodyDerivation,
+  ) => {
+    if (!dsMapped(ds.sku)) {
+      gaps.push({
+        category,
+        concern: CONCERN_LABEL[category],
+        area: 'body',
+        product_sku: card.product_sku,
+        product_name: card.product_name,
+        ds_sku: ds.sku,
+        ds_name: ds.name,
+        companion,
+      });
+      return;
+    }
+    card.additions.push({
+      category,
+      concern: CONCERN_LABEL[category],
+      ds_sku: ds.sku,
+      ds_name: ds.name,
+      dose_ml: round2(dose_ml),
+      score,
+      tier_label,
+      companion,
+      derivation,
+    });
+    if (companion) antiInflammatoryApplied = true;
+  };
+
+  // A) Hyperpigmentation -> Advanced Serum body/treatment pathway.
+  const pigScore = input.scores?.pigmentation_stability;
+  const pigTier = tierForScore(pigScore);
+  if (isScore(pigScore) && pigTier && pigScore < BODY_ACTIVATION_MAX_SCORE) {
+    const card = makeCard(BODY_SERUM_SKU, 'XCAPE Advanced Serum', 0);
+    const derivation: BodyDerivation = {
+      rule: 'advanced_serum_pigmentation',
+      source_category: 'pigmentation_stability',
+      source_concern: CONCERN_LABEL.pigmentation_stability,
+      source_score: pigScore,
+      base_face_dose_ml: pigTier.dose_ml,
+      multiplier: 1,
+    };
+    addLine(
+      card,
+      'pigmentation_stability',
+      DS_ACTIVE_BY_CATEGORY.pigmentation_stability,
+      pigTier.dose_ml,
+      pigScore,
+      pigTier.label,
+      false,
+      derivation,
+    );
+    addLine(
+      card,
+      'pigmentation_stability',
+      DS_ANTI_INFLAMMATORY,
+      pigTier.dose_ml,
+      pigScore,
+      pigTier.label,
+      true,
+      derivation,
+    );
+  }
+
+  // B) Weak elasticity -> Body Milk at 5x the Face Cream anti-aging amount.
+  const firmScore = input.scores?.firmness_skin_support;
+  const firmTier = tierForScore(firmScore);
+  if (isScore(firmScore) && firmTier && firmScore < BODY_ACTIVATION_MAX_SCORE) {
+    const card = makeCard(BODY_MILK_SKU, 'XCAPE Body Milk', 1);
+    addLine(
+      card,
+      'firmness_skin_support',
+      DS_ACTIVE_BY_CATEGORY.firmness_skin_support,
+      firmTier.dose_ml * ELASTICITY_BODY_MULTIPLIER,
+      firmScore,
+      firmTier.label,
+      false,
+      {
+        rule: 'body_milk_elasticity_x5',
+        source_category: 'firmness_skin_support',
+        source_concern: CONCERN_LABEL.firmness_skin_support,
+        source_score: firmScore,
+        base_face_dose_ml: firmTier.dose_ml,
+        multiplier: ELASTICITY_BODY_MULTIPLIER,
+      },
+    );
+  }
+
+  return {
+    // A base product with no resolvable DS line is not a customization.
+    body: cards.filter((c) => c.additions.length > 0).sort((a, b) => a.sort_order - b.sort_order),
+    mapping_gaps: gaps,
+    anti_inflammatory_applied: antiInflammatoryApplied,
+    skus,
+  };
+}
+
 /**
  * Deterministically resolve the full XCAPE protocol for a set of scores.
- * Every applicable category yields both face AND body recommendations;
- * products are de-duplicated per area while retaining every DS addition.
+ * The FACE protocol comes from the alignment map + reasoning pass; the BODY
+ * protocol is derived from the facial findings (see deriveBodyProtocol).
  */
 export function resolveProtocol(input: ResolveProtocolInput): ProtocolResult {
   const alignments = (input.alignments ?? DEFAULT_ALIGNMENTS).filter((a) => a.is_active);
@@ -409,6 +625,18 @@ export function resolveProtocol(input: ResolveProtocolInput): ProtocolResult {
     if (!gapMap.has(key)) gapMap.set(key, g);
   };
 
+  // "Your XCAPE Body Protocol" — derived from the facial findings, resolved
+  // before the alignment pass so its products are never duplicated as
+  // recommendation-only body add-ons.
+  const derivedBody = deriveBodyProtocol({
+    scores: input.scores,
+    alignments,
+    ds_available: input.ds_available,
+  });
+  const derivedBodySkus = new Set(derivedBody.skus);
+  for (const gap of derivedBody.mapping_gaps) recordGap(gap);
+  if (derivedBody.anti_inflammatory_applied) antiInflammatoryApplied = true;
+
 
 
   for (const { category, score, tier } of scored) {
@@ -419,6 +647,12 @@ export function resolveProtocol(input: ResolveProtocolInput): ProtocolResult {
 
     for (const row of rows) {
       const area: ProtocolArea = row.area === 'body' ? 'body' : 'face';
+
+      // The body protocol is derived, not aligned: skip every body row that
+      // the derived pathway owns, plus any customizable body base product.
+      if (area === 'body' && (derivedBodySkus.has(row.product_sku) || isCustomizableProductSku(row.product_sku))) {
+        continue;
+      }
 
       // Minimum effective protocol: only lines the reasoning pass decided to
       // recommend are realised. Everything else keeps its recorded reason.
@@ -550,7 +784,7 @@ export function resolveProtocol(input: ResolveProtocolInput): ProtocolResult {
   return {
     version: PROTOCOL_VERSION,
     face: order([...byArea.face.values()]),
-    body: order([...byArea.body.values()]),
+    body: derivedBody.body,
     addons,
     categories: scored.map((s) => s.category),
     anti_inflammatory_applied: antiInflammatoryApplied,
@@ -576,6 +810,8 @@ export interface ProtocolFormulaLine {
   score: number;
   tier_label: string;
   companion: boolean;
+  /** Present on derived BODY lines only. */
+  derivation?: BodyDerivation | null;
 }
 
 /** Flatten a resolved protocol into snapshot-ready formula lines. */
@@ -596,10 +832,37 @@ export function protocolFormulaLines(result: ProtocolResult): ProtocolFormulaLin
         score: a.score,
         tier_label: a.tier_label,
         companion: a.companion,
+        derivation: a.derivation ?? null,
       });
     }
   }
   return out;
+}
+
+/** Whitelist a stored derivation object coming out of an immutable snapshot. */
+export function sanitizeDerivation(value: unknown): BodyDerivation | null {
+  if (!value || typeof value !== 'object') return null;
+  const d = value as Record<string, unknown>;
+  const rule =
+    d.rule === 'body_milk_elasticity_x5' || d.rule === 'advanced_serum_pigmentation'
+      ? d.rule
+      : null;
+  const category = isProtocolCategory(d.source_category) ? d.source_category : null;
+  const score = Number(d.source_score);
+  const base = Number(d.base_face_dose_ml);
+  const multiplier = Number(d.multiplier);
+  if (!rule || !category || !isScore(score) || !Number.isFinite(base) || !Number.isFinite(multiplier)) {
+    return null;
+  }
+  return {
+    rule,
+    source_category: category,
+    source_concern:
+      typeof d.source_concern === 'string' ? d.source_concern.slice(0, 120) : CONCERN_LABEL[category],
+    source_score: score,
+    base_face_dose_ml: base,
+    multiplier,
+  };
 }
 
 /**
@@ -624,6 +887,7 @@ export function sanitizeSnapshotLines(value: unknown): Array<{
   dose_ml: number;
   tier_label: string;
   companion: boolean;
+  derivation: BodyDerivation | null;
 }> {
   if (!Array.isArray(value)) return [];
   const out = [];
@@ -643,6 +907,7 @@ export function sanitizeSnapshotLines(value: unknown): Array<{
       dose_ml: dose,
       tier_label: typeof l?.tier_label === 'string' ? l.tier_label.slice(0, 24) : '',
       companion: l?.companion === true,
+      derivation: sanitizeDerivation(l?.derivation),
     });
   }
   return out;

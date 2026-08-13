@@ -41,7 +41,9 @@ describe('buildProtocolPlan', () => {
     expect(names.indexOf('XCAPE Alcohol-Free Toner')).toBeLessThan(
       names.indexOf('XCAPE Face Cream'),
     );
-    expect(names.indexOf('XCAPE Face Cream')).toBeLessThan(names.indexOf('XCAPE Body Milk'));
+    expect(names.indexOf('XCAPE Face Cream')).toBeLessThan(
+      names.indexOf('XCAPE Treatment Glycerine'),
+    );
     expect(plan.steps.map((s) => s.step)).toEqual(plan.steps.map((_, i) => i + 1));
   });
 
@@ -49,7 +51,9 @@ describe('buildProtocolPlan', () => {
     const plan = buildProtocolPlan(displayFrom({ pigmentation_stability: 20 }));
     for (const s of plan.steps) {
       if (s.customization.length > 0) {
-        expect(['XCAPE Face Cream', 'XCAPE Body Milk']).toContain(s.product_name);
+        expect(['XCAPE Face Cream', 'XCAPE Body Milk', 'XCAPE Advanced Serum']).toContain(
+          s.product_name,
+        );
         expect(s.customized).toBe(true);
       }
     }

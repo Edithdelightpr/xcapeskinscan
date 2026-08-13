@@ -104,13 +104,48 @@ const StaffProtocolPanel = ({ skin }: Props) => {
         </p>
       )}
       <ReasoningTrace reasoning={result.reasoning} />
+      <BodyDerivationTrace result={result} />
       <ProtocolRecommendations
         face={result.face}
         body={result.body}
         addons={result.addons}
-        footnote="Deterministic XCAPE protocol resolved from the approved scores and the admin product alignment. Only XCAPE Face Cream and Body Milk are customized (body at 3× the face dose); every other product is a recommendation only. DS Anti-Inflammatory is a required companion for pigmentation and oil/congestion lines. Accepting a formula proposal below stores these exact lines in the immutable snapshot that the client report and PDF read."
+        footnote="Deterministic XCAPE protocol resolved from the approved health scores (100 = healthiest) and the admin product alignment. The body protocol is derived from the facial findings — the weak-elasticity Body Milk line is prepared at 5× the Face Cream amount. DS Anti-Inflammatory is a required companion for pigmentation and oil/congestion lines. Accepting a formula proposal below stores these exact lines in the immutable snapshot that the client report and PDF read."
       />
     </div>
+  );
+};
+
+/**
+ * Derived BODY logic, shown separately from the face formula: source health
+ * score, source concern, base facial amount, multiplier and final amount.
+ */
+const BodyDerivationTrace = ({ result }: { result: ProtocolResult }) => {
+  const lines = result.body.flatMap((p) =>
+    p.additions.map((a) => ({ product: p.product_name, a })),
+  );
+  if (lines.length === 0) return null;
+  return (
+    <section className="glass rounded-xl p-5 space-y-2">
+      <div className="space-y-1">
+        <h2 className="text-sm font-semibold text-foreground">Body protocol (derived)</h2>
+        <p className="text-[11px] text-muted-foreground">
+          Derived from the facial findings — the body is not independently scanned. A pathway only
+          activates when its source health score is below 75. Rule version {result.version}.
+        </p>
+      </div>
+      <ul className="space-y-1 text-[11.5px]">
+        {lines.map(({ product, a }, i) => (
+          <li key={`${product}-${a.ds_sku}-${i}`} className="text-muted-foreground">
+            <span className="text-foreground">{product}</span> — {a.ds_name}
+            {a.companion ? ' (required companion)' : ''}:{' '}
+            <span className="text-foreground font-medium tabular-nums">{a.dose_ml} ml</span>
+            {a.derivation
+              ? ` · source: ${a.derivation.source_concern} (health ${a.derivation.source_score}/100) · base face ${a.derivation.base_face_dose_ml} ml × ${a.derivation.multiplier}`
+              : ''}
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 };
 

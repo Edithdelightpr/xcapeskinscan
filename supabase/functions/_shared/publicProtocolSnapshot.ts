@@ -15,11 +15,13 @@ import {
   type ProtocolAlignment,
   type ProtocolArea,
   type ProtocolCategory,
+  sanitizeDerivation,
   sanitizeProductImageUrl,
   sanitizeProtocolAddons,
   publicProtocolAddons,
   type ProtocolAddonDisplay,
   type ProtocolProduct,
+  type BodyDerivation,
 } from './xcapeProtocol.ts';
 
 export const PUBLIC_PROTOCOL_STATUS = 'protocol_recommendation';
@@ -31,6 +33,8 @@ export interface PublicProtocolAddition {
   tier_label: string;
   score: number;
   companion: boolean;
+  /** How a BODY line was derived from a facial finding (body lines only). */
+  derivation?: BodyDerivation | null;
 }
 
 export interface PublicProtocolProduct {
@@ -69,6 +73,7 @@ export function publicProtocolProducts(items: ProtocolProduct[]): PublicProtocol
       tier_label: a.tier_label,
       score: a.score,
       companion: a.companion,
+      derivation: a.derivation ?? null,
     })),
   }));
 }
@@ -214,6 +219,7 @@ export function sanitizePublicProtocolSnapshot(value: unknown): PublicProtocolSn
             tier_label: typeof a?.tier_label === 'string' ? a.tier_label.slice(0, 24) : '',
             score: Number.isFinite(score) ? score : 0,
             companion: a?.companion === true,
+            derivation: sanitizeDerivation(a?.derivation),
           });
         }
       }

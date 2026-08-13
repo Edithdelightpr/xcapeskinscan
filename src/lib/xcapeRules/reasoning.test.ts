@@ -422,11 +422,11 @@ describe('resolved protocol reflects the reasoning', () => {
     expect(namesOf(a)).not.toBe(namesOf(b));
   });
 
-  it('body doses stay at exactly 3x the face dose', () => {
+  it('body milk weak-elasticity dose stays at exactly 5x the face dose', () => {
     const r = resolveProtocol({ scores: scores({ firmness_skin_support: 60 }) });
     const cream = r.face.find((p) => p.product_sku === 'XC-FACE-CREAM');
     const milk = r.body.find((p) => p.product_sku === 'XC-BODY-MILK');
-    expect(milk!.additions[0].dose_ml).toBe(cream!.additions[0].dose_ml * 3);
+    expect(milk!.additions[0].dose_ml).toBe(cream!.additions[0].dose_ml * 5);
   });
 
   it('dose tiers stay keyed to the health score, unchanged by the reasoning layer', () => {
