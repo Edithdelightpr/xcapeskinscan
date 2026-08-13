@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   SCAN_THRESHOLDS,
+  allowsManualCapture,
+  thresholdsFor,
   computeYaw,
   evaluateFrame,
   faceBox,
@@ -141,5 +143,26 @@ describe('pixel helpers', () => {
   it('toGray produces one value per pixel', () => {
     const rgba = new Uint8ClampedArray(4 * 16);
     expect(toGray(rgba).length).toBe(16);
+  });
+});
+
+describe('side-view framing tolerances', () => {
+  it('accepts a turned head that shifts and shrinks the face box', () => {
+    expect(evaluateFrame({ ...good, yaw: 0.4, faceHeightRatio: 0.24, centerOffsetX: 0.2 }, 'left').ok).toBe(true);
+    expect(evaluateFrame({ ...good, yaw: -0.4, faceHeightRatio: 0.24, centerOffsetX: -0.2 }, 'right').ok).toBe(true);
+  });
+
+  it('keeps the front view strict', () => {
+    expect(thresholdsFor('front')).toEqual(SCAN_THRESHOLDS);
+    expect(evaluateFrame({ ...good, centerOffsetX: 0.2 }, 'front').code).toBe('center');
+  });
+});
+
+describe('allowsManualCapture', () => {
+  it('allows framing nits but blocks pose and face failures', () => {
+    expect(allowsManualCapture(evaluateFrame({ ...good, centerOffsetX: 0.3 }, 'front'))).toBe(true);
+    expect(allowsManualCapture(evaluateFrame(good, 'front'))).toBe(true);
+    expect(allowsManualCapture(evaluateFrame({ ...good, faceCount: 0 }, 'front'))).toBe(false);
+    expect(allowsManualCapture(evaluateFrame({ ...good, yaw: 0 }, 'left'))).toBe(false);
   });
 });

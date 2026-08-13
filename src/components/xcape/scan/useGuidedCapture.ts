@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import {
+  allowsManualCapture,
   computeYaw,
   evaluateFrame,
   faceBox,
@@ -173,6 +174,8 @@ export function useGuidedCapture(options: UseGuidedCaptureOptions): GuidedCaptur
       return { ...prev, [cap.view]: cap };
     });
     setPendingCapture(null);
+    validSinceRef.current = null;
+    setStability(0);
     setViewIndex((i) => {
       const next = firstPendingIndex(i + 1);
       if (next >= 0) {
@@ -186,9 +189,20 @@ export function useGuidedCapture(options: UseGuidedCaptureOptions): GuidedCaptur
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Guards against the detection loop firing a second capture for the same
+  // view while the async frame grab / state flush is still in flight.
+  const capturingRef = useRef(false);
+
   const commitCapture = useCallback(
     async (view: ScanViewId): Promise<boolean> => {
-      const blob = await grabFrame();
+      if (capturingRef.current) return false;
+      capturingRef.current = true;
+      let blob: Blob | null = null;
+      try {
+        blob = await grabFrame();
+      } finally {
+        capturingRef.current = false;
+      }
       if (!blob) return false;
       const cap: GuidedCapture = { view, blob, url: URL.createObjectURL(blob) };
       resetHold();
@@ -295,7 +309,7 @@ export function useGuidedCapture(options: UseGuidedCaptureOptions): GuidedCaptur
   const captureNow = useCallback(async () => {
     // The manual shutter bypasses only the stable-hold timer when quality is
     // enforced — never the single-face / framing / lighting / sharpness gates.
-    if (enforceQualityOnManual && !guidanceRef.current.ok) return false;
+    if (enforceQualityOnManual && !allowsManualCapture(guidanceRef.current)) return false;
     return commitCapture(currentView);
   }, [enforceQualityOnManual, commitCapture, currentView]);
 
