@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { sanitizeProtocol, sanitizeReportPayload } from '@/lib/publicAnalysisReport';
 import { buildFormulaCartItem } from '@/lib/reportFormulas';
 import { resolveProtocol } from '@/lib/xcapeRules/protocol';
-import { scoresFromSkin, inflammationFromSkin } from '@/components/xcape/protocol/StaffProtocolPanel';
+import { scoresFromSkin } from '@/components/xcape/protocol/StaffProtocolPanel';
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const anyFormula = (over: Record<string, unknown>) => over as any;
 
@@ -120,16 +120,15 @@ describe('staff score extraction', () => {
     expect(scoresFromSkin(skin)).toEqual({ pigmentation_stability: 42 });
   });
 
-  it('inflammation requires an explicit sensitivity reading', () => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    expect(inflammationFromSkin({ observed_causes: [] } as any)).toBe(false);
-    expect(
-      inflammationFromSkin({
-        observed_causes: [],
-        scores: { sensitivity_inflammation: { value: 60 } },
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      } as any),
-    ).toBe(true);
+  it('a pigmentation score resolves the required companion in the public payload', () => {
+    const staff = resolveProtocol({ scores: { pigmentation_stability: 30 } });
+    const publicPayload = sanitizeProtocol({
+      face: staff.face.map((p) => ({ product_name: p.product_name, additions: p.additions })),
+      body: staff.body.map((p) => ({ product_name: p.product_name, additions: p.additions })),
+    })!;
+    const names = publicPayload.face.flatMap((p) => p.additions.map((a) => a.ds_name));
+    expect(names).toContain('DS Anti-Inflammatory');
+    expect(JSON.stringify(publicPayload)).not.toMatch(/sku|price|product_id|ai_raw/i);
   });
 });
 
