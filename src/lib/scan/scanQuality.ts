@@ -62,7 +62,7 @@ export const SCAN_THRESHOLDS = {
  * that is what used to stall the sequence after the first capture. Side views
  * therefore get looser framing tolerances (pose is still strictly gated).
  */
-export function thresholdsFor(view: ScanViewId): typeof SCAN_THRESHOLDS {
+export function thresholdsFor(view: ScanViewId): Record<keyof typeof SCAN_THRESHOLDS, number> {
   if (view === 'front') return SCAN_THRESHOLDS;
   return {
     ...SCAN_THRESHOLDS,
