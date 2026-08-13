@@ -7,6 +7,8 @@ import { XcapeFeaturesDark } from '@/components/xcape/landing/XcapeFeaturesDark'
 import { XcapeCredibilityStrip } from '@/components/xcape/landing/XcapeCredibilityStrip';
 import { XcapeClosingCta } from '@/components/xcape/landing/XcapeClosingCta';
 import { XCAPE_DISCLAIMER } from '@/lib/xcapeMarketing';
+import InstallXcape from '@/components/pwa/InstallXcape';
+
 
 /**
  * XCAPE public landing (route "/").
@@ -43,7 +45,10 @@ const XcapeLanding = () => {
         <XcapeClosingCta />
       </main>
 
+      <InstallXcape />
+
       <footer className="border-t border-border">
+
         <div className="mx-auto max-w-6xl px-6 py-10">
           <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground">
             {XCAPE_DISCLAIMER}
