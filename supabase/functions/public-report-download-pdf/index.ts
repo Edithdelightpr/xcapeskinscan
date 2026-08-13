@@ -5,6 +5,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
 import { resolveClientFirstName } from '../_shared/clientName.ts';
 import { sanitizeSnapshotLines } from '../_shared/xcapeProtocol.ts';
+import { sanitizePublicProtocolSnapshot } from '../_shared/publicProtocolSnapshot.ts';
 import { PDFDocument, StandardFonts, rgb } from 'npm:pdf-lib@1.17.1';
 import {
   formatReport,
@@ -96,6 +97,12 @@ async function buildPdf(payload: {
       companion: boolean;
     }> | null;
   }>;
+  /** Non-approved public protocol recommendation (only when no approved kit). */
+  protocol: {
+    protocol_version: string;
+    face: Array<{ product_name: string; additions: Array<{ concern: string; ds_name: string; dose_ml: number; tier_label: string; score: number; companion: boolean }> }>;
+    body: Array<{ product_name: string; additions: Array<{ concern: string; ds_name: string; dose_ml: number; tier_label: string; score: number; companion: boolean }> }>;
+  } | null;
 }): Promise<Uint8Array> {
   const pdf = await PDFDocument.create();
   const font = await pdf.embedFont(StandardFonts.Helvetica);
@@ -131,7 +138,7 @@ async function buildPdf(payload: {
   page.drawText('PERSONAL REPORT', {
     x: MARGIN, y: PAGE_H - 52, size: 9, font: fontBold, color: BRONZE,
   });
-  page.drawText('Tropics MedSpa', {
+  page.drawText('XCAPE', {
     x: MARGIN, y: PAGE_H - 74, size: 16, font: fontBold, color: COCOA,
   });
   const dateNice = new Date(payload.report.assessment.createdAt).toLocaleDateString('en-GB', {
@@ -313,12 +320,42 @@ async function buildPdf(payload: {
   // NOTE: approved XCAPE kit formulas are rendered INSIDE their matching
   // concern's Customization position above — a separate duplicate formula
   // section is intentionally not printed here.
+  //
+  // The block below is the DIFFERENT case: no approved kit exists yet, so we
+  // print the deterministic protocol recommendation captured from the public
+  // scan, clearly marked as pending practitioner confirmation.
+  if (payload.protocol && (payload.protocol.face.length > 0 || payload.protocol.body.length > 0)) {
+    ensure(40);
+    drawText('Your XCAPE customization', { size: 12, bold: true, color: BRONZE });
+    y -= 2;
+    drawText(
+      'Derived from your four skin-health scores. Pending practitioner confirmation — not yet a purchasable formula.',
+      { size: 10, italic: true, color: COCOA_SOFT },
+    );
+    y -= 4;
+    for (const [label, items] of [['Face', payload.protocol.face], ['Body (3× the face dose)', payload.protocol.body]] as const) {
+      if (items.length === 0) continue;
+      drawText(label, { size: 10.5, bold: true, color: COCOA });
+      for (const prod of items) {
+        drawText(`• ${prod.product_name}`, { size: 11, bold: true, color: COCOA, x: MARGIN + 8, maxWidth: CONTENT_W - 8 });
+        for (const a of prod.additions) {
+          drawText(
+            `${a.ds_name}${a.companion ? ' (companion)' : ''} — ${a.dose_ml} ml · ${a.concern} · score ${a.score}/100 · tier ${a.tier_label}`,
+            { size: 10, color: COCOA_SOFT, x: MARGIN + 20, maxWidth: CONTENT_W - 20 },
+          );
+        }
+        y -= 3;
+      }
+      y -= 3;
+    }
+    y -= 4;
+  }
 
   // Footer note on every page
   const totalPages = pdf.getPageCount();
   for (let i = 0; i < totalPages; i++) {
     const p = pdf.getPage(i);
-    p.drawText('Tropics MedSpa · Personal Report · Confidential', {
+    p.drawText('XCAPE · Personal Report · Confidential', {
       x: MARGIN, y: 24, size: 8, font, color: BRONZE,
     });
     p.drawText(`Page ${i + 1} of ${totalPages}`, {
@@ -412,6 +449,11 @@ Deno.serve(async (req) => {
         ...f,
         formula_lines: sanitizeSnapshotLines(f.formula_lines),
       })) as any[],
+      // Only when nothing has been practitioner-approved for this assessment.
+      protocol: (formulas ?? []).length > 0
+        ? null
+        // deno-lint-ignore no-explicit-any
+        : sanitizePublicProtocolSnapshot((assessment.skin_analysis as any)?.public_protocol_snapshot),
     });
 
     // Dedupe pdf_downloaded within 60s
@@ -433,7 +475,7 @@ Deno.serve(async (req) => {
     }
 
     const firstNameSlug = (report.client.firstName ?? 'client').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'client';
-    const filename = `tropics-personal-report-${firstNameSlug}-${new Date(assessment.created_at).toISOString().slice(0, 10)}.pdf`;
+    const filename = `xcape-personal-report-${firstNameSlug}-${new Date(assessment.created_at).toISOString().slice(0, 10)}.pdf`;
 
     return new Response(pdfBytes, {
       status: 200,

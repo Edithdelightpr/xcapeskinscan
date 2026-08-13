@@ -6890,6 +6890,7 @@ export type Database = {
           analysis_attempts: number
           analysis_completed_at: string | null
           analysis_started_at: string | null
+          assessment_id: string | null
           attempt_count: number
           capture_method: string | null
           client_id: string | null
@@ -6923,6 +6924,7 @@ export type Database = {
           analysis_attempts?: number
           analysis_completed_at?: string | null
           analysis_started_at?: string | null
+          assessment_id?: string | null
           attempt_count?: number
           capture_method?: string | null
           client_id?: string | null
@@ -6956,6 +6958,7 @@ export type Database = {
           analysis_attempts?: number
           analysis_completed_at?: string | null
           analysis_started_at?: string | null
+          assessment_id?: string | null
           attempt_count?: number
           capture_method?: string | null
           client_id?: string | null
@@ -6984,6 +6987,13 @@ export type Database = {
           worker_lease?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "public_analysis_sessions_assessment_id_fkey"
+            columns: ["assessment_id"]
+            isOneToOne: false
+            referencedRelation: "client_visit_assessments"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "public_analysis_sessions_client_id_fkey"
             columns: ["client_id"]
@@ -12560,6 +12570,10 @@ export type Database = {
         Returns: Json
       }
       public_analysis_status: { Args: { p_token_hash: string }; Returns: Json }
+      public_analysis_store_protocol_snapshot: {
+        Args: { p_assessment_id: string; p_snapshot: Json }
+        Returns: boolean
+      }
       purge_public_analysis_expired: { Args: never; Returns: Json }
       read_email_batch: {
         Args: { batch_size: number; queue_name: string; vt: number }

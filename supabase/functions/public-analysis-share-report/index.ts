@@ -11,8 +11,16 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
 import { corsHeaders, json, sha256Hex } from '../_shared/publicAnalysis.ts';
 import { deriveToken, reportUrl, sha256Hex as tokenHash } from '../_shared/reportLinkToken.ts';
+import { buildReportShareMessage, whatsAppShareUrl } from '../_shared/reportShareMessage.ts';
+import {
+  buildPublicProtocolSnapshot,
+  loadAlignments,
+} from '../_shared/publicProtocolSnapshot.ts';
 
-const APP_URL = Deno.env.get('APP_PUBLIC_URL') || 'https://tropics-medspa-pro.lovable.app';
+const APP_URL = Deno.env.get('APP_PUBLIC_URL') || 'https://xcapeskinscan.lovable.app';
+/** Mirrors `src/lib/brand.ts` — the same contact block staff share. */
+const CLINIC_ADDRESS = 'House 8, Wonderland Estate, Kukwaba, Abuja';
+const CLINIC_PHONE = '+234 803 769 6910';
 
 interface Body {
   token?: string;
@@ -102,6 +110,8 @@ Deno.serve(async (req) => {
         session_expired: 'This analysis session has expired. Start a new analysis.',
         report_not_ready: 'Your report is still being prepared. Try again in a moment.',
         invalid_contact: 'Enter your full name and mobile number.',
+        claim_incomplete:
+          'We could not match this analysis to your record. Please contact us and we will send your report.',
       };
       return json(
         { ok: false, code, error: messages[code] ?? 'Your report could not be prepared.' },
@@ -111,6 +121,32 @@ Deno.serve(async (req) => {
 
     const client_id = result.client_id!;
     const assessment_id = result.assessment_id!;
+
+    // ---- Persist the XCAPE protocol recommendation ONCE, write-once ----
+    // Resolved from the session's stored engine scores so the shared report
+    // shows the same deterministic protocol the scanner showed. The RPC is a
+    // no-op when a snapshot already exists, keeping repeat shares idempotent.
+    try {
+      const { data: sessionRow } = await admin
+        .from('public_analysis_sessions')
+        .select('engine')
+        .eq('token_hash', token_hash)
+        .maybeSingle();
+      if (sessionRow?.engine) {
+        const alignments = await loadAlignments(admin);
+        const snapshot = buildPublicProtocolSnapshot(sessionRow.engine, alignments);
+        if (snapshot) {
+          await admin.rpc('public_analysis_store_protocol_snapshot', {
+            p_assessment_id: assessment_id,
+            p_snapshot: snapshot,
+          });
+        }
+      }
+    } catch (snapErr) {
+      // Never block report delivery on the snapshot.
+      console.error('public-analysis-share-report snapshot error', snapErr);
+    }
+
 
     // ---- Issue (or recover) the persistent report link ----
     const nowIso = new Date().toISOString();
@@ -166,16 +202,19 @@ Deno.serve(async (req) => {
     }
 
     const url = reportUrl(APP_URL, rawToken);
-    const firstName = full_name.split(' ')[0];
-    const message =
-      `Hi ${firstName}, here is your XCAPE skin analysis report: ${url}` +
-      ` — it shows your four skin-health scores and what to prioritise.`;
+    // Canonical share text — identical builder to the staff Share dialog.
+    const message = buildReportShareMessage({
+      firstName: full_name.split(' ')[0],
+      reportUrl: url,
+      clinicAddress: CLINIC_ADDRESS,
+      clinicPhone: CLINIC_PHONE,
+    });
 
     return json(
       {
         ok: true,
         url,
-        whatsapp_url: `https://wa.me/${phone.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`,
+        whatsapp_url: whatsAppShareUrl(phone, message),
         share_text: message,
         already_shared: linkId != null && existing != null && rawToken != null && !!existing.token_hash,
       },

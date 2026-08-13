@@ -42,6 +42,7 @@ import { resolveClientFirstName } from '@/lib/clientName';
 import { useRealStaff } from '@/hooks/useRealStaff';
 import { useAuth } from '@/hooks/useAuth';
 import { BRAND } from '@/lib/brand';
+import { buildReportShareMessage } from '@/lib/reportShareMessage';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -75,25 +76,18 @@ export const buildShareMessage = (opts: {
   promoCode: string | null;
   promoPct: number | string | null;
   referralLink: string | null;
-}) => {
-  const lines: string[] = [
-    `Hi ${opts.first}, here is your XCAPE skin analysis report:`,
-    opts.reportUrl,
-    `Visit us at ${BRAND.address.line1}, ${BRAND.address.city}. Call ${BRAND.phone}.`,
-  ];
-  if (opts.promoCode) {
-    const pct = opts.promoPct != null ? Number(opts.promoPct) : null;
-    lines.push(
-      pct
-        ? `Use my promo code ${opts.promoCode} for ${pct}% off your first visit.`
-        : `Use my promo code ${opts.promoCode} at the front desk for a special benefit.`,
-    );
-  }
-  if (opts.referralLink) {
-    lines.push(`Book with me directly: ${opts.referralLink}`);
-  }
-  return lines.join('\n\n');
-};
+}) =>
+  // Thin adapter over the shared builder so staff WhatsApp text and the
+  // public scanner's issued link produce byte-identical messages.
+  buildReportShareMessage({
+    firstName: opts.first,
+    reportUrl: opts.reportUrl,
+    clinicAddress: `${BRAND.address.line1}, ${BRAND.address.city}`,
+    clinicPhone: BRAND.phone,
+    promoCode: opts.promoCode,
+    promoPct: opts.promoPct,
+    referralLink: opts.referralLink,
+  });
 
 const EVENT_LABEL: Record<string, string> = {
   link_viewed: 'Viewed the report',

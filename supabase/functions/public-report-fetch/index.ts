@@ -6,6 +6,7 @@ import { resolveClientFirstName } from '../_shared/clientName.ts';
 import { buildTreatmentPlanBlock } from '../_shared/reportTreatmentPlan.ts';
 import { buildCareJourneyBlock } from '../_shared/reportCareJourney.ts';
 import { sanitizeSnapshotLines } from '../_shared/xcapeProtocol.ts';
+import { sanitizePublicProtocolSnapshot } from '../_shared/publicProtocolSnapshot.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -148,6 +149,16 @@ Deno.serve(async (req) => {
       };
     });
 
+    // ---- Public XCAPE protocol recommendation (NOT practitioner-approved) ----
+    // Shown only when no approved formula snapshot exists for this assessment,
+    // so an approved kit always wins. Re-whitelisted on the way out.
+    const protocol_recommendation = hydratedFormulas.length > 0
+      ? null
+      : sanitizePublicProtocolSnapshot(
+        // deno-lint-ignore no-explicit-any
+        (assessment.skin_analysis as any)?.public_protocol_snapshot,
+      );
+
     // ---- Promo block: practitioner code + clinic contact + defaults ----
     const [{ data: creator }, { data: outreach }, { data: siteRow }] = await Promise.all([
       linkFull?.created_by
@@ -250,6 +261,7 @@ Deno.serve(async (req) => {
       promo,
       care_journey,
       formulas: hydratedFormulas,
+      protocol_recommendation,
       link: { prefix: link.token_prefix, expires_at: link.expires_at },
     });
   } catch (e) {
