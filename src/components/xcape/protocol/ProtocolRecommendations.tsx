@@ -17,9 +17,12 @@ export interface ProtocolDisplayAddition {
 
 export interface ProtocolDisplayProduct {
   product_name: string;
+  /** Official XCAPE packaging image from the product configuration. */
+  product_image_url?: string | null;
   area: 'face' | 'body';
   additions: ProtocolDisplayAddition[];
 }
+
 
 interface Props {
   face: ProtocolDisplayProduct[];
