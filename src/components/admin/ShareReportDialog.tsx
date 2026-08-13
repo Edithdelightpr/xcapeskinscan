@@ -42,6 +42,7 @@ import { resolveClientFirstName } from '@/lib/clientName';
 import { useRealStaff } from '@/hooks/useRealStaff';
 import { useAuth } from '@/hooks/useAuth';
 import { BRAND } from '@/lib/brand';
+import { buildReportShareMessage } from '@/lib/reportShareMessage';
 import {
   AlertDialog,
   AlertDialogAction,
