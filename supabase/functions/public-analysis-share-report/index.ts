@@ -11,8 +11,16 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
 import { corsHeaders, json, sha256Hex } from '../_shared/publicAnalysis.ts';
 import { deriveToken, reportUrl, sha256Hex as tokenHash } from '../_shared/reportLinkToken.ts';
+import { buildReportShareMessage, whatsAppShareUrl } from '../_shared/reportShareMessage.ts';
+import {
+  buildPublicProtocolSnapshot,
+  loadAlignments,
+} from '../_shared/publicProtocolSnapshot.ts';
 
-const APP_URL = Deno.env.get('APP_PUBLIC_URL') || 'https://tropics-medspa-pro.lovable.app';
+const APP_URL = Deno.env.get('APP_PUBLIC_URL') || 'https://xcapeskinscan.lovable.app';
+/** Mirrors `src/lib/brand.ts` — the same contact block staff share. */
+const CLINIC_ADDRESS = 'House 8, Wonderland Estate, Kukwaba, Abuja';
+const CLINIC_PHONE = '+234 803 769 6910';
 
 interface Body {
   token?: string;
