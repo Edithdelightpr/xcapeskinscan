@@ -9,6 +9,7 @@ import { formulasByCategory } from '@/lib/reportFormulas';
 import ReportHeader from '@/components/report/ReportHeader';
 import MainConcernCard from '@/components/report/MainConcernCard';
 import ConcernCard from '@/components/report/ConcernCard';
+import ProtocolRecommendations from '@/components/xcape/protocol/ProtocolRecommendations';
 import HomeCareRoutine from '@/components/report/HomeCareRoutine';
 import RecommendedTreatments from '@/components/report/RecommendedTreatments';
 import RecommendedProducts from '@/components/report/RecommendedProducts';
