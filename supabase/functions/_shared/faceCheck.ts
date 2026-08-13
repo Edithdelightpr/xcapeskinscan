@@ -102,10 +102,11 @@ export function faceSizeCode(fraction: number): 'ok' | 'face_too_small' | 'face_
  * Coarse-pose tolerance.
  *
  * The browser gate already accepts a gentle side turn (~15-20 degrees), which a
- * general vision model frequently labels "front" or "unclear". Requiring an
- * exact label therefore rejected valid captures. The server still fails closed
- * on the cases that matter: no readable face, and a head clearly turned the
- * WRONG way for the requested view.
+ * general vision model frequently labels "front" or "unclear". Front-camera
+ * captures are also frequently mirrored, so the model's left/right handedness
+ * disagrees with the on-screen guide and cannot be trusted as proof of a wrong
+ * capture. The server therefore verifies what it can verify reliably: the head
+ * is clearly turned for a side view, and clearly NOT turned for the front view.
  */
 export const FRONT_MAX_YAW_DEG = 25;
 export const SIDE_MIN_YAW_DEG = 10;
@@ -116,12 +117,9 @@ export function poseMatches(view: ViewId, face: FaceCheck): boolean {
   // Front: reject only a head that is clearly turned away.
   if (view === 'front') return Math.abs(yaw) <= FRONT_MAX_YAW_DEG;
 
-  const wanted = view === 'left' ? 1 : -1;
-  // A confident opposite-side label is always a mismatch.
-  if (face.pose === 'left' || face.pose === 'right') {
-    if ((face.pose === 'left' ? 1 : -1) !== wanted) return false;
-    return true;
-  }
-  // "front"/"unclear": accept when the signed estimate still leans the right way.
-  return yaw * wanted >= SIDE_MIN_YAW_DEG;
+  // Side views: mirror-agnostic — accept any clear turn, either reported as a
+  // confident side label or as a sufficient signed yaw estimate.
+  if (face.pose === 'left' || face.pose === 'right') return true;
+  return Math.abs(yaw) >= SIDE_MIN_YAW_DEG;
 }
+
