@@ -261,3 +261,49 @@ describe('frontend / edge parity', () => {
     expect(edge).toBe(src);
   });
 });
+
+describe('product visuals (v1.1 display plumbing)', () => {
+  it('carries the aligned product image onto the resolved product card', () => {
+    const alignments = [
+      {
+        category: 'pigmentation_stability' as const,
+        area: 'face' as const,
+        product_sku: 'XC-FACE-CREAM',
+        product_name: 'XCAPE Face Cream',
+        product_image_url: '/__l5e/assets-v1/abc/xcape-face-cream.jpg',
+        dose_multiplier: 1,
+        is_active: true,
+        sort_order: 0,
+      },
+    ];
+    const res = resolveProtocol({ scores: { pigmentation_stability: 30 }, alignments });
+    expect(res.face[0].product_image_url).toBe('/__l5e/assets-v1/abc/xcape-face-cream.jpg');
+    expect(protocolFormulaLines(res)[0].product_image_url).toBe(
+      '/__l5e/assets-v1/abc/xcape-face-cream.jpg',
+    );
+  });
+
+  it('rejects unsafe image urls and keeps safe ones', () => {
+    expect(sanitizeProductImageUrl('javascript:alert(1)')).toBeNull();
+    expect(sanitizeProductImageUrl('//evil.example/x.png')).toBeNull();
+    expect(sanitizeProductImageUrl('data:image/png;base64,AAA')).toBeNull();
+    expect(sanitizeProductImageUrl('http://insecure/x.png')).toBeNull();
+    expect(sanitizeProductImageUrl('/assets/x.jpg')).toBe('/assets/x.jpg');
+    expect(sanitizeProductImageUrl('https://cdn.example/x.jpg')).toBe('https://cdn.example/x.jpg');
+  });
+
+  it('drops an unsafe image url when re-reading a stored snapshot line', () => {
+    const [line] = sanitizeSnapshotLines([
+      {
+        area: 'face',
+        product_name: 'XCAPE Face Cream',
+        product_image_url: 'javascript:alert(1)',
+        ds_name: 'DS Tyrosinase Inhibitor',
+        dose_ml: 1.5,
+        tier_label: '25-49',
+        companion: false,
+      },
+    ]);
+    expect(line.product_image_url).toBeNull();
+  });
+});
