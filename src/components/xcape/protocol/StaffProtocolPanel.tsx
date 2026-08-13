@@ -123,14 +123,28 @@ const BodyDerivationTrace = ({ result }: { result: ProtocolResult }) => {
   const lines = result.body.flatMap((p) =>
     p.additions.map((a) => ({ product: p.product_name, a })),
   );
-  if (lines.length === 0) return null;
+  const bodyGaps = result.mapping_gaps.filter((g) => g.area === 'body');
+  if (lines.length === 0 && bodyGaps.length === 0) return null;
   return (
     <section className="glass rounded-xl p-5 space-y-2">
       <div className="space-y-1">
         <h2 className="text-sm font-semibold text-foreground">Body protocol (derived)</h2>
         <p className="text-[11px] text-muted-foreground">
           Derived from the facial findings — the body is not independently scanned. A pathway only
-          activates when its source health score is below 75. Rule version {result.version}.
+          activates when its source health score is below 75. Rule version {result.version} ·
+          recommendation config v{result.reasoning.config_version}.
+        </p>
+        <p className="text-[11px]">
+          Mapping status:{' '}
+          {bodyGaps.length === 0 ? (
+            <span className="text-emerald-600">all required body formula lines are mapped</span>
+          ) : (
+            <span className="text-amber-600">
+              XCAPE product/kit mapping required —{' '}
+              {bodyGaps.map((g) => `${g.product_name}: ${g.ds_name}`).join('; ')}. Approval and
+              purchase are blocked for these lines.
+            </span>
+          )}
         </p>
       </div>
       <ul className="space-y-1 text-[11.5px]">

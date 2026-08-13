@@ -27,13 +27,13 @@ const allScores = (score: number) =>
 
 describe('confirmed dose tiers', () => {
   it.each([
-    [80, 0.5, 1.5],
-    [60, 1, 3],
-    [30, 1.5, 4.5],
-    [20, 2, 6],
-  ])('score %i → face %s ml, body %s ml', (score, face, body) => {
+    [80, 0.5, 2.5],
+    [60, 1, 5],
+    [30, 1.5, 7.5],
+    [20, 2, 10],
+  ])('score %i → face %s ml, elasticity body milk %s ml', (score, face, body) => {
     expect(faceDoseFor(score)).toBe(face);
-    expect(doseFor(score, 3)).toBe(body);
+    expect(doseFor(score, 5)).toBe(body);
   });
 
   it('boundaries resolve inclusively', () => {
@@ -276,10 +276,15 @@ describe('admin-editable alignment', () => {
     expect(r.body[0].additions[0].dose_ml).toBe(5);
   });
 
-  it('default body multiplier is 3 and face is 1', () => {
+  it('default alignments carry a 1x dose multiplier (body scaling is derived)', () => {
     for (const a of DEFAULT_ALIGNMENTS) {
-      expect(a.dose_multiplier).toBe(a.area === 'body' ? 3 : 1);
+      expect(a.dose_multiplier).toBe(1);
     }
+  });
+
+  it('Body Milk is only aligned to weak elasticity — the derived body pathway', () => {
+    const milk = DEFAULT_ALIGNMENTS.filter((a) => a.product_sku === 'XC-BODY-MILK');
+    expect(milk.map((a) => a.category)).toEqual(['firmness_skin_support']);
   });
 });
 
@@ -467,5 +472,79 @@ describe('customizable vs recommended-only products', () => {
     expect(clean.product_name).toBe('XCAPE Purifying Cleanser');
     expect(JSON.stringify(clean)).not.toContain('DS P Bacterium');
     expect(JSON.stringify(clean)).not.toContain('dose_ml');
+  });
+});
+
+/* ============================================================
+ * LOCKED REGRESSION CASES — raw HEALTH scores only (100 = healthiest).
+ * No severity-conversion helper is used anywhere in this block.
+ * ============================================================ */
+describe('derived body protocol — locked raw-health regressions', () => {
+  const bodyLine = (r: ReturnType<typeof resolveProtocol>, sku: string) =>
+    r.body.find((p) => p.product_sku === sku)?.additions.find((a) => !a.companion) ?? null;
+
+  it('pigmentation 20 / dehydration 50 / oil 70 / firmness 78', () => {
+    const r = resolveProtocol({
+      scores: {
+        pigmentation_stability: 20,
+        barrier_surface_hydration: 50,
+        oil_congestion_balance: 70,
+        firmness_skin_support: 78,
+      },
+    });
+    // Lower raw health = higher priority.
+    expect(r.reasoning.priorities.map((p) => p.category)).toEqual([
+      'pigmentation_stability',
+      'barrier_surface_hydration',
+      'oil_congestion_balance',
+      'firmness_skin_support',
+    ]);
+    // Advanced Serum body pathway customized at the 0–24 tier.
+    const serum = bodyLine(r, 'XC-ADVANCED-SERUM');
+    expect(serum?.dose_ml).toBe(2);
+    expect(serum?.derivation?.source_score).toBe(20);
+    // No Body Milk from weak elasticity at firmness health 78.
+    expect(r.body.some((p) => p.product_sku === 'XC-BODY-MILK')).toBe(false);
+  });
+
+  it.each([
+    [60, 1, 5],
+    [40, 1.5, 7.5],
+    [20, 2, 10],
+  ])(
+    'firmness health %i: face cream anti-aging %s ml -> body milk %s ml',
+    (health, faceMl, bodyMl) => {
+      const r = resolveProtocol({ scores: { firmness_skin_support: health } });
+      const faceLine = r.face
+        .find((p) => p.product_sku === 'XC-FACE-CREAM')
+        ?.additions.find((a) => a.category === 'firmness_skin_support' && !a.companion);
+      expect(faceLine?.dose_ml).toBe(faceMl);
+      const milk = bodyLine(r, 'XC-BODY-MILK');
+      expect(milk?.dose_ml).toBe(bodyMl);
+      expect(milk?.derivation?.multiplier).toBe(5);
+      expect(milk?.derivation?.base_face_dose_ml).toBe(faceMl);
+      expect(milk?.derivation?.source_score).toBe(health);
+    },
+  );
+
+  it.each([75, 78, 90])('firmness health %i does not activate Body Milk', (health) => {
+    const r = resolveProtocol({ scores: { firmness_skin_support: health } });
+    expect(r.body.some((p) => p.product_sku === 'XC-BODY-MILK')).toBe(false);
+  });
+
+  it('pigmentation health 74 activates the serum pathway at 1.0 ml', () => {
+    const r = resolveProtocol({ scores: { pigmentation_stability: 74 } });
+    expect(bodyLine(r, 'XC-ADVANCED-SERUM')?.dose_ml).toBe(1);
+  });
+
+  it.each([75, 80])('pigmentation health %i does not activate the serum pathway', (health) => {
+    const r = resolveProtocol({ scores: { pigmentation_stability: health } });
+    expect(r.body.some((p) => p.product_sku === 'XC-ADVANCED-SERUM')).toBe(false);
+  });
+
+  it('a missing serum/DS mapping blocks the body formula instead of inventing one', () => {
+    const r = resolveProtocol({ scores: { pigmentation_stability: 20 }, ds_available: [] });
+    expect(r.mapping_required).toBe(true);
+    expect(r.body).toEqual([]);
   });
 });

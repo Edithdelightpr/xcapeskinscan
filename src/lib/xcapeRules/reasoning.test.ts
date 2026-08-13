@@ -144,20 +144,37 @@ describe('interaction engine', () => {
 });
 
 describe('priority ranking', () => {
-  it('the 20 / 50 / 70 / 78 example ranks elasticity first and pigmentation last', () => {
+  // LOCKED CASE — raw HEALTH scores, no severity conversion helper.
+  it('raw health 20 / 50 / 70 / 78 ranks pigmentation first and firmness last', () => {
     const r = reasonProtocol({
-      scores: scores({
+      scores: {
         pigmentation_stability: 20,
         barrier_surface_hydration: 50,
         oil_congestion_balance: 70,
         firmness_skin_support: 78,
-      }),
+      },
     });
-    expect(r.primary?.category).toBe('firmness_skin_support');
-    expect(r.secondary?.category).toBe('oil_congestion_balance');
-    expect(r.priorities[2].category).toBe('barrier_surface_hydration');
-    expect(r.priorities[3].category).toBe('pigmentation_stability');
+    expect(r.priorities.map((p) => p.category)).toEqual([
+      'pigmentation_stability',
+      'barrier_surface_hydration',
+      'oil_congestion_balance',
+      'firmness_skin_support',
+    ]);
+    expect(r.primary?.category).toBe('pigmentation_stability');
+    expect(r.secondary?.category).toBe('barrier_surface_hydration');
     expect(r.priorities[3].tier).toBe('maintenance');
+  });
+
+  it('raw health 78 firmness never activates the Body Milk pathway', () => {
+    const r = reasonProtocol({
+      scores: {
+        pigmentation_stability: 20,
+        barrier_surface_hydration: 50,
+        oil_congestion_balance: 70,
+        firmness_skin_support: 78,
+      },
+    });
+    expect(recommendedSkus(r).has('XC-BODY-MILK')).toBe(false);
   });
 
   it('low severity across all four dimensions is maintenance only', () => {
@@ -260,12 +277,35 @@ describe('product activation and exclusion', () => {
     // minimisation pass — not the threshold — is what removes it.
     const config: RecommendationConfig = {
       ...DEFAULT_RECOMMENDATION_CONFIG,
-      activation: DEFAULT_RECOMMENDATION_CONFIG.activation.map((a) =>
-        a.product_sku === 'XC-TREATMENT-GLYCERINE' ? { ...a, min_severity: 20 } : a,
-      ),
+      activation: [
+        ...DEFAULT_RECOMMENDATION_CONFIG.activation.map((a) =>
+          a.product_sku === 'XC-TREATMENT-GLYCERINE' ? { ...a, min_severity: 20 } : a,
+        ),
+        {
+          category: 'barrier_surface_hydration' as const,
+          product_sku: 'XC-BODY-MILK',
+          area: 'body' as const,
+          min_severity: 20,
+          priority_weight: 1,
+          satisfies_need: true,
+          foundation: false,
+        },
+      ],
     };
     const r = reasonProtocol({
       scores: scores({ barrier_surface_hydration: 45 }),
+      alignments: [
+        ...DEFAULT_ALIGNMENTS,
+        {
+          category: 'barrier_surface_hydration',
+          area: 'body',
+          product_sku: 'XC-BODY-MILK',
+          product_name: 'XCAPE Body Milk',
+          dose_multiplier: 1,
+          is_active: true,
+          sort_order: 0,
+        },
+      ],
       config,
     });
     const redundant = r.decisions.filter((d) => d.code === 'redundant');
@@ -379,22 +419,23 @@ describe('anti-inflammatory companion', () => {
 });
 
 describe('resolved protocol reflects the reasoning', () => {
-  it('the 20 / 50 / 70 / 78 client gets the foundation, no serum, no glycerine', () => {
+  // LOCKED CASE — raw HEALTH scores, no severity-conversion helper.
+  it('raw health 20 / 50 / 70 / 78 gets the foundation plus the derived serum body path', () => {
     const r = resolveProtocol({
-      scores: scores({
+      scores: {
         pigmentation_stability: 20,
         barrier_surface_hydration: 50,
         oil_congestion_balance: 70,
         firmness_skin_support: 78,
-      }),
+      },
     });
     const names = [...r.face, ...r.body, ...r.addons].map((p) => p.product_name);
     expect(names).toEqual(
       expect.arrayContaining(['XCAPE Purifying Cleanser', 'XCAPE Alcohol-Free Toner', 'XCAPE Face Cream']),
     );
-    expect(names).not.toContain('XCAPE Advanced Serum');
-    expect(names).not.toContain('XCAPE Treatment Glycerine');
-    expect(r.reasoning.primary?.category).toBe('firmness_skin_support');
+    expect(r.body.map((p) => p.product_sku)).toEqual(['XC-ADVANCED-SERUM']);
+    expect(names).not.toContain('XCAPE Body Milk');
+    expect(r.reasoning.primary?.category).toBe('pigmentation_stability');
   });
 
   it('a dominant pigmentation client gets the targeted serum pathway', () => {

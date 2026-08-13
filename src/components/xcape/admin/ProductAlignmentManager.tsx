@@ -20,7 +20,7 @@ import {
   type ProductAlignmentRow,
 } from '@/hooks/useProductAlignments';
 import {
-  BODY_DOSE_MULTIPLIER,
+  ELASTICITY_BODY_MULTIPLIER,
   CONCERN_LABEL,
   CONFIRMED_FACE_DOSE_TIERS,
   DS_ACTIVE_BY_CATEGORY,
@@ -79,7 +79,7 @@ const ProductAlignmentManager = () => {
         category,
         product_id: p.product_id,
         area: p.area,
-        dose_multiplier: p.area === 'body' ? BODY_DOSE_MULTIPLIER : FACE_DOSE_MULTIPLIER,
+        dose_multiplier: FACE_DOSE_MULTIPLIER,
         is_active: true,
         sort_order: siblings.length,
       });
@@ -100,8 +100,10 @@ const ProductAlignmentManager = () => {
           </Badge>
         </div>
         <p className="text-[11px] text-muted-foreground">
-          Health score 100 = healthiest. A lower score means a higher dose. Body is always
-          recommended alongside face at {BODY_DOSE_MULTIPLIER}× the face dose.
+          Health score 100 = healthiest. A lower score means a higher dose. The body protocol is
+          derived from the facial findings: Body Milk carries the weak-elasticity line at exactly
+          {ELASTICITY_BODY_MULTIPLIER}× the Face Cream anti-aging line, and Advanced Serum uses the
+          same tier dose as the face.
         </p>
         <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
           {CONFIRMED_FACE_DOSE_TIERS.map((t) => (
@@ -109,7 +111,7 @@ const ProductAlignmentManager = () => {
               <p className="text-xs text-muted-foreground">Score {t.label}</p>
               <p className="text-sm font-semibold text-foreground">Face {t.dose_ml} ml</p>
               <p className="text-xs text-muted-foreground">
-                Body {t.dose_ml * BODY_DOSE_MULTIPLIER} ml
+                Body Milk anti-aging {t.dose_ml * ELASTICITY_BODY_MULTIPLIER} ml
               </p>
             </div>
           ))}
