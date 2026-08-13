@@ -202,16 +202,19 @@ Deno.serve(async (req) => {
     }
 
     const url = reportUrl(APP_URL, rawToken);
-    const firstName = full_name.split(' ')[0];
-    const message =
-      `Hi ${firstName}, here is your XCAPE skin analysis report: ${url}` +
-      ` — it shows your four skin-health scores and what to prioritise.`;
+    // Canonical share text — identical builder to the staff Share dialog.
+    const message = buildReportShareMessage({
+      firstName: full_name.split(' ')[0],
+      reportUrl: url,
+      clinicAddress: CLINIC_ADDRESS,
+      clinicPhone: CLINIC_PHONE,
+    });
 
     return json(
       {
         ok: true,
         url,
-        whatsapp_url: `https://wa.me/${phone.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`,
+        whatsapp_url: whatsAppShareUrl(phone, message),
         share_text: message,
         already_shared: linkId != null && existing != null && rawToken != null && !!existing.token_hash,
       },
