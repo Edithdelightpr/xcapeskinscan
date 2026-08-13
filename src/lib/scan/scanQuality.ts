@@ -52,9 +52,26 @@ export const SCAN_THRESHOLDS = {
   maxBrightness: 240,
   minSharpness: 6,
   frontMaxYaw: 0.22,
-  sideMinYaw: 0.26,
+  sideMinYaw: 0.2,
   sideMaxYaw: 0.9,
 } as const;
+
+/**
+ * Turning the head shrinks the visible face box and shifts its centre, so the
+ * front-view framing gates can never be satisfied on the left/right views —
+ * that is what used to stall the sequence after the first capture. Side views
+ * therefore get looser framing tolerances (pose is still strictly gated).
+ */
+export function thresholdsFor(view: ScanViewId): typeof SCAN_THRESHOLDS {
+  if (view === 'front') return SCAN_THRESHOLDS;
+  return {
+    ...SCAN_THRESHOLDS,
+    minFaceHeight: 0.2,
+    maxCenterOffsetX: 0.24,
+    maxCenterOffsetY: 0.22,
+  };
+}
+
 
 export type GuidanceCode =
   | 'ok'
