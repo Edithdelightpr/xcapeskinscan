@@ -303,7 +303,7 @@ describe('product activation and exclusion', () => {
           product_name: 'XCAPE Body Milk',
           dose_multiplier: 1,
           is_active: true,
-          sort_order: 1,
+          sort_order: 0,
         },
       ],
       config,
