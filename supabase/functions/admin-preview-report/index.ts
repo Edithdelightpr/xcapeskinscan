@@ -160,6 +160,15 @@ Deno.serve(async (req) => {
       };
     });
 
+    // Public XCAPE protocol recommendation (NOT practitioner-approved). Only
+    // surfaced when no approved formula snapshot exists — approved kits win.
+    const protocol_recommendation = hydratedFormulas.length > 0
+      ? null
+      : sanitizePublicProtocolSnapshot(
+        // deno-lint-ignore no-explicit-any
+        (assessment.skin_analysis as any)?.public_protocol_snapshot,
+      );
+
     const recommended_sessions_by_service_id: Record<string, number> = {};
     if (Array.isArray(assessment.recommended_services)) {
       // deno-lint-ignore no-explicit-any
