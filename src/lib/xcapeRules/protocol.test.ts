@@ -9,6 +9,8 @@ import {
   faceDoseFor,
   protocolFormulaLines,
   resolveProtocol,
+  sanitizeProductImageUrl,
+  sanitizeSnapshotLines,
   validateProtocolTiers,
   type ProtocolCategory,
 } from './protocol';
