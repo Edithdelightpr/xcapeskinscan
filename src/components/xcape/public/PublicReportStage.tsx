@@ -121,7 +121,7 @@ const PublicReportStage = ({
               face={report.protocol.face}
               body={report.protocol.body}
               addons={report.protocol.addons}
-              footnote="Your XCAPE protocol, resolved from your four health scores. Use the steps in order. Only your Face Cream and Body Milk are customized (body at 3× the face dose); the other products are simply recommended for your routine. Availability and pricing are confirmed by XCAPE before anything is prepared."
+              footnote="Your XCAPE protocol, resolved from your four health scores. Use the steps in order. Only your Face Cream and Body Milk are customized; your body protocol is derived from your facial findings, with the weak-elasticity Body Milk line prepared at 5× the face amount. The other products are simply recommended for your routine. Availability and pricing are confirmed by XCAPE before anything is prepared."
             />
           )}
 

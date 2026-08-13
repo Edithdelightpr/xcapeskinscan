@@ -42,6 +42,7 @@ describe('public protocol sanitizer', () => {
     expect(Object.keys(out.face[0].additions[0]).sort()).toEqual([
       'companion',
       'concern',
+      'derivation',
       'dose_ml',
       'ds_name',
       'score',

@@ -19,6 +19,7 @@ import type {
   ProtocolDisplayProduct,
 } from '@/components/xcape/protocol/ProtocolRecommendations';
 import type { ReasoningResult } from './reasoning';
+import type { BodyDerivation } from './protocol';
 
 export type ProtocolArea = 'face' | 'body';
 
@@ -108,7 +109,7 @@ export const PRODUCT_ROLES: ProductRoleMeta[] = [
     when: 'Last step on the body, after bathing',
     frequency: 'Daily',
     rationale:
-      'The body counterpart of your customized cream. Body skin is larger and thicker, so it is prepared at three times the face dose.',
+      'The body counterpart of your customized cream. Body skin is larger and thicker, so the weak-elasticity solution is prepared at five times the face amount.',
     area: 'body',
   },
 ];
@@ -126,6 +127,8 @@ export interface ProtocolPlanCustomization {
   concern: string;
   tier_label?: string;
   score?: number;
+  /** Present on derived BODY lines only. */
+  derivation?: BodyDerivation | null;
 }
 
 /** One ordered step of the client-facing protocol. */
@@ -228,6 +231,7 @@ export function buildProtocolPlan(input: {
         concern: a.concern,
         tier_label: a.tier_label,
         score: a.score,
+        derivation: a.derivation ?? null,
       });
       draft.concerns = uniq([...draft.concerns, a.concern]);
     }

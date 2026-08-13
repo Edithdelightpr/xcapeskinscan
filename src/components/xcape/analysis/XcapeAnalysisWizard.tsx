@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
-import { Check, ChevronLeft, ChevronRight, RotateCcw } from 'lucide-react';
+import { Check, ChevronLeft, ChevronRight, Plus, RotateCcw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { useRealClients, type RealClient } from '@/hooks/useRealClients';
@@ -250,6 +250,24 @@ const XcapeAnalysisWizard = () => {
     setMaxStep((m) => Math.max(m, clamped));
   };
 
+  /**
+   * "+ New Analysis" — start a completely fresh flow. Transient wizard state
+   * only (client selection, images, scores, proposals, report draft) is
+   * cleared; NOTHING previously saved is mutated. Prior assessments,
+   * reports, snapshots, share links, carts and orders are untouched — the
+   * next save inserts a brand-new assessment row.
+   */
+  const startNewAnalysis = () => {
+    resetFields();
+    hydratedFor.current = null;
+    setClientId(null);
+    try { window.sessionStorage.removeItem(WIP_KEY); } catch { /* noop */ }
+    setStep(0);
+    setMaxStep(0);
+    window.scrollTo({ top: 0, behavior: 'auto' });
+    toast.success('Started a new analysis');
+  };
+
   const startFresh = () => {
     resetFields();
     hydratedFor.current = clientId; // don't immediately re-hydrate the old draft
@@ -263,6 +281,19 @@ const XcapeAnalysisWizard = () => {
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 pb-10 space-y-5">
+      {/* Always-available entry point into a fresh analysis. */}
+      <div className="flex justify-end">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="w-full sm:w-auto"
+          onClick={startNewAnalysis}
+        >
+          <Plus className="w-4 h-4 mr-1" /> New Analysis
+        </Button>
+      </div>
+
       {/* Stepper */}
       <ol className="grid grid-cols-3 sm:grid-cols-6 gap-1.5">
         {STEPS.map((s, i) => {
@@ -383,6 +414,22 @@ const XcapeAnalysisWizard = () => {
           assessments={assessments}
           assessmentId={assessmentId}
         />
+      )}
+
+      {step === STEPS.length - 1 && client && (
+        <div className="rounded-lg border border-border/50 bg-surface/40 px-3 py-3 sm:flex sm:items-center sm:justify-between sm:gap-3">
+          <p className="text-[11px] text-muted-foreground">
+            Finished with {client.full_name}? Starting a new analysis keeps this report and every
+            saved record exactly as it is.
+          </p>
+          <Button
+            type="button"
+            className="mt-2 w-full sm:mt-0 sm:w-auto glow-primary"
+            onClick={startNewAnalysis}
+          >
+            <Plus className="w-4 h-4 mr-1" /> Start New Analysis
+          </Button>
+        </div>
       )}
 
       {/* Footer navigation */}

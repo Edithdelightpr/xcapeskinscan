@@ -159,7 +159,10 @@ const Step = ({ step, dark }: { step: ProtocolPlanStep; dark: boolean }) => {
                   </span>
                   <span className="text-[11px]">
                     {c.concern}
-                    {typeof c.score === 'number' ? ` · score ${c.score}/100` : ''}
+                    {typeof c.score === 'number' ? ` · health score ${c.score}/100` : ''}
+                    {c.derivation && c.derivation.multiplier > 1
+                      ? ` · ${c.derivation.base_face_dose_ml} ml face × ${c.derivation.multiplier}`
+                      : ''}
                   </span>
                 </li>
               ))}
@@ -183,6 +186,15 @@ const ClientProtocolPlan = ({
   const plan = buildProtocolPlan({ face, body, addons, reasoning });
   if (plan.steps.length === 0) return null;
   const dark = tone === 'dark';
+  // "Your XCAPE Body Protocol" is presented as its own section immediately
+  // after the facial protocol. It is derived from the facial findings — the
+  // body is never independently scanned.
+  const faceSteps = plan.steps.filter((s) => s.area !== 'body');
+  const bodySteps = plan.steps.filter((s) => s.area === 'body');
+  const bodyTrigger = bodySteps
+    .flatMap((s) => s.customization)
+    .map((c) => c.derivation)
+    .find(Boolean);
 
   return (
     <section
@@ -204,7 +216,7 @@ const ClientProtocolPlan = ({
         </h3>
         <p className={cn('text-[11.5px]', dark ? 'text-slate-400' : 'text-muted-foreground')}>
           {footnote ??
-            'Built from your four skin-health scores using the XCAPE customization protocol. Use the steps in order. Only your Face Cream and Body Milk are customized — body is prepared at 3× the face dose.'}
+            'Built from your four skin-health scores (100 = healthiest, lower means more support needed) using the XCAPE customization protocol. Use the steps in order.'}
         </p>
       </div>
 
@@ -272,10 +284,35 @@ const ClientProtocolPlan = ({
       )}
 
       <ul className={cn('divide-y', dark ? 'divide-slate-800' : 'divide-border/50')}>
-        {plan.steps.map((s) => (
+        {faceSteps.map((s) => (
           <Step key={`${s.area}-${s.product_name}`} step={s} dark={dark} />
         ))}
       </ul>
+
+      {bodySteps.length > 0 && (
+        <div className="space-y-2 pt-2">
+          <div className="space-y-0.5">
+            <h4
+              className={cn(
+                'text-[11px] font-semibold uppercase tracking-[0.16em]',
+                dark ? 'text-sky-300' : 'text-primary',
+              )}
+            >
+              Your XCAPE Body Protocol
+            </h4>
+            <p className={cn('text-[11.5px]', dark ? 'text-slate-400' : 'text-muted-foreground')}>
+              Derived from your facial findings
+              {bodyTrigger ? ` — ${bodyTrigger.source_concern.toLowerCase()} at a health score of ${bodyTrigger.source_score}/100` : ''}
+              . Your body was not scanned separately.
+            </p>
+          </div>
+          <ul className={cn('divide-y', dark ? 'divide-slate-800' : 'divide-border/50')}>
+            {bodySteps.map((s) => (
+              <Step key={`${s.area}-${s.product_name}`} step={s} dark={dark} />
+            ))}
+          </ul>
+        </div>
+      )}
     </section>
   );
 };

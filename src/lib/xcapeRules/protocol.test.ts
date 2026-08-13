@@ -5,6 +5,7 @@ import {
   CONFIRMED_FACE_DOSE_TIERS,
   CUSTOMIZABLE_PRODUCT_SKUS,
   isCustomizableProductSku,
+  isFaceCustomizableProductSku,
   sanitizeProtocolAddons,
   DEFAULT_ALIGNMENTS,
   PROTOCOL_CATEGORIES,
@@ -65,25 +66,28 @@ describe('resolveProtocol — alignment', () => {
   const addons = (r: ReturnType<typeof resolveProtocol>) =>
     r.addons.map((p) => p.product_name).sort();
 
-  it('hyperpigmentation customizes only face cream + body milk', () => {
+  it('hyperpigmentation customizes the face cream and the derived serum body path', () => {
     const r = resolveProtocol({ scores: { pigmentation_stability: 30 } });
     expect(face(r)).toEqual(['XCAPE Face Cream']);
-    expect(body(r)).toEqual(['XCAPE Body Milk']);
-    expect(addons(r)).toEqual([
-      'XCAPE Advanced Serum',
-      'XCAPE Advanced Serum',
-      'XCAPE Treatment Glycerine',
-    ]);
+    // pigmentation health 30 < 75 -> Advanced Serum body pathway, same tier.
+    expect(body(r)).toEqual(['XCAPE Advanced Serum']);
     expect(r.face[0].additions[0].ds_name).toBe('DS Tyrosinase Inhibitor');
     expect(r.face[0].additions[1].ds_name).toBe('DS Anti-Inflammatory');
     expect(r.face[0].additions[0].dose_ml).toBe(1.5);
-    expect(r.body[0].additions[0].dose_ml).toBe(4.5);
+    expect(r.body[0].additions[0].dose_ml).toBe(1.5);
+    expect(r.body[0].additions[0].derivation?.rule).toBe('advanced_serum_pigmentation');
   });
 
-  it('oversebaceous activity customizes face cream + body milk, recommends cleanser/toner', () => {
+  it('pigmentation at 75+ does not activate the serum body pathway', () => {
+    const r = resolveProtocol({ scores: { pigmentation_stability: 80 } });
+    expect(body(r)).toEqual([]);
+  });
+
+  it('oversebaceous activity customizes face cream only, recommends cleanser/toner', () => {
     const r = resolveProtocol({ scores: { oil_congestion_balance: 60 } });
     expect(face(r)).toEqual(['XCAPE Face Cream']);
-    expect(body(r)).toEqual(['XCAPE Body Milk']);
+    // Oil/congestion has no derived body pathway.
+    expect(body(r)).toEqual([]);
     expect(addons(r)).toEqual(['XCAPE Alcohol-Free Toner', 'XCAPE Purifying Cleanser']);
     expect(r.face[0].additions[0].ds_name).toBe('DS P Bacterium');
   });
@@ -95,7 +99,9 @@ describe('resolveProtocol — alignment', () => {
     expect(body(r)).toEqual(['XCAPE Body Milk']);
     expect(r.face[0].additions[0].ds_name).toBe('DS Anti-Aging');
     expect(r.face[0].additions[0].dose_ml).toBe(1);
-    expect(r.body[0].additions[0].dose_ml).toBe(3);
+    // Body Milk weak-elasticity line = 5x the face amount.
+    expect(r.body[0].additions[0].dose_ml).toBe(5);
+    expect(r.body[0].additions[0].derivation?.multiplier).toBe(5);
   });
 
   it('a maintenance-level concern does not open the body pathway', () => {
@@ -105,21 +111,24 @@ describe('resolveProtocol — alignment', () => {
     expect(body(r)).toEqual([]);
   });
 
-  it('surface dehydration aligns toner + face cream, body milk + glycerine with DS Sebum Control', () => {
+  it('surface dehydration aligns toner + face cream with DS Sebum Control, no body path', () => {
     const r = resolveProtocol({ scores: { barrier_surface_hydration: 20 } });
     expect(face(r)).toEqual(['XCAPE Face Cream']);
-    expect(body(r)).toEqual(['XCAPE Body Milk']);
-    expect(addons(r)).toEqual(['XCAPE Alcohol-Free Toner', 'XCAPE Treatment Glycerine']);
+    expect(body(r)).toEqual([]);
+    expect(addons(r)).toContain('XCAPE Alcohol-Free Toner');
     expect(r.face[0].additions[0].ds_name).toBe('DS Sebum Control');
     expect(r.face[0].additions[0].dose_ml).toBe(2);
-    expect(r.body[0].additions[0].dose_ml).toBe(6);
+    // Dehydration has no derived body pathway.
+    expect(r.body).toEqual([]);
   });
 
-  it('every category returns both face and body recommendations', () => {
+  it('every category returns face recommendations; only pigmentation and firmness derive body', () => {
     for (const category of PROTOCOL_CATEGORIES) {
       const r = resolveProtocol({ scores: { [category]: 40 } });
       expect(r.face.length).toBeGreaterThan(0);
-      expect(r.body.length).toBeGreaterThan(0);
+      const expectsBody =
+        category === 'pigmentation_stability' || category === 'firmness_skin_support';
+      expect(r.body.length > 0).toBe(expectsBody);
     }
   });
 
@@ -147,7 +156,7 @@ describe('resolveProtocol — alignment', () => {
   it('does not divide the dose across multiple aligned products', () => {
     const r = resolveProtocol({ scores: { oil_congestion_balance: 30 } });
     for (const p of r.face) for (const a of p.additions) expect(a.dose_ml).toBe(1.5);
-    for (const p of r.body) for (const a of p.additions) expect(a.dose_ml).toBe(4.5);
+    expect(r.body).toEqual([]);
   });
 });
 
@@ -178,22 +187,26 @@ describe('DS Anti-Inflammatory required companion', () => {
   it('confirmed live doses: pigmentation 30 and oil 60', () => {
     const pig = resolveProtocol({ scores: { pigmentation_stability: 30 } });
     for (const a of pig.face.flatMap((p) => p.additions)) expect(a.dose_ml).toBe(1.5);
-    for (const a of pig.body.flatMap((p) => p.additions)) expect(a.dose_ml).toBe(4.5);
+    for (const a of pig.body.flatMap((p) => p.additions)) expect(a.dose_ml).toBe(1.5);
     const oil = resolveProtocol({ scores: { oil_congestion_balance: 60 } });
     for (const a of oil.face.flatMap((p) => p.additions)) expect(a.dose_ml).toBe(1);
-    for (const a of oil.body.flatMap((p) => p.additions)) expect(a.dose_ml).toBe(3);
+    expect(oil.body).toEqual([]);
   });
 
   it.each([
-    [80, 0.5, 1.5],
-    [60, 1, 3],
-    [30, 1.5, 4.5],
-    [20, 2, 6],
-  ])('tier %i pairs matching primary/companion doses face %s / body %s', (score, face, body) => {
-    const r = resolveProtocol({ scores: { pigmentation_stability: score } });
-    for (const a of r.face.flatMap((p) => p.additions)) expect(a.dose_ml).toBe(face);
-    for (const a of r.body.flatMap((p) => p.additions)) expect(a.dose_ml).toBe(body);
-  });
+    [80, 0.5, null],
+    [60, 1, 1],
+    [30, 1.5, 1.5],
+    [20, 2, 2],
+  ])(
+    'tier %i pairs matching primary/companion doses face %s / derived body %s',
+    (score, face, body) => {
+      const r = resolveProtocol({ scores: { pigmentation_stability: score } });
+      for (const a of r.face.flatMap((p) => p.additions)) expect(a.dose_ml).toBe(face);
+      if (body == null) expect(r.body).toEqual([]);
+      else for (const a of r.body.flatMap((p) => p.additions)) expect(a.dose_ml).toBe(body);
+    },
+  );
 
   it('never attaches to firmness or dehydration lines', () => {
     const r = resolveProtocol({
@@ -257,8 +270,10 @@ describe('admin-editable alignment', () => {
         ? { ...a, dose_multiplier: 2 }
         : a,
     );
+    // The derived body protocol owns the Body Milk line: the weak-elasticity
+    // amount is always 5x the face amount, regardless of alignment multiplier.
     const r = resolveProtocol({ scores: { firmness_skin_support: 60 }, alignments });
-    expect(r.body[0].additions[0].dose_ml).toBe(2);
+    expect(r.body[0].additions[0].dose_ml).toBe(5);
   });
 
   it('default body multiplier is 3 and face is 1', () => {
@@ -324,11 +339,15 @@ describe('product visuals (v1.1 display plumbing)', () => {
 
 
 describe('customizable vs recommended-only products', () => {
-  it('only face cream and body milk are customizable', () => {
-    expect([...CUSTOMIZABLE_PRODUCT_SKUS]).toEqual(['XC-FACE-CREAM', 'XC-BODY-MILK']);
+  it('only face cream, body milk and the derived-body serum are customizable', () => {
+    expect([...CUSTOMIZABLE_PRODUCT_SKUS]).toEqual([
+      'XC-FACE-CREAM',
+      'XC-BODY-MILK',
+      'XC-ADVANCED-SERUM',
+    ]);
     expect(isCustomizableProductSku('XC-FACE-CREAM')).toBe(true);
     expect(isCustomizableProductSku('XC-BODY-MILK')).toBe(true);
-    for (const sku of ['XC-PURIFYING-CLEANSER', 'XC-AF-TONER', 'XC-ADVANCED-SERUM', 'XC-TREATMENT-GLYCERINE']) {
+    for (const sku of ['XC-PURIFYING-CLEANSER', 'XC-AF-TONER', 'XC-TREATMENT-GLYCERINE']) {
       expect(isCustomizableProductSku(sku)).toBe(false);
     }
   });
@@ -341,24 +360,57 @@ describe('customizable vs recommended-only products', () => {
     expect(cream?.additions[0].dose_ml).toBe(1.5);
   });
 
-  it('body milk carries customization at exactly 3x the face dose', () => {
-    // Health scores whose severity clears the body activation threshold.
-    for (const score of [10, 30, 60] ) {
+  it('body milk weak-elasticity line is exactly 5x the face cream amount', () => {
+    for (const [score, expected] of [
+      [60, 5],
+      [40, 7.5],
+      [10, 10],
+    ] as const) {
       const r = resolveProtocol({ scores: { firmness_skin_support: score } });
       const cream = r.face.find((p) => p.product_sku === 'XC-FACE-CREAM');
       const milk = r.body.find((p) => p.product_sku === 'XC-BODY-MILK');
       expect(milk?.customizable).toBe(true);
-      expect(milk!.additions[0].dose_ml).toBe(cream!.additions[0].dose_ml * 3);
+      expect(milk!.additions[0].dose_ml).toBe(cream!.additions[0].dose_ml * 5);
+      expect(milk!.additions[0].dose_ml).toBe(expected);
     }
+  });
+
+  it('firmness at 75+ does not activate the body milk pathway', () => {
+    const r = resolveProtocol({ scores: { firmness_skin_support: 78 } });
+    expect(r.body.some((p) => p.product_sku === 'XC-BODY-MILK')).toBe(false);
+  });
+
+  it('regression: pig 20 / hydration 50 / oil 70 / firmness 78', () => {
+    const r = resolveProtocol({
+      scores: {
+        pigmentation_stability: 20,
+        barrier_surface_hydration: 50,
+        oil_congestion_balance: 70,
+        firmness_skin_support: 78,
+      },
+    });
+    // Lower health score = higher priority.
+    expect(r.reasoning.priorities.map((p) => p.category)).toEqual([
+      'pigmentation_stability',
+      'barrier_surface_hydration',
+      'oil_congestion_balance',
+      'firmness_skin_support',
+    ]);
+    const serum = r.body.find((p) => p.product_sku === 'XC-ADVANCED-SERUM');
+    expect(serum?.additions[0].dose_ml).toBe(2);
+    expect(r.body.some((p) => p.product_sku === 'XC-BODY-MILK')).toBe(false);
   });
 
   it('non-customizable products are recommended but never customized', () => {
     const r = resolveProtocol({ scores: allScores(30) });
     const customizedSkus = [...r.face, ...r.body].map((p) => p.product_sku);
-    expect(new Set(customizedSkus)).toEqual(new Set(['XC-FACE-CREAM', 'XC-BODY-MILK']));
+    for (const sku of customizedSkus) expect(isCustomizableProductSku(sku)).toBe(true);
     expect(r.addons.length).toBeGreaterThan(0);
     for (const addon of r.addons) {
-      expect(isCustomizableProductSku(addon.product_sku)).toBe(false);
+      // Face add-ons are never customized; the Advanced Serum is customized
+      // on the derived body pathway only, so it may still be a face add-on.
+      expect(isFaceCustomizableProductSku(addon.product_sku)).toBe(false);
+      expect(addon.area === 'body' && isCustomizableProductSku(addon.product_sku)).toBe(false);
       expect(addon.customizable).toBe(false);
       expect(addon.reason.length).toBeGreaterThan(0);
       expect(addon.supports.length).toBeGreaterThan(0);
