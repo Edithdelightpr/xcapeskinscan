@@ -5,6 +5,7 @@ import {
   CONFIRMED_FACE_DOSE_TIERS,
   CUSTOMIZABLE_PRODUCT_SKUS,
   isCustomizableProductSku,
+  isFaceCustomizableProductSku,
   sanitizeProtocolAddons,
   DEFAULT_ALIGNMENTS,
   PROTOCOL_CATEGORIES,
@@ -406,7 +407,10 @@ describe('customizable vs recommended-only products', () => {
     for (const sku of customizedSkus) expect(isCustomizableProductSku(sku)).toBe(true);
     expect(r.addons.length).toBeGreaterThan(0);
     for (const addon of r.addons) {
-      expect(isCustomizableProductSku(addon.product_sku)).toBe(false);
+      // Face add-ons are never customized; the Advanced Serum is customized
+      // on the derived body pathway only, so it may still be a face add-on.
+      expect(isFaceCustomizableProductSku(addon.product_sku)).toBe(false);
+      expect(addon.area === 'body' && isCustomizableProductSku(addon.product_sku)).toBe(false);
       expect(addon.customizable).toBe(false);
       expect(addon.reason.length).toBeGreaterThan(0);
       expect(addon.supports.length).toBeGreaterThan(0);
