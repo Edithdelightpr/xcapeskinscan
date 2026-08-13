@@ -13,7 +13,7 @@ import { supabase } from '@/integrations/supabase/client';
 
 export type PushEnableResult =
   | { ok: true; endpoint: string }
-  | { ok: false; reason: 'unsupported' | 'denied' | 'vapid_missing' | 'no_service_worker' | 'error' };
+  | { ok: false; reason: 'unsupported' | 'denied' | 'vapid_missing' | 'no_service_worker' | 'requires_auth' | 'error' };
 
 export const pushSupported = (): boolean =>
   typeof window !== 'undefined' &&
@@ -54,6 +54,9 @@ export const enablePushNotifications = async (): Promise<PushEnableResult> => {
     const registration = await navigator.serviceWorker.getRegistration('/');
     if (!registration) return { ok: false, reason: 'no_service_worker' };
 
+    const { data: auth } = await supabase.auth.getUser();
+    if (!auth?.user?.id) return { ok: false, reason: 'requires_auth' };
+
     const existing = await registration.pushManager.getSubscription();
     const subscription =
       existing ??
@@ -63,7 +66,6 @@ export const enablePushNotifications = async (): Promise<PushEnableResult> => {
       }));
 
     const json = subscription.toJSON();
-    const { data: auth } = await supabase.auth.getUser();
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { error } = await (supabase as any).from('push_subscriptions').upsert(
@@ -71,7 +73,7 @@ export const enablePushNotifications = async (): Promise<PushEnableResult> => {
         endpoint: subscription.endpoint,
         p256dh: json.keys?.p256dh ?? '',
         auth_key: json.keys?.auth ?? '',
-        user_id: auth?.user?.id ?? null,
+        user_id: auth.user.id,
         user_agent: navigator.userAgent.slice(0, 300),
       },
       { onConflict: 'endpoint' },
