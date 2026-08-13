@@ -2,6 +2,7 @@ import { Helmet } from 'react-helmet-async';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import AdminProducts from '@/components/admin/AdminProducts';
 import KitCustomizationManager from '@/components/xcape/admin/KitCustomizationManager';
+import ProductAlignmentManager from '@/components/xcape/admin/ProductAlignmentManager';
 import XcapePageHeader from '@/components/xcape/XcapePageHeader';
 
 /** XCAPE Products & Ingredients — existing product catalog module plus the
@@ -20,12 +21,16 @@ const XcapeAdminProducts = () => (
       <TabsList>
         <TabsTrigger value="catalogue">Catalogue</TabsTrigger>
         <TabsTrigger value="customization">Kits &amp; Customization</TabsTrigger>
+        <TabsTrigger value="alignment">Product alignment</TabsTrigger>
       </TabsList>
       <TabsContent value="catalogue" className="pt-4">
         <AdminProducts />
       </TabsContent>
       <TabsContent value="customization" className="pt-4">
         <KitCustomizationManager />
+      </TabsContent>
+      <TabsContent value="alignment" className="pt-4">
+        <ProductAlignmentManager />
       </TabsContent>
     </Tabs>
   </div>

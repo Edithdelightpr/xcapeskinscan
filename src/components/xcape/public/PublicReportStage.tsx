@@ -14,6 +14,7 @@ import {
 } from '@/lib/publicAnalysisScores';
 import { SCAN_VIEWS, type ScanViewId } from '@/lib/scan/scanQuality';
 import PublicConcernBreakdown from '@/components/xcape/public/PublicConcernBreakdown';
+import ProtocolRecommendations from '@/components/xcape/protocol/ProtocolRecommendations';
 import { concernsFromReport, type PublicAnalysisReport } from '@/lib/publicAnalysisReport';
 
 interface Props {
@@ -113,6 +114,15 @@ const PublicReportStage = ({
           )}
 
           <PublicConcernBreakdown concerns={concerns} report={report} />
+
+          {report?.protocol && (
+            <ProtocolRecommendations
+              tone="dark"
+              face={report.protocol.face}
+              body={report.protocol.body}
+              footnote="XCAPE protocol recommendations, resolved from your four health scores. Body is always recommended alongside face at 3× the face dose. Availability and pricing are confirmed by XCAPE before anything is prepared."
+            />
+          )}
 
           {report && (report.combinedInterpretation || report.homeCareDirections.length > 0) && (
             <div className="space-y-4 rounded-2xl border border-slate-700/80 bg-slate-900/40 p-4">

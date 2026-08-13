@@ -24,6 +24,27 @@ export interface PublicReportVariable {
   note: string | null;
 }
 
+/** One DS addition on one recommended product (server-derived, id-free). */
+export interface PublicProtocolAddition {
+  concern: string;
+  ds_name: string;
+  dose_ml: number;
+  tier_label: string;
+  score: number;
+  companion: boolean;
+}
+
+export interface PublicProtocolProduct {
+  product_name: string;
+  area: 'face' | 'body';
+  additions: PublicProtocolAddition[];
+}
+
+export interface PublicProtocol {
+  face: PublicProtocolProduct[];
+  body: PublicProtocolProduct[];
+}
+
 export interface PublicAnalysisReport {
   variables: Partial<Record<PublicScoreKey, PublicReportVariable>>;
   priorityOrder: PublicScoreKey[];
@@ -31,6 +52,11 @@ export interface PublicAnalysisReport {
   combinedInterpretation: string | null;
   homeCareDirections: string[];
   treatmentDirections: string[];
+  /**
+   * The deterministic XCAPE protocol, resolved SERVER-side from the stored
+   * engine scores. Never contains ids, prices, storage paths or raw AI data.
+   */
+  protocol: PublicProtocol | null;
 }
 
 const MAX_LIST_ITEMS = 8;
@@ -54,6 +80,54 @@ function list(v: unknown, max: number): string[] {
 
 const isScore = (v: unknown): v is number =>
   typeof v === 'number' && Number.isInteger(v) && v >= 0 && v <= 100;
+
+const AREAS = ['face', 'body'] as const;
+const MAX_PRODUCTS = 12;
+const MAX_ADDITIONS = 6;
+
+const isDose = (v: unknown): v is number =>
+  typeof v === 'number' && Number.isFinite(v) && v > 0 && v <= 100;
+
+function protocolProducts(raw: unknown, area: 'face' | 'body'): PublicProtocolProduct[] {
+  if (!Array.isArray(raw)) return [];
+  const out: PublicProtocolProduct[] = [];
+  for (const item of raw) {
+    const row = (item ?? {}) as Record<string, unknown>;
+    const name = text(row.product_name, 120);
+    if (!name) continue;
+    const additions: PublicProtocolAddition[] = [];
+    const rawAdds = Array.isArray(row.additions) ? row.additions : [];
+    for (const a of rawAdds) {
+      const add = (a ?? {}) as Record<string, unknown>;
+      const dsName = text(add.ds_name, 120);
+      const concern = text(add.concern, 120);
+      if (!dsName || !concern || !isDose(add.dose_ml) || !isScore(add.score)) continue;
+      additions.push({
+        concern,
+        ds_name: dsName,
+        dose_ml: add.dose_ml,
+        tier_label: text(add.tier_label, 20) ?? '',
+        score: add.score,
+        companion: add.companion === true,
+      });
+      if (additions.length >= MAX_ADDITIONS) break;
+    }
+    // A companion line can never stand alone.
+    if (!additions.some((x) => !x.companion)) continue;
+    out.push({ product_name: name, area, additions });
+    if (out.length >= MAX_PRODUCTS) break;
+  }
+  return out;
+}
+
+export function sanitizeProtocol(raw: unknown): PublicProtocol | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const row = raw as Record<string, unknown>;
+  const face = protocolProducts(row.face, AREAS[0]);
+  const body = protocolProducts(row.body, AREAS[1]);
+  if (face.length === 0 && body.length === 0) return null;
+  return { face, body };
+}
 
 export function sanitizeReportPayload(raw: unknown): PublicAnalysisReport {
   const row = (raw ?? {}) as Record<string, unknown>;
@@ -87,6 +161,7 @@ export function sanitizeReportPayload(raw: unknown): PublicAnalysisReport {
     combinedInterpretation: text(row.combined_interpretation, 500),
     homeCareDirections: list(row.home_care_directions, 300),
     treatmentDirections: list(row.treatment_directions, 300),
+    protocol: sanitizeProtocol(row.protocol),
   };
 }
 

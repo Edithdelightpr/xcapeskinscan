@@ -10076,6 +10076,7 @@ export type Database = {
           decision_reason: string | null
           dose_ml: number | null
           dose_tier: Json | null
+          formula_lines: Json
           id: string
           instructions: string | null
           is_demo: boolean
@@ -10084,6 +10085,7 @@ export type Database = {
           kit_unit_price: number | null
           override_note: string | null
           proposal_id: string | null
+          protocol_version: string | null
           rule_id: string | null
           rule_version: number | null
           rule_version_id: string | null
@@ -10110,6 +10112,7 @@ export type Database = {
           decision_reason?: string | null
           dose_ml?: number | null
           dose_tier?: Json | null
+          formula_lines?: Json
           id?: string
           instructions?: string | null
           is_demo?: boolean
@@ -10118,6 +10121,7 @@ export type Database = {
           kit_unit_price?: number | null
           override_note?: string | null
           proposal_id?: string | null
+          protocol_version?: string | null
           rule_id?: string | null
           rule_version?: number | null
           rule_version_id?: string | null
@@ -10144,6 +10148,7 @@ export type Database = {
           decision_reason?: string | null
           dose_ml?: number | null
           dose_tier?: Json | null
+          formula_lines?: Json
           id?: string
           instructions?: string | null
           is_demo?: boolean
@@ -10152,6 +10157,7 @@ export type Database = {
           kit_unit_price?: number | null
           override_note?: string | null
           proposal_id?: string | null
+          protocol_version?: string | null
           rule_id?: string | null
           rule_version?: number | null
           rule_version_id?: string | null
@@ -10369,6 +10375,67 @@ export type Database = {
           {
             foreignKeyName: "xcape_kit_components_kit_product_id_fkey"
             columns: ["kit_product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      xcape_product_alignments: {
+        Row: {
+          area: string
+          category: string
+          created_at: string
+          created_by: string | null
+          dose_multiplier: number
+          id: string
+          is_active: boolean
+          product_id: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          area: string
+          category: string
+          created_at?: string
+          created_by?: string | null
+          dose_multiplier?: number
+          id?: string
+          is_active?: boolean
+          product_id: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          area?: string
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          dose_multiplier?: number
+          id?: string
+          is_active?: boolean
+          product_id?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "xcape_product_alignments_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "product_performance"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "xcape_product_alignments_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "product_performance_v2"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "xcape_product_alignments_product_id_fkey"
+            columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "products"
             referencedColumns: ["id"]

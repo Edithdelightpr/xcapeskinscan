@@ -187,7 +187,7 @@ const CustomizationFormulaCard = ({ token, formula, compact = false, mock = fals
             </p>
           )}
         </div>
-        {formula.kit_unit_price != null && (
+        {formula.kit_unit_price != null && formula.kit_unit_price > 0 && (
           <span className="text-[15px] text-cocoa font-semibold tabular-nums shrink-0">
             {formatNaira(formula.kit_unit_price)}
           </span>
