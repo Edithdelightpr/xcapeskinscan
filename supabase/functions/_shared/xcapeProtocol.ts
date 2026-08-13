@@ -296,6 +296,22 @@ export interface ProtocolAddon {
   customizable: false;
 }
 
+/**
+ * A DS solution required by the confirmed protocol that is NOT present as an
+ * active catalogue product. The line is dropped, never substituted or faked,
+ * and the gap is surfaced so approval and purchase can be blocked.
+ */
+export interface ProtocolMappingGap {
+  category: ProtocolCategory;
+  concern: string;
+  area: ProtocolArea;
+  product_sku: string;
+  product_name: string;
+  ds_sku: string;
+  ds_name: string;
+  companion: boolean;
+}
+
 export interface ProtocolResult {
   version: string;
   /** Customizable FACE base products (Face Cream) with their DS additions. */
@@ -308,6 +324,10 @@ export interface ProtocolResult {
   categories: ProtocolCategory[];
   /** True when the required anti-inflammatory companion was applied anywhere. */
   anti_inflammatory_applied: boolean;
+  /** DS solutions required by the protocol but missing from the catalogue. */
+  mapping_gaps: ProtocolMappingGap[];
+  /** Convenience flag: at least one required mapping is missing. */
+  mapping_required: boolean;
 }
 
 
@@ -317,12 +337,20 @@ export interface ResolveProtocolInput {
   /** Admin-maintained alignment; defaults to the confirmed catalogue map. */
   alignments?: ProtocolAlignment[];
   /**
+   * SKUs of DS solutions that actually exist as ACTIVE catalogue products.
+   * When omitted (undefined/null) every DS solution is assumed mapped, which
+   * preserves pure-rule evaluation. When provided, a DS solution — including
+   * the anti-inflammatory companion — is only ever applied if it is listed.
+   */
+  ds_available?: string[] | null;
+  /**
    * @deprecated Ignored since xcape-protocol-1.1. The DS Anti-Inflammatory
    * companion is required on every pigmentation and oil/congestion line and
    * can no longer be suppressed or enabled by a caller.
    */
   inflammation?: boolean;
 }
+
 
 const isProtocolCategory = (v: unknown): v is ProtocolCategory =>
   typeof v === 'string' && (PROTOCOL_CATEGORIES as string[]).includes(v);
@@ -351,6 +379,18 @@ export function resolveProtocol(input: ResolveProtocolInput): ProtocolResult {
   };
   const addonMap = new Map<string, ProtocolAddon>();
   let antiInflammatoryApplied = false;
+
+  // A DS solution is only usable when it is an ACTIVE catalogue product.
+  // Omitting ds_available keeps pure rule evaluation (everything mapped).
+  const dsAllowList = Array.isArray(input.ds_available) ? new Set(input.ds_available) : null;
+  const dsMapped = (sku: string) => dsAllowList == null || dsAllowList.has(sku);
+  const gapMap = new Map<string, ProtocolMappingGap>();
+  const recordGap = (g: ProtocolMappingGap) => {
+    const key = `${g.area}:${g.product_sku}:${g.ds_sku}:${g.category}`;
+    if (!gapMap.has(key)) gapMap.set(key, g);
+  };
+
+
 
   for (const { category, score, tier } of scored) {
     const active = DS_ACTIVE_BY_CATEGORY[category];
@@ -407,40 +447,69 @@ export function resolveProtocol(input: ResolveProtocolInput): ProtocolResult {
       }
 
       if (!card.additions.some((a) => a.category === category && !a.companion)) {
-        card.additions.push({
-          category,
-          concern: CONCERN_LABEL[category],
-          ds_sku: active.sku,
-          ds_name: active.name,
-          dose_ml: dose,
-          score,
-          tier_label: tier.label,
-          companion: false,
-        });
+        if (dsMapped(active.sku)) {
+          card.additions.push({
+            category,
+            concern: CONCERN_LABEL[category],
+            ds_sku: active.sku,
+            ds_name: active.name,
+            dose_ml: dose,
+            score,
+            tier_label: tier.label,
+            companion: false,
+          });
+        } else {
+          recordGap({
+            category,
+            concern: CONCERN_LABEL[category],
+            area,
+            product_sku: row.product_sku,
+            product_name: row.product_name,
+            ds_sku: active.sku,
+            ds_name: active.name,
+            companion: false,
+          });
+        }
       }
 
       // Required companion: always paired with the pigmentation and
       // oil/congestion primaries at the same tier dose, never on its own.
       if (ANTI_INFLAMMATORY_CATEGORIES.includes(category)) {
         if (!card.additions.some((a) => a.category === category && a.companion)) {
-          card.additions.push({
-            category,
-            concern: CONCERN_LABEL[category],
-            ds_sku: DS_ANTI_INFLAMMATORY.sku,
-            ds_name: DS_ANTI_INFLAMMATORY.name,
-            dose_ml: dose,
-            score,
-            tier_label: tier.label,
-            companion: true,
-          });
-          antiInflammatoryApplied = true;
+          if (dsMapped(DS_ANTI_INFLAMMATORY.sku)) {
+            card.additions.push({
+              category,
+              concern: CONCERN_LABEL[category],
+              ds_sku: DS_ANTI_INFLAMMATORY.sku,
+              ds_name: DS_ANTI_INFLAMMATORY.name,
+              dose_ml: dose,
+              score,
+              tier_label: tier.label,
+              companion: true,
+            });
+            antiInflammatoryApplied = true;
+          } else {
+            recordGap({
+              category,
+              concern: CONCERN_LABEL[category],
+              area,
+              product_sku: row.product_sku,
+              product_name: row.product_name,
+              ds_sku: DS_ANTI_INFLAMMATORY.sku,
+              ds_name: DS_ANTI_INFLAMMATORY.name,
+              companion: true,
+            });
+          }
         }
       }
     }
   }
 
   const order = (list: ProtocolProduct[]): ProtocolProduct[] =>
-    list.sort((a, b) => a.sort_order - b.sort_order || a.product_name.localeCompare(b.product_name));
+    list
+      // A base product with no resolvable DS line is not a customization.
+      .filter((p) => p.additions.length > 0)
+      .sort((a, b) => a.sort_order - b.sort_order || a.product_name.localeCompare(b.product_name));
 
   const addons = [...addonMap.values()].sort(
     (a, b) =>
@@ -450,6 +519,8 @@ export function resolveProtocol(input: ResolveProtocolInput): ProtocolResult {
       a.product_name.localeCompare(b.product_name),
   );
 
+  const mappingGaps = [...gapMap.values()];
+
   return {
     version: PROTOCOL_VERSION,
     face: order([...byArea.face.values()]),
@@ -457,8 +528,11 @@ export function resolveProtocol(input: ResolveProtocolInput): ProtocolResult {
     addons,
     categories: scored.map((s) => s.category),
     anti_inflammatory_applied: antiInflammatoryApplied,
+    mapping_gaps: mappingGaps,
+    mapping_required: mappingGaps.length > 0,
   };
 }
+
 
 
 /** Flat immutable snapshot lines (one row per product + DS addition). */

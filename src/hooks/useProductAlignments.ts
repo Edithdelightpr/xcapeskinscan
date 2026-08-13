@@ -113,3 +113,29 @@ export const useDeleteProductAlignment = () => {
     onSuccess: () => qc.invalidateQueries({ queryKey: KEY }),
   });
 };
+
+/**
+ * SKUs of DS solutions that exist as ACTIVE catalogue products.
+ *
+ * The resolver only applies a DS active (including the required
+ * anti-inflammatory companion) when its SKU is present here — an unmapped DS
+ * solution is reported as a mapping gap instead of being invented.
+ * Returns `null` while loading so nothing is falsely reported as missing.
+ */
+export const useDsAvailability = () => {
+  const { data, isLoading } = useQuery({
+    queryKey: ['xcape-ds-availability'],
+    queryFn: async (): Promise<string[]> => {
+      const { data, error } = await (supabase as any)
+        .from('products')
+        .select('sku, active')
+        .like('sku', 'XC-DS-%')
+        .eq('active', true);
+      if (error) throw error;
+      return ((data ?? []) as { sku: string | null }[])
+        .map((r) => r.sku)
+        .filter((s): s is string => !!s);
+    },
+  });
+  return { dsAvailable: isLoading ? null : (data ?? []), isLoading };
+};

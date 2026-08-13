@@ -37,7 +37,7 @@ import {
   resolveFormula,
   type ResolvedFormula,
 } from '@/lib/xcapeRules/customization';
-import { useProtocolAlignments } from '@/hooks/useProductAlignments';
+import { useDsAvailability, useProtocolAlignments } from '@/hooks/useProductAlignments';
 import { protocolFormulaLines, resolveProtocol } from '@/lib/xcapeRules/protocol';
 import { scoresFromSkin } from '@/components/xcape/protocol/StaffProtocolPanel';
 import type { RuleOutputs, XcapeProposal } from '@/lib/xcapeRules/types';
@@ -122,6 +122,7 @@ const XcapeProposalsPanel = ({
   const { data: formulaSnapshots = [] } = useFormulaSnapshots(assessmentId);
   const snapshotMut = useCreateFormulaSnapshot();
   const { alignments } = useProtocolAlignments();
+  const { dsAvailable } = useDsAvailability();
 
   /** Deterministic protocol resolved from the approved scores + admin
    *  alignment. Snapshotted per approved formula so the issued report keeps
@@ -131,8 +132,9 @@ const XcapeProposalsPanel = ({
       resolveProtocol({
         scores: scoresFromSkin(skin),
         alignments,
+        ds_available: dsAvailable,
       }),
-    [skin, alignments],
+    [skin, alignments, dsAvailable],
   );
 
   const [rejecting, setRejecting] = useState<XcapeProposal | null>(null);
@@ -391,7 +393,12 @@ const XcapeProposalsPanel = ({
           // A customization proposal without an active category mapping shows
           // its matched protocol/dose logic for review but can NOT be
           // approved — no formula, no snapshot, no purchase path.
-          const mappingMissing = !!customizationOut && !formula;
+          // A required DS solution for this category that is not an active
+          // catalogue product also blocks approval — never substituted.
+          const dsGaps = customizationOut
+            ? protocolResult.mapping_gaps.filter((g) => g.category === customizationOut.category)
+            : [];
+          const mappingMissing = (!!customizationOut && !formula) || dsGaps.length > 0;
           const rawCategoryScore = customizationOut ? ctx[`score.${customizationOut.category}`] : null;
           const pendingDose =
             customizationOut && typeof rawCategoryScore === 'number'
