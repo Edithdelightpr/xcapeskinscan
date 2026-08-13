@@ -7,6 +7,8 @@ import { XcapeFeaturesDark } from '@/components/xcape/landing/XcapeFeaturesDark'
 import { XcapeCredibilityStrip } from '@/components/xcape/landing/XcapeCredibilityStrip';
 import { XcapeClosingCta } from '@/components/xcape/landing/XcapeClosingCta';
 import { XCAPE_DISCLAIMER } from '@/lib/xcapeMarketing';
+import InstallXcape from '@/components/pwa/InstallXcape';
+
 
 /**
  * XCAPE public landing (route "/").
