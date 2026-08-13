@@ -277,12 +277,35 @@ describe('product activation and exclusion', () => {
     // minimisation pass — not the threshold — is what removes it.
     const config: RecommendationConfig = {
       ...DEFAULT_RECOMMENDATION_CONFIG,
-      activation: DEFAULT_RECOMMENDATION_CONFIG.activation.map((a) =>
-        a.product_sku === 'XC-TREATMENT-GLYCERINE' ? { ...a, min_severity: 20 } : a,
-      ),
+      activation: [
+        ...DEFAULT_RECOMMENDATION_CONFIG.activation.map((a) =>
+          a.product_sku === 'XC-TREATMENT-GLYCERINE' ? { ...a, min_severity: 20 } : a,
+        ),
+        {
+          category: 'barrier_surface_hydration' as const,
+          product_sku: 'XC-BODY-MILK',
+          area: 'body' as const,
+          min_severity: 20,
+          priority_weight: 1,
+          satisfies_need: true,
+          foundation: false,
+        },
+      ],
     };
     const r = reasonProtocol({
       scores: scores({ barrier_surface_hydration: 45 }),
+      alignments: [
+        ...DEFAULT_ALIGNMENTS,
+        {
+          category: 'barrier_surface_hydration',
+          area: 'body',
+          product_sku: 'XC-BODY-MILK',
+          product_name: 'XCAPE Body Milk',
+          dose_multiplier: 1,
+          is_active: true,
+          sort_order: 1,
+        },
+      ],
       config,
     });
     const redundant = r.decisions.filter((d) => d.code === 'redundant');

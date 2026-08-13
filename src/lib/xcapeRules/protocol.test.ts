@@ -276,10 +276,15 @@ describe('admin-editable alignment', () => {
     expect(r.body[0].additions[0].dose_ml).toBe(5);
   });
 
-  it('default body multiplier is 3 and face is 1', () => {
+  it('default alignments carry a 1x dose multiplier (body scaling is derived)', () => {
     for (const a of DEFAULT_ALIGNMENTS) {
-      expect(a.dose_multiplier).toBe(a.area === 'body' ? 3 : 1);
+      expect(a.dose_multiplier).toBe(1);
     }
+  });
+
+  it('Body Milk is only aligned to weak elasticity — the derived body pathway', () => {
+    const milk = DEFAULT_ALIGNMENTS.filter((a) => a.product_sku === 'XC-BODY-MILK');
+    expect(milk.map((a) => a.category)).toEqual(['firmness_skin_support']);
   });
 });
 

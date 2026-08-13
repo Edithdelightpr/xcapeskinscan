@@ -273,22 +273,19 @@ export const DEFAULT_ALIGNMENTS: ProtocolAlignment[] = [
   // Hyperpigmentation
   align('pigmentation_stability', 'face', 'XC-FACE-CREAM', 'XCAPE Face Cream', 0),
   align('pigmentation_stability', 'face', 'XC-ADVANCED-SERUM', 'XCAPE Advanced Serum', 1),
-  align('pigmentation_stability', 'body', 'XC-BODY-MILK', 'XCAPE Body Milk', 0),
   align('pigmentation_stability', 'body', 'XC-ADVANCED-SERUM', 'XCAPE Advanced Serum', 1),
   align('pigmentation_stability', 'body', 'XC-TREATMENT-GLYCERINE', 'XCAPE Treatment Glycerine', 2),
   // Oversebaceous activity
   align('oil_congestion_balance', 'face', 'XC-PURIFYING-CLEANSER', 'XCAPE Purifying Cleanser', 0),
   align('oil_congestion_balance', 'face', 'XC-AF-TONER', 'XCAPE Alcohol-Free Toner', 1),
   align('oil_congestion_balance', 'face', 'XC-FACE-CREAM', 'XCAPE Face Cream', 2),
-  align('oil_congestion_balance', 'body', 'XC-BODY-MILK', 'XCAPE Body Milk', 0),
   // Weak elasticity
   align('firmness_skin_support', 'face', 'XC-FACE-CREAM', 'XCAPE Face Cream', 0),
   align('firmness_skin_support', 'body', 'XC-BODY-MILK', 'XCAPE Body Milk', 0),
   // Surface dehydration
   align('barrier_surface_hydration', 'face', 'XC-AF-TONER', 'XCAPE Alcohol-Free Toner', 0),
   align('barrier_surface_hydration', 'face', 'XC-FACE-CREAM', 'XCAPE Face Cream', 1),
-  align('barrier_surface_hydration', 'body', 'XC-BODY-MILK', 'XCAPE Body Milk', 0),
-  align('barrier_surface_hydration', 'body', 'XC-TREATMENT-GLYCERINE', 'XCAPE Treatment Glycerine', 1),
+  align('barrier_surface_hydration', 'body', 'XC-TREATMENT-GLYCERINE', 'XCAPE Treatment Glycerine', 0),
 ];
 
 /* ---------- Resolution ---------- */
