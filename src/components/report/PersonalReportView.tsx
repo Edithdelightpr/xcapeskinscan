@@ -9,7 +9,7 @@ import { formulasByCategory } from '@/lib/reportFormulas';
 import ReportHeader from '@/components/report/ReportHeader';
 import MainConcernCard from '@/components/report/MainConcernCard';
 import ConcernCard from '@/components/report/ConcernCard';
-import ProtocolRecommendations from '@/components/xcape/protocol/ProtocolRecommendations';
+import ClientProtocolPlan from '@/components/xcape/protocol/ClientProtocolPlan';
 import HomeCareRoutine from '@/components/report/HomeCareRoutine';
 import RecommendedTreatments from '@/components/report/RecommendedTreatments';
 import RecommendedProducts from '@/components/report/RecommendedProducts';
@@ -92,10 +92,10 @@ const PersonalReportView = ({ data, token, onDownloadPdf, downloadDisabled }: Pr
                 id="protocol-recommendation"
                 className="mt-1 font-display text-xl sm:text-3xl text-cocoa tracking-tight"
               >
-                What your scores recommend
+                Your XCAPE protocol
               </h2>
             </div>
-            <ProtocolRecommendations
+            <ClientProtocolPlan
               face={data.protocol_recommendation.face}
               body={data.protocol_recommendation.body}
               addons={data.protocol_recommendation.addons ?? []}
