@@ -122,6 +122,32 @@ Deno.serve(async (req) => {
     const client_id = result.client_id!;
     const assessment_id = result.assessment_id!;
 
+    // ---- Persist the XCAPE protocol recommendation ONCE, write-once ----
+    // Resolved from the session's stored engine scores so the shared report
+    // shows the same deterministic protocol the scanner showed. The RPC is a
+    // no-op when a snapshot already exists, keeping repeat shares idempotent.
+    try {
+      const { data: sessionRow } = await admin
+        .from('public_analysis_sessions')
+        .select('engine')
+        .eq('token_hash', token_hash)
+        .maybeSingle();
+      if (sessionRow?.engine) {
+        const alignments = await loadAlignments(admin);
+        const snapshot = buildPublicProtocolSnapshot(sessionRow.engine, alignments);
+        if (snapshot) {
+          await admin.rpc('public_analysis_store_protocol_snapshot', {
+            p_assessment_id: assessment_id,
+            p_snapshot: snapshot,
+          });
+        }
+      }
+    } catch (snapErr) {
+      // Never block report delivery on the snapshot.
+      console.error('public-analysis-share-report snapshot error', snapErr);
+    }
+
+
     // ---- Issue (or recover) the persistent report link ----
     const nowIso = new Date().toISOString();
     const { data: existing } = await admin
