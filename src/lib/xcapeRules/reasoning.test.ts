@@ -419,22 +419,23 @@ describe('anti-inflammatory companion', () => {
 });
 
 describe('resolved protocol reflects the reasoning', () => {
-  it('the 20 / 50 / 70 / 78 client gets the foundation, no serum, no glycerine', () => {
+  // LOCKED CASE — raw HEALTH scores, no severity-conversion helper.
+  it('raw health 20 / 50 / 70 / 78 gets the foundation plus the derived serum body path', () => {
     const r = resolveProtocol({
-      scores: scores({
+      scores: {
         pigmentation_stability: 20,
         barrier_surface_hydration: 50,
         oil_congestion_balance: 70,
         firmness_skin_support: 78,
-      }),
+      },
     });
     const names = [...r.face, ...r.body, ...r.addons].map((p) => p.product_name);
     expect(names).toEqual(
       expect.arrayContaining(['XCAPE Purifying Cleanser', 'XCAPE Alcohol-Free Toner', 'XCAPE Face Cream']),
     );
-    expect(names).not.toContain('XCAPE Advanced Serum');
-    expect(names).not.toContain('XCAPE Treatment Glycerine');
-    expect(r.reasoning.primary?.category).toBe('firmness_skin_support');
+    expect(r.body.map((p) => p.product_sku)).toEqual(['XC-ADVANCED-SERUM']);
+    expect(names).not.toContain('XCAPE Body Milk');
+    expect(r.reasoning.primary?.category).toBe('pigmentation_stability');
   });
 
   it('a dominant pigmentation client gets the targeted serum pathway', () => {
