@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { AlertTriangle } from 'lucide-react';
 import ProtocolRecommendations from '@/components/xcape/protocol/ProtocolRecommendations';
 import { useProtocolAlignments } from '@/hooks/useProductAlignments';
 import { PROTOCOL_CATEGORIES, resolveProtocol, type ProtocolCategory } from '@/lib/xcapeRules/protocol';
