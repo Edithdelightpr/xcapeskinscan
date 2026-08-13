@@ -110,6 +110,8 @@ Deno.serve(async (req) => {
         session_expired: 'This analysis session has expired. Start a new analysis.',
         report_not_ready: 'Your report is still being prepared. Try again in a moment.',
         invalid_contact: 'Enter your full name and mobile number.',
+        claim_incomplete:
+          'We could not match this analysis to your record. Please contact us and we will send your report.',
       };
       return json(
         { ok: false, code, error: messages[code] ?? 'Your report could not be prepared.' },
