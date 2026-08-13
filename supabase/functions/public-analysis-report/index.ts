@@ -169,9 +169,8 @@ Deno.serve(async (req) => {
     const resolved = resolveProtocol({
       scores: scores as Record<ProtocolCategory, number>,
       alignments: await loadAlignments(admin),
-      // Public flow has no explicit inflammation reading, so the
-      // anti-inflammatory companion is never applied here.
-      inflammation: false,
+      // DS Anti-Inflammatory is a required companion on every pigmentation
+      // and oil/congestion line — the resolver applies it automatically.
     });
     const protocol =
       resolved.face.length > 0 || resolved.body.length > 0

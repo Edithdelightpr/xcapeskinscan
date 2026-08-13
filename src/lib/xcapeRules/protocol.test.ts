@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import {
+  ANTI_INFLAMMATORY_CATEGORIES,
   CONFIRMED_FACE_DOSE_TIERS,
   DEFAULT_ALIGNMENTS,
   PROTOCOL_CATEGORIES,
@@ -66,6 +67,7 @@ describe('resolveProtocol — alignment', () => {
       'XCAPE Treatment Glycerine',
     ]);
     expect(r.face[0].additions[0].ds_name).toBe('DS Tyrosinase Inhibitor');
+    expect(r.face[0].additions[1].ds_name).toBe('DS Anti-Inflammatory');
     expect(r.face[0].additions[0].dose_ml).toBe(1.5);
     expect(r.body[0].additions[0].dose_ml).toBe(4.5);
   });
@@ -120,6 +122,7 @@ describe('resolveProtocol — alignment', () => {
     expect(cream).toHaveLength(1);
     expect(cream[0].additions.map((a) => a.ds_name).sort()).toEqual([
       'DS Anti-Aging',
+      'DS Anti-Inflammatory',
       'DS Tyrosinase Inhibitor',
     ]);
     // Doses stay per-concern — never divided across products.
@@ -129,42 +132,99 @@ describe('resolveProtocol — alignment', () => {
 
   it('does not divide the dose across multiple aligned products', () => {
     const r = resolveProtocol({ scores: { oil_congestion_balance: 30 } });
-    for (const p of r.face) expect(p.additions[0].dose_ml).toBe(1.5);
-    for (const p of r.body) expect(p.additions[0].dose_ml).toBe(4.5);
+    for (const p of r.face) for (const a of p.additions) expect(a.dose_ml).toBe(1.5);
+    for (const p of r.body) for (const a of p.additions) expect(a.dose_ml).toBe(4.5);
   });
 });
 
-describe('DS Anti-Inflammatory companion', () => {
-  it('never appears without an explicit inflammation reading', () => {
-    const r = resolveProtocol({ scores: allScores(30) });
-    expect(protocolFormulaLines(r).some((l) => l.ds_name === 'DS Anti-Inflammatory')).toBe(false);
-    expect(r.anti_inflammatory_applied).toBe(false);
-  });
-
-  it('never appears alone — only alongside a primary DS active', () => {
-    const r = resolveProtocol({ scores: allScores(30), inflammation: true });
+describe('DS Anti-Inflammatory required companion', () => {
+  it('pigmentation alone always pairs Tyrosinase with Anti-Inflammatory', () => {
+    const r = resolveProtocol({ scores: { pigmentation_stability: 30 } });
     for (const card of [...r.face, ...r.body]) {
-      const primaries = card.additions.filter((a) => !a.companion);
-      const companions = card.additions.filter((a) => a.companion);
-      expect(primaries.length).toBeGreaterThan(0);
-      for (const c of companions) {
-        expect(primaries.some((p) => p.category === c.category)).toBe(true);
-      }
+      const primary = card.additions.find((a) => !a.companion)!;
+      const companion = card.additions.find((a) => a.companion)!;
+      expect(primary.ds_name).toBe('DS Tyrosinase Inhibitor');
+      expect(companion.ds_name).toBe('DS Anti-Inflammatory');
+      expect(companion.dose_ml).toBe(primary.dose_ml);
     }
     expect(r.anti_inflammatory_applied).toBe(true);
   });
 
-  it('only attaches to pigmentation and oil/congestion lines', () => {
+  it('oil/congestion alone always pairs P Bacterium with Anti-Inflammatory', () => {
+    const r = resolveProtocol({ scores: { oil_congestion_balance: 60 } });
+    for (const card of [...r.face, ...r.body]) {
+      const primary = card.additions.find((a) => !a.companion)!;
+      const companion = card.additions.find((a) => a.companion)!;
+      expect(primary.ds_name).toBe('DS P Bacterium');
+      expect(companion.ds_name).toBe('DS Anti-Inflammatory');
+      expect(companion.dose_ml).toBe(primary.dose_ml);
+    }
+  });
+
+  it('confirmed live doses: pigmentation 30 and oil 60', () => {
+    const pig = resolveProtocol({ scores: { pigmentation_stability: 30 } });
+    for (const a of pig.face.flatMap((p) => p.additions)) expect(a.dose_ml).toBe(1.5);
+    for (const a of pig.body.flatMap((p) => p.additions)) expect(a.dose_ml).toBe(4.5);
+    const oil = resolveProtocol({ scores: { oil_congestion_balance: 60 } });
+    for (const a of oil.face.flatMap((p) => p.additions)) expect(a.dose_ml).toBe(1);
+    for (const a of oil.body.flatMap((p) => p.additions)) expect(a.dose_ml).toBe(3);
+  });
+
+  it.each([
+    [80, 0.5, 1.5],
+    [60, 1, 3],
+    [30, 1.5, 4.5],
+    [20, 2, 6],
+  ])('tier %i pairs matching primary/companion doses face %s / body %s', (score, face, body) => {
+    const r = resolveProtocol({ scores: { pigmentation_stability: score } });
+    for (const a of r.face.flatMap((p) => p.additions)) expect(a.dose_ml).toBe(face);
+    for (const a of r.body.flatMap((p) => p.additions)) expect(a.dose_ml).toBe(body);
+  });
+
+  it('never attaches to firmness or dehydration lines', () => {
     const r = resolveProtocol({
       scores: { firmness_skin_support: 30, barrier_surface_hydration: 30 },
-      inflammation: true,
     });
     expect(protocolFormulaLines(r).some((l) => l.companion)).toBe(false);
+    expect(r.anti_inflammatory_applied).toBe(false);
+  });
 
-    const r2 = resolveProtocol({ scores: { pigmentation_stability: 30 }, inflammation: true });
-    const lines = protocolFormulaLines(r2).filter((l) => l.companion);
-    expect(lines.length).toBeGreaterThan(0);
-    for (const l of lines) expect(l.category).toBe('pigmentation_stability');
+  it('never appears without a primary DS addition of the same category', () => {
+    const r = resolveProtocol({ scores: allScores(30) });
+    for (const card of [...r.face, ...r.body]) {
+      const primaries = card.additions.filter((a) => !a.companion);
+      expect(primaries.length).toBeGreaterThan(0);
+      for (const c of card.additions.filter((a) => a.companion)) {
+        expect(ANTI_INFLAMMATORY_CATEGORIES).toContain(c.category);
+        expect(primaries.some((p) => p.category === c.category)).toBe(true);
+      }
+    }
+  });
+
+  it('ignores a legacy inflammation input entirely', () => {
+    const on = resolveProtocol({ scores: { pigmentation_stability: 30 }, inflammation: true });
+    const off = resolveProtocol({ scores: { pigmentation_stability: 30 }, inflammation: false });
+    expect(protocolFormulaLines(off)).toEqual(protocolFormulaLines(on));
+  });
+
+  it('de-duplicated cards keep every category primary and its companion', () => {
+    const r = resolveProtocol({
+      scores: { pigmentation_stability: 30, oil_congestion_balance: 60 },
+    });
+    const cream = r.face.filter((p) => p.product_name === 'XCAPE Face Cream');
+    expect(cream).toHaveLength(1);
+    expect(cream[0].additions.map((a) => `${a.category}:${a.ds_name}:${a.dose_ml}`).sort()).toEqual([
+      'oil_congestion_balance:DS Anti-Inflammatory:1',
+      'oil_congestion_balance:DS P Bacterium:1',
+      'pigmentation_stability:DS Anti-Inflammatory:1.5',
+      'pigmentation_stability:DS Tyrosinase Inhibitor:1.5',
+    ]);
+  });
+
+  it('resolves as protocol version 1.1', () => {
+    expect(resolveProtocol({ scores: { pigmentation_stability: 30 } }).version).toBe(
+      'xcape-protocol-1.1',
+    );
   });
 });
 

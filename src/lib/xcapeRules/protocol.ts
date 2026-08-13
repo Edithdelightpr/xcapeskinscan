@@ -12,9 +12,11 @@
  *     product; BODY is always recommended alongside face at 3x the face dose.
  *  3. The DS active is added to EVERY product aligned with that concern —
  *     the dose is never divided across products.
- *  4. DS Anti-Inflammatory is never standalone: it is only added when an
- *     explicit inflammation / sensitivity reading is present AND the concern
- *     is pigmentation or oil/congestion.
+ *  4. DS Anti-Inflammatory is a REQUIRED companion on every pigmentation and
+ *     oil/congestion line, at the same tier dose as that category's primary
+ *     DS solution. It is automatic — it does not depend on any inflammation
+ *     or sensitivity score, flag, AI wording or practitioner toggle — and it
+ *     is never standalone.
  */
 
 /* ---------- Categories & DS actives ---------- */
@@ -27,7 +29,7 @@ export type ProtocolCategory =
 
 export type ProtocolArea = 'face' | 'body';
 
-export const PROTOCOL_VERSION = 'xcape-protocol-1.0';
+export const PROTOCOL_VERSION = 'xcape-protocol-1.1';
 
 export const PROTOCOL_CATEGORIES: ProtocolCategory[] = [
   'pigmentation_stability',
@@ -55,7 +57,10 @@ export const DS_ACTIVE_BY_CATEGORY: Record<ProtocolCategory, DsActive> = {
   barrier_surface_hydration: { sku: 'XC-DS-SEBUM', name: 'DS Sebum Control' },
 };
 
-/** Never standalone — companion only, and only for the two categories below. */
+/**
+ * Required companion for pigmentation and oil/congestion. Never standalone,
+ * never applied to firmness or hydration lines.
+ */
 export const DS_ANTI_INFLAMMATORY: DsActive = {
   sku: 'XC-DS-ANTIINFLAM',
   name: 'DS Anti-Inflammatory',
@@ -225,7 +230,7 @@ export interface ProtocolResult {
   body: ProtocolProduct[];
   /** Categories that produced recommendations, weakest score first. */
   categories: ProtocolCategory[];
-  /** True when the anti-inflammatory companion was applied anywhere. */
+  /** True when the required anti-inflammatory companion was applied anywhere. */
   anti_inflammatory_applied: boolean;
 }
 
@@ -235,8 +240,9 @@ export interface ResolveProtocolInput {
   /** Admin-maintained alignment; defaults to the confirmed catalogue map. */
   alignments?: ProtocolAlignment[];
   /**
-   * Explicit inflammation / sensitivity reading (engine flag or practitioner
-   * flag). NEVER inferred from free text.
+   * @deprecated Ignored since xcape-protocol-1.1. The DS Anti-Inflammatory
+   * companion is required on every pigmentation and oil/congestion line and
+   * can no longer be suppressed or enabled by a caller.
    */
   inflammation?: boolean;
 }
@@ -251,7 +257,6 @@ const isProtocolCategory = (v: unknown): v is ProtocolCategory =>
  */
 export function resolveProtocol(input: ResolveProtocolInput): ProtocolResult {
   const alignments = (input.alignments ?? DEFAULT_ALIGNMENTS).filter((a) => a.is_active);
-  const inflammation = input.inflammation === true;
 
   const scored: { category: ProtocolCategory; score: number; tier: ProtocolDoseTier }[] = [];
   for (const category of PROTOCOL_CATEGORIES) {
@@ -311,9 +316,9 @@ export function resolveProtocol(input: ResolveProtocolInput): ProtocolResult {
         });
       }
 
-      // Companion: only with an explicit inflammation reading, only on the
-      // pigmentation / oil lines, and never on its own.
-      if (inflammation && ANTI_INFLAMMATORY_CATEGORIES.includes(category)) {
+      // Required companion: always paired with the pigmentation and
+      // oil/congestion primaries at the same tier dose, never on its own.
+      if (ANTI_INFLAMMATORY_CATEGORIES.includes(category)) {
         if (!card.additions.some((a) => a.category === category && a.companion)) {
           card.additions.push({
             category,
