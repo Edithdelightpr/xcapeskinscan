@@ -15,6 +15,34 @@ const report = sanitizeReportPayload({
   combined_interpretation: 'Pigmentation stability is the first priority, supported by barrier repair before any aggressive brightening.',
   home_care_directions: ['Cleanse gently twice daily', 'Daily broad-spectrum SPF'],
   treatment_directions: ['Barrier repair facial', 'Gradual pigment control course'],
+  protocol: {
+    face: [
+      {
+        product_name: 'XCAPE Face Cream',
+        product_image_url: '/__l5e/assets-v1/3cde619b-7f91-4ee5-adea-8b79f9015f8d/xcape-face-cream.jpg',
+        additions: [
+          { concern: 'Hyperpigmentation', ds_name: 'DS Tyrosinase Inhibitor', dose_ml: 2, score: 18, tier_label: '0-24', companion: false },
+          { concern: 'Hyperpigmentation', ds_name: 'DS Anti-Inflammatory', dose_ml: 2, score: 18, tier_label: '0-24', companion: true },
+        ],
+      },
+      {
+        product_name: 'XCAPE Advanced Serum',
+        product_image_url: '/__l5e/assets-v1/228cc74e-72f8-4c31-a8ab-adbbf8a42732/xcape-advanced-serum.jpg',
+        additions: [
+          { concern: 'Hyperpigmentation', ds_name: 'DS Tyrosinase Inhibitor', dose_ml: 2, score: 18, tier_label: '0-24', companion: false },
+        ],
+      },
+    ],
+    body: [
+      {
+        product_name: 'XCAPE Body Milk',
+        product_image_url: '/__l5e/assets-v1/d1d65953-eb1e-440a-ac59-ac485aebccc0/xcape-body-milk.jpg',
+        additions: [
+          { concern: 'Hyperpigmentation', ds_name: 'DS Tyrosinase Inhibitor', dose_ml: 6, score: 18, tier_label: '0-24', companion: false },
+        ],
+      },
+    ],
+  },
 });
 
 const ScanPreviewHarness = () => (

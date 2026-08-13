@@ -163,6 +163,7 @@ export interface ReportCareJourney {
 export interface ReportFormulaLine {
   area: 'face' | 'body';
   product_name: string;
+  product_image_url?: string | null;
   concern: string;
   ds_name: string;
   dose_ml: number;

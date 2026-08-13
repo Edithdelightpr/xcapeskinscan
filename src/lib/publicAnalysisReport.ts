@@ -17,6 +17,7 @@ import {
   type PublicScores,
 } from '@/lib/publicAnalysisScores';
 import { formatConcerns, type FormattedConcern } from '@/lib/reportConcernFormatter';
+import { sanitizeProductImageUrl } from '@/lib/xcapeRules/protocol';
 
 export interface PublicReportVariable {
   score: number;
@@ -36,6 +37,8 @@ export interface PublicProtocolAddition {
 
 export interface PublicProtocolProduct {
   product_name: string;
+  /** Catalogue packaging image, same-origin asset path or https only. */
+  product_image_url: string | null;
   area: 'face' | 'body';
   additions: PublicProtocolAddition[];
 }
@@ -114,7 +117,12 @@ function protocolProducts(raw: unknown, area: 'face' | 'body'): PublicProtocolPr
     }
     // A companion line can never stand alone.
     if (!additions.some((x) => !x.companion)) continue;
-    out.push({ product_name: name, area, additions });
+    out.push({
+      product_name: name,
+      product_image_url: sanitizeProductImageUrl(row.product_image_url),
+      area,
+      additions,
+    });
     if (out.length >= MAX_PRODUCTS) break;
   }
   return out;

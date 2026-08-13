@@ -33,7 +33,12 @@ describe('public protocol sanitizer', () => {
 
   it('keeps only whitelisted display fields', () => {
     const out = sanitizeProtocol(payload)!;
-    expect(Object.keys(out.face[0]).sort()).toEqual(['additions', 'area', 'product_name']);
+    expect(Object.keys(out.face[0]).sort()).toEqual([
+      'additions',
+      'area',
+      'product_image_url',
+      'product_name',
+    ]);
     expect(Object.keys(out.face[0].additions[0]).sort()).toEqual([
       'companion',
       'concern',

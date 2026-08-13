@@ -155,6 +155,11 @@ export interface ProtocolAlignment {
   /** Stable catalogue SKU — never a database id in shared/public output. */
   product_sku: string;
   product_name: string;
+  /**
+   * Admin-configured product packaging image (catalogue `products.image_url`).
+   * Presentation only — never a database id, never a price.
+   */
+  product_image_url?: string | null;
   /** Face = 1, body = 3 (stored explicitly per mapping, admin-editable). */
   dose_multiplier: number;
   is_active: boolean;
@@ -219,6 +224,8 @@ export interface ProtocolAddition {
 export interface ProtocolProduct {
   product_sku: string;
   product_name: string;
+  /** Catalogue packaging image for the product card (display only). */
+  product_image_url?: string | null;
   area: ProtocolArea;
   additions: ProtocolAddition[];
   sort_order: number;
@@ -296,6 +303,7 @@ export function resolveProtocol(input: ResolveProtocolInput): ProtocolResult {
         card = {
           product_sku: row.product_sku,
           product_name: row.product_name,
+          product_image_url: sanitizeProductImageUrl(row.product_image_url),
           area,
           additions: [],
           sort_order: row.sort_order,
@@ -353,6 +361,7 @@ export interface ProtocolFormulaLine {
   area: ProtocolArea;
   product_sku: string;
   product_name: string;
+  product_image_url?: string | null;
   category: ProtocolCategory;
   concern: string;
   ds_sku: string;
@@ -372,6 +381,7 @@ export function protocolFormulaLines(result: ProtocolResult): ProtocolFormulaLin
         area: card.area,
         product_sku: card.product_sku,
         product_name: card.product_name,
+        product_image_url: card.product_image_url ?? null,
         category: a.category,
         concern: a.concern,
         ds_sku: a.ds_sku,
@@ -386,9 +396,23 @@ export function protocolFormulaLines(result: ProtocolResult): ProtocolFormulaLin
   return out;
 }
 
+/**
+ * Only same-origin asset paths and https URLs may reach a rendered report.
+ * Anything else (javascript:, data:, protocol-relative, oversized) is dropped.
+ */
+export function sanitizeProductImageUrl(value: unknown): string | null {
+  if (typeof value !== 'string') return null;
+  const url = value.trim();
+  if (url.length === 0 || url.length > 500) return null;
+  if (url.startsWith('//')) return null;
+  if (url.startsWith('/') || url.startsWith('https://')) return url;
+  return null;
+}
+
 export function sanitizeSnapshotLines(value: unknown): Array<{
   area: string;
   product_name: string;
+  product_image_url: string | null;
   concern: string;
   ds_name: string;
   dose_ml: number;
@@ -407,6 +431,7 @@ export function sanitizeSnapshotLines(value: unknown): Array<{
     out.push({
       area,
       product_name,
+      product_image_url: sanitizeProductImageUrl(l?.product_image_url),
       concern: typeof l?.concern === 'string' ? l.concern.slice(0, 120) : '',
       ds_name,
       dose_ml: dose,
