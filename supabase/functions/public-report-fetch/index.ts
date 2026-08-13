@@ -7,6 +7,7 @@ import { buildTreatmentPlanBlock } from '../_shared/reportTreatmentPlan.ts';
 import { buildCareJourneyBlock } from '../_shared/reportCareJourney.ts';
 import { sanitizeSnapshotLines } from '../_shared/xcapeProtocol.ts';
 import { sanitizePublicProtocolSnapshot } from '../_shared/publicProtocolSnapshot.ts';
+import { sanitizeReportSkinAnalysis } from '../_shared/reportSkinAnalysis.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -248,7 +249,10 @@ Deno.serve(async (req) => {
         created_at: assessment.created_at,
         main_concern: assessment.main_concern,
         client_goal: assessment.client_goal,
-        skin_analysis: assessment.skin_analysis,
+        // Whitelisted: engine scores + approved AI display text ONLY. Never
+        // raw model JSON, media ids, staff ids or the embedded protocol
+        // snapshot (delivered separately as `protocol_recommendation`).
+        skin_analysis: sanitizeReportSkinAnalysis(assessment.skin_analysis),
         home_care: assessment.home_care,
         follow_up_recommendation: assessment.follow_up_recommendation,
         next_visit_in_weeks: assessment.next_visit_in_weeks,

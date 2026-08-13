@@ -6,6 +6,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
 import { resolveClientFirstName } from '../_shared/clientName.ts';
 import { sanitizeSnapshotLines } from '../_shared/xcapeProtocol.ts';
 import { sanitizePublicProtocolSnapshot } from '../_shared/publicProtocolSnapshot.ts';
+import { sanitizeReportSkinAnalysis } from '../_shared/reportSkinAnalysis.ts';
 import { PDFDocument, StandardFonts, rgb } from 'npm:pdf-lib@1.17.1';
 import {
   formatReport,
@@ -424,6 +425,8 @@ Deno.serve(async (req) => {
       client?.full_name ?? null,
     );
 
+    const sanitizedSkinAnalysis = sanitizeReportSkinAnalysis(assessment.skin_analysis);
+
     // Single canonical formatting step — same input shape as the live report
     // consumes, so live page and PDF render byte-parity concern content.
     const report = formatReport({
@@ -433,7 +436,8 @@ Deno.serve(async (req) => {
         created_at: assessment.created_at,
         main_concern: assessment.main_concern,
         client_goal: assessment.client_goal,
-        skin_analysis: assessment.skin_analysis,
+        // Formatted from the SAME sanitized shape the client report uses.
+        skin_analysis: sanitizedSkinAnalysis,
       },
     });
 
