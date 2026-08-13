@@ -65,25 +65,52 @@ const CustomizationFormulaCard = ({ token, formula, compact = false, mock = fals
       <div className="text-[10px] uppercase tracking-[0.18em] text-bronze font-semibold">
         Your exact formula
       </div>
-      {/* Multi-product protocol lines, exactly as snapshotted at approval. */}
+      {/* Multi-product protocol lines, exactly as snapshotted at approval —
+          grouped per product so the packaging visual leads, then the
+          customization this analysis calls for. */}
       {(['face', 'body'] as const).map((area) => {
         const group = protocolLines.filter((l) => l.area === area);
         if (group.length === 0) return null;
+        const products: { name: string; image: string | null; lines: typeof group }[] = [];
+        for (const l of group) {
+          let entry = products.find((p) => p.name === l.product_name);
+          if (!entry) {
+            entry = { name: l.product_name, image: l.product_image_url ?? null, lines: [] };
+            products.push(entry);
+          }
+          entry.lines.push(l);
+        }
         return (
-          <div key={area} className="space-y-0.5">
+          <div key={area} className="space-y-1.5">
             <p className="text-[11px] uppercase tracking-[0.14em] text-cocoa/55">
               {area === 'face' ? 'Face' : 'Body — always alongside face'}
             </p>
-            {group.map((l, i) => (
-              <p key={i} className="text-[12.5px] text-cocoa">
-                <span className="font-medium">{l.product_name}</span> + {l.ds_name}
-                <span className="font-semibold"> — {l.dose_ml} ml</span>
-                {l.companion && <span className="text-cocoa/60"> (required companion)</span>}
-              </p>
+            {products.map((p) => (
+              <div key={p.name} className="flex items-start gap-2.5">
+                {p.image && (
+                  <img
+                    src={p.image}
+                    alt={p.name}
+                    loading="lazy"
+                    className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl object-cover border border-bronze/15 shrink-0"
+                  />
+                )}
+                <div className="min-w-0">
+                  <p className="text-[12.5px] font-medium text-cocoa">{p.name}</p>
+                  {p.lines.map((l, i) => (
+                    <p key={i} className="text-[12.5px] text-cocoa/80">
+                      + {l.ds_name}
+                      <span className="font-semibold text-cocoa"> — {l.dose_ml} ml</span>
+                      {l.companion && <span className="text-cocoa/60"> (required companion)</span>}
+                    </p>
+                  ))}
+                </div>
+              </div>
             ))}
           </div>
         );
       })}
+
       {formula.base_product_name && (
         <p className="text-[12.5px] text-cocoa">
           Customized product: <span className="font-medium">{formula.base_product_name}</span>
