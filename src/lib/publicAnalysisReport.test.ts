@@ -44,6 +44,7 @@ describe('sanitizeReportPayload', () => {
       'combinedInterpretation',
       'homeCareDirections',
       'treatmentDirections',
+      'protocol',
     ]);
   });
 
