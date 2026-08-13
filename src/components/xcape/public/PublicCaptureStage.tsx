@@ -12,7 +12,7 @@ import {
 } from '@/lib/publicAnalysisSession';
 
 /** How long a view may stall before the manual shutter is revealed. */
-export const MANUAL_REVEAL_MS = 20_000;
+export const MANUAL_REVEAL_MS = 10_000;
 
 interface Props {
   token: string;
