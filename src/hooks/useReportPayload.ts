@@ -198,6 +198,23 @@ export interface ReportFormula {
   kit_short_description?: string | null;
 }
 
+/**
+ * Deterministic XCAPE protocol recommendation captured when a public
+ * skin-analysis visitor requested their report. NOT practitioner-approved and
+ * NOT purchasable — the server omits it entirely once an approved formula
+ * snapshot exists for the assessment.
+ */
+export interface ReportProtocolRecommendation {
+  protocol_version: string;
+  status: string;
+  source: string;
+  resolved_at: string;
+  approved: false;
+  purchasable: false;
+  face: ProtocolDisplayProduct[];
+  body: ProtocolDisplayProduct[];
+}
+
 export interface ReportPayload {
   client: { first_name: string | null; initials: string };
   assessment: {
