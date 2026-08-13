@@ -16,8 +16,9 @@
  *       - pigmentation health < 75 -> XCAPE Advanced Serum body pathway at
  *         the same health-score tier dose (1.0 / 1.5 / 2.0 ml).
  *       - firmness health < 75 -> XCAPE Body Milk customized with the
- *         weak-elasticity line at EXACTLY 5x the Face Cream anti-aging dose.
- *     (This supersedes the older "body = 3x face" rule.)
+ *         weak-elasticity line at EXACTLY 5x the Face Cream anti-aging dose
+ *         (only that line is multiplied — never the total volume or any
+ *         unrelated additive).
  *  5. The DS active is added to EVERY product aligned with that concern —
  *     the dose is never divided across products.
  *  6. DS Anti-Inflammatory is a REQUIRED companion on every pigmentation and
@@ -148,7 +149,7 @@ export function addonSupportFor(sku: string, category: ProtocolCategory): string
 export interface ProtocolDoseTier {
   score_min: number;
   score_max: number;
-  /** Face dose in ml. Body = face dose x body multiplier (default 3). */
+  /** Face dose in ml. The derived body protocol scales its own lines. */
   dose_ml: number;
   label: string;
 }
@@ -161,11 +162,6 @@ export const CONFIRMED_FACE_DOSE_TIERS: ProtocolDoseTier[] = [
 ];
 
 export const FACE_DOSE_MULTIPLIER = 1;
-/**
- * @deprecated Legacy alignment multiplier. The derived body protocol no
- * longer uses a blanket 3x rule; see ELASTICITY_BODY_MULTIPLIER.
- */
-export const BODY_DOSE_MULTIPLIER = 3;
 
 /** Body Milk weak-elasticity line = 5x the Face Cream anti-aging line. */
 export const ELASTICITY_BODY_MULTIPLIER = 5;
@@ -200,7 +196,7 @@ export function faceDoseFor(score: number | null | undefined): number | null {
   return tier ? tier.dose_ml : null;
 }
 
-/** Dose for a score at a given area multiplier (face 1, body 3). */
+/** Dose for a score at a given multiplier. */
 export function doseFor(
   score: number | null | undefined,
   multiplier: number,
@@ -250,7 +246,7 @@ export interface ProtocolAlignment {
    * Presentation only — never a database id, never a price.
    */
   product_image_url?: string | null;
-  /** Face = 1, body = 3 (stored explicitly per mapping, admin-editable). */
+  /** Alignment dose multiplier (stored per mapping, admin-editable). */
   dose_multiplier: number;
   is_active: boolean;
   sort_order: number;
@@ -267,7 +263,7 @@ const align = (
   area,
   product_sku,
   product_name,
-  dose_multiplier: area === 'body' ? BODY_DOSE_MULTIPLIER : FACE_DOSE_MULTIPLIER,
+  dose_multiplier: FACE_DOSE_MULTIPLIER,
   is_active: true,
   sort_order,
 });
@@ -384,7 +380,7 @@ export interface ProtocolResult {
   version: string;
   /** Customizable FACE base products (Face Cream) with their DS additions. */
   face: ProtocolProduct[];
-  /** Customizable BODY base products (Body Milk) at 3x the face dose. */
+  /** Customizable BODY base products derived from the facial findings. */
   body: ProtocolProduct[];
   /** Recommended-only products: reason copy, never customization. */
   addons: ProtocolAddon[];
@@ -701,9 +697,7 @@ export function resolveProtocol(input: ResolveProtocolInput): ProtocolResult {
 
       const multiplier = Number.isFinite(row.dose_multiplier) && row.dose_multiplier > 0
         ? row.dose_multiplier
-        : area === 'body'
-          ? BODY_DOSE_MULTIPLIER
-          : FACE_DOSE_MULTIPLIER;
+        : FACE_DOSE_MULTIPLIER;
       const dose = doseFor(score, multiplier);
       if (dose == null) continue;
 
@@ -991,7 +985,7 @@ export function sanitizeProtocolAddons(value: unknown): ProtocolAddonDisplay[] {
  * client and practitioner read is expressed as SEVERITY = 100 - score.
  * ============================================================ */
 
-export const RECOMMENDATION_CONFIG_VERSION = 1;
+export const RECOMMENDATION_CONFIG_VERSION = 2;
 
 export type SeverityBandCode = 'maintenance' | 'supportive' | 'intervention' | 'priority';
 
@@ -1053,7 +1047,9 @@ export interface RecommendationConfig {
 }
 
 /**
- * Compiled fallback of the published database configuration (config v1).
+ * Compiled fallback of the published database configuration (config v2).
+ * v2 corrects the derived body activation thresholds to raw health < 75
+ * (severity >= 26) and removes the unrelated Body Milk activations.
  * Kept in sync with the seed migration so the edge/public path still
  * resolves when the config tables are unreachable.
  */
@@ -1069,17 +1065,14 @@ export const DEFAULT_RECOMMENDATION_CONFIG: RecommendationConfig = {
     { category: 'oil_congestion_balance', product_sku: 'XC-PURIFYING-CLEANSER', area: 'face', min_severity: 0, priority_weight: 1, satisfies_need: true, foundation: true },
     { category: 'oil_congestion_balance', product_sku: 'XC-AF-TONER', area: 'face', min_severity: 0, priority_weight: 1, satisfies_need: true, foundation: true },
     { category: 'oil_congestion_balance', product_sku: 'XC-FACE-CREAM', area: 'face', min_severity: 0, priority_weight: 1, satisfies_need: true, foundation: true },
-    { category: 'oil_congestion_balance', product_sku: 'XC-BODY-MILK', area: 'body', min_severity: 40, priority_weight: 1, satisfies_need: true, foundation: false },
     { category: 'barrier_surface_hydration', product_sku: 'XC-AF-TONER', area: 'face', min_severity: 0, priority_weight: 1, satisfies_need: false, foundation: true },
     { category: 'barrier_surface_hydration', product_sku: 'XC-FACE-CREAM', area: 'face', min_severity: 0, priority_weight: 1.1, satisfies_need: true, foundation: true },
     { category: 'barrier_surface_hydration', product_sku: 'XC-TREATMENT-GLYCERINE', area: 'body', min_severity: 60, priority_weight: 1, satisfies_need: false, foundation: false },
-    { category: 'barrier_surface_hydration', product_sku: 'XC-BODY-MILK', area: 'body', min_severity: 40, priority_weight: 1, satisfies_need: true, foundation: false },
     { category: 'firmness_skin_support', product_sku: 'XC-FACE-CREAM', area: 'face', min_severity: 0, priority_weight: 1, satisfies_need: true, foundation: true },
-    { category: 'firmness_skin_support', product_sku: 'XC-BODY-MILK', area: 'body', min_severity: 40, priority_weight: 1, satisfies_need: true, foundation: false },
+    { category: 'firmness_skin_support', product_sku: 'XC-BODY-MILK', area: 'body', min_severity: 26, priority_weight: 1, satisfies_need: true, foundation: false },
     { category: 'pigmentation_stability', product_sku: 'XC-FACE-CREAM', area: 'face', min_severity: 0, priority_weight: 1, satisfies_need: false, foundation: true },
     { category: 'pigmentation_stability', product_sku: 'XC-ADVANCED-SERUM', area: 'face', min_severity: 50, priority_weight: 1.2, satisfies_need: true, foundation: false },
-    { category: 'pigmentation_stability', product_sku: 'XC-BODY-MILK', area: 'body', min_severity: 40, priority_weight: 1, satisfies_need: false, foundation: false },
-    { category: 'pigmentation_stability', product_sku: 'XC-ADVANCED-SERUM', area: 'body', min_severity: 60, priority_weight: 1, satisfies_need: false, foundation: false },
+    { category: 'pigmentation_stability', product_sku: 'XC-ADVANCED-SERUM', area: 'body', min_severity: 26, priority_weight: 1, satisfies_need: false, foundation: false },
     { category: 'pigmentation_stability', product_sku: 'XC-TREATMENT-GLYCERINE', area: 'body', min_severity: 70, priority_weight: 1, satisfies_need: false, foundation: false },
   ],
   interactions: [
