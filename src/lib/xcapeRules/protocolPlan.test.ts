@@ -41,8 +41,8 @@ describe('buildProtocolPlan', () => {
     expect(names.indexOf('XCAPE Alcohol-Free Toner')).toBeLessThan(
       names.indexOf('XCAPE Face Cream'),
     );
-    expect(names.indexOf('XCAPE Face Cream')).toBeLessThan(
-      names.indexOf('XCAPE Treatment Glycerine'),
+    expect(names.indexOf('XCAPE Purifying Cleanser')).toBeLessThan(
+      names.indexOf('XCAPE Face Cream'),
     );
     expect(plan.steps.map((s) => s.step)).toEqual(plan.steps.map((_, i) => i + 1));
   });

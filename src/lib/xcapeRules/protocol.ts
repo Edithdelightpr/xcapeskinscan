@@ -98,6 +98,19 @@ export const CUSTOMIZABLE_PRODUCT_SKUS = [
   'XC-ADVANCED-SERUM',
 ] as const;
 
+/**
+ * Customizable in the FACE protocol. The Advanced Serum is customized on the
+ * derived BODY pigmentation pathway only, never on the face.
+ */
+export const FACE_CUSTOMIZABLE_PRODUCT_SKUS = ['XC-FACE-CREAM'] as const;
+
+export function isFaceCustomizableProductSku(sku: unknown): boolean {
+  return (
+    typeof sku === 'string' &&
+    (FACE_CUSTOMIZABLE_PRODUCT_SKUS as readonly string[]).includes(sku)
+  );
+}
+
 export function isCustomizableProductSku(sku: unknown): boolean {
   return typeof sku === 'string' && (CUSTOMIZABLE_PRODUCT_SKUS as readonly string[]).includes(sku);
 }
@@ -662,7 +675,11 @@ export function resolveProtocol(input: ResolveProtocolInput): ProtocolResult {
 
       // NON-customizable products are recommended only: no DS ingredient,
       // no ml quantity, no dose tier — ever.
-      if (!isCustomizableProductSku(row.product_sku)) {
+      const customizableHere =
+        area === 'face'
+          ? isFaceCustomizableProductSku(row.product_sku)
+          : isCustomizableProductSku(row.product_sku);
+      if (!customizableHere) {
         const key = `${area}:${row.product_sku}`;
         if (!addonMap.has(key)) {
           addonMap.set(key, {

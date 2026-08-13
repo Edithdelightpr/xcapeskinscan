@@ -110,10 +110,10 @@ describe('resolveProtocol — alignment', () => {
     expect(body(r)).toEqual([]);
   });
 
-  it('surface dehydration aligns toner + face cream, body milk + glycerine with DS Sebum Control', () => {
+  it('surface dehydration aligns toner + face cream with DS Sebum Control, no body path', () => {
     const r = resolveProtocol({ scores: { barrier_surface_hydration: 20 } });
     expect(face(r)).toEqual(['XCAPE Face Cream']);
-    expect(body(r)).toEqual(['XCAPE Body Milk']);
+    expect(body(r)).toEqual([]);
     expect(addons(r)).toContain('XCAPE Alcohol-Free Toner');
     expect(r.face[0].additions[0].ds_name).toBe('DS Sebum Control');
     expect(r.face[0].additions[0].dose_ml).toBe(2);
@@ -269,8 +269,10 @@ describe('admin-editable alignment', () => {
         ? { ...a, dose_multiplier: 2 }
         : a,
     );
+    // The derived body protocol owns the Body Milk line: the weak-elasticity
+    // amount is always 5x the face amount, regardless of alignment multiplier.
     const r = resolveProtocol({ scores: { firmness_skin_support: 60 }, alignments });
-    expect(r.body[0].additions[0].dose_ml).toBe(2);
+    expect(r.body[0].additions[0].dose_ml).toBe(5);
   });
 
   it('default body multiplier is 3 and face is 1', () => {
