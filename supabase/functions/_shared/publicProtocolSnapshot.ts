@@ -106,6 +106,31 @@ export async function loadAlignments(
   }
 }
 
+/**
+ * SKUs of DS solutions that exist as ACTIVE catalogue products. The resolver
+ * only applies a DS active — including the required anti-inflammatory
+ * companion — when its SKU is returned here. Returns null on failure so the
+ * pure rule output is used rather than falsely reporting a missing mapping.
+ */
+export async function loadDsAvailability(
+  // deno-lint-ignore no-explicit-any
+  admin: { from: (t: string) => any },
+): Promise<string[] | null> {
+  try {
+    const { data, error } = await admin
+      .from('products')
+      .select('sku, active')
+      .like('sku', 'XC-DS-%')
+      .eq('active', true);
+    if (error || !Array.isArray(data)) return null;
+    return (data as { sku?: string | null }[])
+      .map((r) => r.sku)
+      .filter((s): s is string => typeof s === 'string' && s.length > 0);
+  } catch {
+    return null;
+  }
+}
+
 /** Pull the 0–100 practitioner health scores out of a stored engine payload. */
 export function scoresFromEngine(engine: unknown): Record<string, number> {
   const out: Record<string, number> = {};
@@ -129,12 +154,14 @@ export function buildPublicProtocolSnapshot(
   engine: unknown,
   alignments: ProtocolAlignment[],
   resolvedAt: string = new Date().toISOString(),
+  dsAvailable: string[] | null = null,
 ): PublicProtocolSnapshot | null {
   const scores = scoresFromEngine(engine);
   if (Object.keys(scores).length === 0) return null;
   const resolved = resolveProtocol({
     scores: scores as Partial<Record<ProtocolCategory, number>>,
     alignments,
+    ds_available: dsAvailable,
   });
   if (resolved.face.length === 0 && resolved.body.length === 0 && resolved.addons.length === 0) {
     return null;

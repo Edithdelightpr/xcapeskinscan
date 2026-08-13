@@ -178,6 +178,8 @@ Deno.serve(async (req) => {
     const resolved = resolveProtocol({
       scores: scores as Record<ProtocolCategory, number>,
       alignments: await loadAlignments(admin),
+      // A DS solution is only applied when it is an active catalogue product.
+      ds_available: await loadDsAvailability(admin),
       // DS Anti-Inflammatory is a required companion on every pigmentation
       // and oil/congestion line — the resolver applies it automatically.
     });
