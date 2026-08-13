@@ -296,6 +296,22 @@ export interface ProtocolAddon {
   customizable: false;
 }
 
+/**
+ * A DS solution required by the confirmed protocol that is NOT present as an
+ * active catalogue product. The line is dropped, never substituted or faked,
+ * and the gap is surfaced so approval and purchase can be blocked.
+ */
+export interface ProtocolMappingGap {
+  category: ProtocolCategory;
+  concern: string;
+  area: ProtocolArea;
+  product_sku: string;
+  product_name: string;
+  ds_sku: string;
+  ds_name: string;
+  companion: boolean;
+}
+
 export interface ProtocolResult {
   version: string;
   /** Customizable FACE base products (Face Cream) with their DS additions. */
@@ -308,6 +324,10 @@ export interface ProtocolResult {
   categories: ProtocolCategory[];
   /** True when the required anti-inflammatory companion was applied anywhere. */
   anti_inflammatory_applied: boolean;
+  /** DS solutions required by the protocol but missing from the catalogue. */
+  mapping_gaps: ProtocolMappingGap[];
+  /** Convenience flag: at least one required mapping is missing. */
+  mapping_required: boolean;
 }
 
 
@@ -317,12 +337,20 @@ export interface ResolveProtocolInput {
   /** Admin-maintained alignment; defaults to the confirmed catalogue map. */
   alignments?: ProtocolAlignment[];
   /**
+   * SKUs of DS solutions that actually exist as ACTIVE catalogue products.
+   * When omitted (undefined/null) every DS solution is assumed mapped, which
+   * preserves pure-rule evaluation. When provided, a DS solution — including
+   * the anti-inflammatory companion — is only ever applied if it is listed.
+   */
+  ds_available?: string[] | null;
+  /**
    * @deprecated Ignored since xcape-protocol-1.1. The DS Anti-Inflammatory
    * companion is required on every pigmentation and oil/congestion line and
    * can no longer be suppressed or enabled by a caller.
    */
   inflammation?: boolean;
 }
+
 
 const isProtocolCategory = (v: unknown): v is ProtocolCategory =>
   typeof v === 'string' && (PROTOCOL_CATEGORIES as string[]).includes(v);
