@@ -5,6 +5,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
 import { resolveClientFirstName } from '../_shared/clientName.ts';
 import { sanitizeSnapshotLines } from '../_shared/xcapeProtocol.ts';
+import { sanitizePublicProtocolSnapshot } from '../_shared/publicProtocolSnapshot.ts';
 import { PDFDocument, StandardFonts, rgb } from 'npm:pdf-lib@1.17.1';
 import {
   formatReport,
@@ -448,6 +449,11 @@ Deno.serve(async (req) => {
         ...f,
         formula_lines: sanitizeSnapshotLines(f.formula_lines),
       })) as any[],
+      // Only when nothing has been practitioner-approved for this assessment.
+      protocol: (formulas ?? []).length > 0
+        ? null
+        // deno-lint-ignore no-explicit-any
+        : sanitizePublicProtocolSnapshot((assessment.skin_analysis as any)?.public_protocol_snapshot),
     });
 
     // Dedupe pdf_downloaded within 60s
