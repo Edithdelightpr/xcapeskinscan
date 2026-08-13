@@ -5,10 +5,9 @@ import {
   rankConcerns,
   reasonProtocol,
   severityFromScore,
-  type ProtocolCategory,
   type RecommendationConfig,
 } from './reasoning';
-import { DEFAULT_ALIGNMENTS, resolveProtocol } from './protocol';
+import { DEFAULT_ALIGNMENTS, resolveProtocol, type ProtocolCategory } from './protocol';
 
 /**
  * Scenario coverage for the intelligent recommendation engine.
