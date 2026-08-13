@@ -7,6 +7,7 @@ import {
   RecommendedServicesPicker,
 } from '@/components/admin/assessmentShared';
 import XcapeProposalsPanel from './XcapeProposalsPanel';
+import StaffProtocolPanel from '@/components/xcape/protocol/StaffProtocolPanel';
 import type { RecommendedProduct, RecommendedService, SkinAnalysisPayload } from '@/hooks/useVisitAssessments';
 import type { RuleOutputs } from '@/lib/xcapeRules/types';
 
@@ -101,6 +102,8 @@ const StepRecommendations = ({
         observation={observation}
         onApply={applyOutputs}
       />
+
+      <StaffProtocolPanel skin={skin} />
 
       <section className="glass rounded-xl p-5 space-y-4">
         <div className="space-y-1">
