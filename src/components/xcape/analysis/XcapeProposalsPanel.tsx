@@ -37,6 +37,9 @@ import {
   resolveFormula,
   type ResolvedFormula,
 } from '@/lib/xcapeRules/customization';
+import { useProtocolAlignments } from '@/hooks/useProductAlignments';
+import { protocolFormulaLines, resolveProtocol } from '@/lib/xcapeRules/protocol';
+import { inflammationFromSkin, scoresFromSkin } from '@/components/xcape/protocol/StaffProtocolPanel';
 import type { RuleOutputs, XcapeProposal } from '@/lib/xcapeRules/types';
 import type { SkinAnalysisPayload } from '@/hooks/useVisitAssessments';
 import { cn } from '@/lib/utils';
@@ -118,6 +121,20 @@ const XcapeProposalsPanel = ({
   const { data: categoryMaps = [] } = useActiveCategoryCustomizations();
   const { data: formulaSnapshots = [] } = useFormulaSnapshots(assessmentId);
   const snapshotMut = useCreateFormulaSnapshot();
+  const { alignments } = useProtocolAlignments();
+
+  /** Deterministic protocol resolved from the approved scores + admin
+   *  alignment. Snapshotted per approved formula so the issued report keeps
+   *  the exact face/body lines that were true at approval time. */
+  const protocolResult = useMemo(
+    () =>
+      resolveProtocol({
+        scores: scoresFromSkin(skin),
+        alignments,
+        inflammation: inflammationFromSkin(skin),
+      }),
+    [skin, alignments],
+  );
 
   const [rejecting, setRejecting] = useState<XcapeProposal | null>(null);
   const [rejectReason, setRejectReason] = useState('');
@@ -237,6 +254,10 @@ const XcapeProposalsPanel = ({
             active_name: productById(formula.active_product_id)?.name ?? null,
             companion_name: productById(formula.companion_product_id)?.name ?? null,
           },
+          protocolLines: protocolFormulaLines(protocolResult).filter(
+            (l) => l.category === formula.category,
+          ),
+          protocolVersion: protocolResult.version,
           rule: { rule_id: p.rule_id, rule_version_id: p.rule_version_id, rule_version: p.rule_version },
           decisionReason: reason,
         });

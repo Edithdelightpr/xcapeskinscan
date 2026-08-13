@@ -6,6 +6,7 @@ import type {
   KitComponent,
   ResolvedFormula,
 } from '@/lib/xcapeRules/customization';
+import type { ProtocolFormulaLine } from '@/lib/xcapeRules/protocol';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -159,6 +160,11 @@ export interface CreateFormulaSnapshotInput {
   };
   rule: { rule_id: string | null; rule_version_id: string | null; rule_version: number | null };
   decisionReason?: string | null;
+  /** Deterministic multi-product protocol lines resolved at approval time.
+   *  Stored immutably alongside the legacy single-base fields so later
+   *  alignment or catalogue edits can never rewrite an issued report. */
+  protocolLines?: ProtocolFormulaLine[];
+  protocolVersion?: string | null;
 }
 
 /**
@@ -200,6 +206,8 @@ export const useCreateFormulaSnapshot = () => {
           warnings: input.formula.warnings,
           status: 'approved',
           decision_reason: input.decisionReason ?? null,
+          formula_lines: input.protocolLines ?? [],
+          protocol_version: input.protocolLines?.length ? (input.protocolVersion ?? null) : null,
           is_demo: input.formula.is_demo,
           created_by: uid,
           approved_by: uid,
