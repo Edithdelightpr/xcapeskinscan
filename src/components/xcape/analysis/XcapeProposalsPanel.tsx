@@ -39,7 +39,7 @@ import {
 } from '@/lib/xcapeRules/customization';
 import { useProtocolAlignments } from '@/hooks/useProductAlignments';
 import { protocolFormulaLines, resolveProtocol } from '@/lib/xcapeRules/protocol';
-import { inflammationFromSkin, scoresFromSkin } from '@/components/xcape/protocol/StaffProtocolPanel';
+import { scoresFromSkin } from '@/components/xcape/protocol/StaffProtocolPanel';
 import type { RuleOutputs, XcapeProposal } from '@/lib/xcapeRules/types';
 import type { SkinAnalysisPayload } from '@/hooks/useVisitAssessments';
 import { cn } from '@/lib/utils';
@@ -131,7 +131,6 @@ const XcapeProposalsPanel = ({
       resolveProtocol({
         scores: scoresFromSkin(skin),
         alignments,
-        inflammation: inflammationFromSkin(skin),
       }),
     [skin, alignments],
   );

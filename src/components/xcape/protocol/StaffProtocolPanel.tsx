@@ -2,7 +2,6 @@ import { useMemo } from 'react';
 import ProtocolRecommendations from '@/components/xcape/protocol/ProtocolRecommendations';
 import { useProtocolAlignments } from '@/hooks/useProductAlignments';
 import { PROTOCOL_CATEGORIES, resolveProtocol, type ProtocolCategory } from '@/lib/xcapeRules/protocol';
-import { effectiveConcern } from '@/lib/skinFramework';
 import type { SkinAnalysisPayload } from '@/hooks/useVisitAssessments';
 
 interface Props {
@@ -27,16 +26,6 @@ export function scoresFromSkin(
 }
 
 /**
- * Explicit inflammation / sensitivity reading only — the recorded
- * sensitivity_inflammation concern. Never inferred from free text.
- */
-export function inflammationFromSkin(skin: SkinAnalysisPayload): boolean {
-  const entry = skin?.scores?.sensitivity_inflammation;
-  if (!entry) return false;
-  return effectiveConcern(entry) >= 25;
-}
-
-/**
  * Practitioner view of the deterministic XCAPE protocol — the SAME resolver
  * and alignment map the public report uses, so staff and visitor output can
  * never diverge.
@@ -48,7 +37,6 @@ const StaffProtocolPanel = ({ skin }: Props) => {
       resolveProtocol({
         scores: scoresFromSkin(skin),
         alignments,
-        inflammation: inflammationFromSkin(skin),
       }),
     [skin, alignments],
   );
@@ -59,7 +47,7 @@ const StaffProtocolPanel = ({ skin }: Props) => {
     <ProtocolRecommendations
       face={result.face}
       body={result.body}
-      footnote="Deterministic XCAPE protocol resolved from the approved scores and the admin product alignment. Body accompanies face at 3× the face dose. Accepting a formula proposal below stores these exact lines in the immutable snapshot that the client report and PDF read."
+      footnote="Deterministic XCAPE protocol resolved from the approved scores and the admin product alignment. Body accompanies face at 3× the face dose. DS Anti-Inflammatory is a required companion for pigmentation and oil/congestion lines. Accepting a formula proposal below stores these exact lines in the immutable snapshot that the client report and PDF read."
     />
   );
 };
