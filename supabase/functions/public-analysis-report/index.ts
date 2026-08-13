@@ -7,6 +7,14 @@
 // `ai_raw` or the raw provider envelope.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
 import { corsHeaders, json, sha256Hex } from '../_shared/publicAnalysis.ts';
+import {
+  DEFAULT_ALIGNMENTS,
+  resolveProtocol,
+  type ProtocolAlignment,
+  type ProtocolArea,
+  type ProtocolCategory,
+  type ProtocolProduct,
+} from '../_shared/xcapeProtocol.ts';
 
 interface Body {
   token?: string;
@@ -66,6 +74,52 @@ export function sanitizeReport(row: Record<string, unknown>) {
   };
 }
 
+/** Strip the protocol down to client-safe display fields (no ids, no SKUs, no prices). */
+function publicProtocolProducts(items: ProtocolProduct[]) {
+  return items.map((p) => ({
+    product_name: p.product_name,
+    area: p.area,
+    additions: p.additions.map((a) => ({
+      concern: a.concern,
+      ds_name: a.ds_name,
+      dose_ml: a.dose_ml,
+      tier_label: a.tier_label,
+      score: a.score,
+      companion: a.companion,
+    })),
+  }));
+}
+
+/** Admin-maintained alignment; falls back to the confirmed default map. */
+async function loadAlignments(
+  admin: { from: (t: string) => any },
+): Promise<ProtocolAlignment[]> {
+  try {
+    const { data, error } = await admin
+      .from('xcape_product_alignments')
+      .select('category, area, dose_multiplier, is_active, sort_order, product:products(name,sku,active)')
+      .eq('is_active', true);
+    if (error || !Array.isArray(data)) return DEFAULT_ALIGNMENTS;
+    const rows: ProtocolAlignment[] = [];
+    for (const r of data as Record<string, any>[]) {
+      const product = r.product as { name?: string; sku?: string; active?: boolean } | null;
+      if (!product?.sku || !product?.name || product.active === false) continue;
+      rows.push({
+        category: r.category as ProtocolCategory,
+        area: (r.area === 'body' ? 'body' : 'face') as ProtocolArea,
+        product_sku: product.sku,
+        product_name: product.name,
+        dose_multiplier: Number(r.dose_multiplier) || (r.area === 'body' ? 3 : 1),
+        is_active: true,
+        sort_order: Number(r.sort_order) || 0,
+      });
+    }
+    return rows.length > 0 ? rows : DEFAULT_ALIGNMENTS;
+  } catch {
+    return DEFAULT_ALIGNMENTS;
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
   if (req.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
@@ -107,7 +161,27 @@ Deno.serve(async (req) => {
       return json({ error: message, code }, Number(res.http ?? 401), true);
     }
 
-    return json({ ok: true, ...sanitizeReport(res) }, 200, true);
+    const report = sanitizeReport(res);
+    // The protocol is derived server-side from the STORED engine scores —
+    // never from client input and never by generic AI.
+    const scores: Record<string, number> = {};
+    for (const [k, v] of Object.entries(report.variables)) scores[k] = v.score;
+    const resolved = resolveProtocol({
+      scores: scores as Record<ProtocolCategory, number>,
+      alignments: await loadAlignments(admin),
+      // Public flow has no explicit inflammation reading, so the
+      // anti-inflammatory companion is never applied here.
+      inflammation: false,
+    });
+    const protocol =
+      resolved.face.length > 0 || resolved.body.length > 0
+        ? {
+            face: publicProtocolProducts(resolved.face),
+            body: publicProtocolProducts(resolved.body),
+          }
+        : null;
+
+    return json({ ok: true, ...report, protocol }, 200, true);
   } catch (e) {
     console.error('[public-analysis-report] failed', e instanceof Error ? e.message : e);
     return json({ error: 'Unexpected error' }, 500);
