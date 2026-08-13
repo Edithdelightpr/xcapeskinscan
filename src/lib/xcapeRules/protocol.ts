@@ -29,7 +29,7 @@ export type ProtocolCategory =
 
 export type ProtocolArea = 'face' | 'body';
 
-export const PROTOCOL_VERSION = 'xcape-protocol-1.1';
+export const PROTOCOL_VERSION = 'xcape-protocol-2.0';
 
 export const PROTOCOL_CATEGORIES: ProtocolCategory[] = [
   'pigmentation_stability',
@@ -328,6 +328,8 @@ export interface ProtocolResult {
   mapping_gaps: ProtocolMappingGap[];
   /** Convenience flag: at least one required mapping is missing. */
   mapping_required: boolean;
+  /** Full reasoning trace: priority, interactions and every decision. */
+  reasoning: ReasoningResult;
 }
 
 
@@ -344,9 +346,13 @@ export interface ResolveProtocolInput {
    */
   ds_available?: string[] | null;
   /**
+   * Versioned, admin-editable reasoning configuration. Defaults to the
+   * compiled fallback of published config v1.
+   */
+  config?: RecommendationConfig | null;
+  /**
    * @deprecated Ignored since xcape-protocol-1.1. The DS Anti-Inflammatory
-   * companion is required on every pigmentation and oil/congestion line and
-   * can no longer be suppressed or enabled by a caller.
+   * companion is applied by the reasoning engine, not by the caller.
    */
   inflammation?: boolean;
 }
@@ -363,15 +369,28 @@ const isProtocolCategory = (v: unknown): v is ProtocolCategory =>
 export function resolveProtocol(input: ResolveProtocolInput): ProtocolResult {
   const alignments = (input.alignments ?? DEFAULT_ALIGNMENTS).filter((a) => a.is_active);
 
+  // The reasoning pass decides priority, activation, redundancy and
+  // compatibility. Resolution below only realises those decisions.
+  const reasoning = reasonProtocol({
+    scores: input.scores,
+    alignments,
+    config: input.config,
+  });
+  const recommended = new Set(
+    reasoning.decisions
+      .filter((d) => d.recommended)
+      .map((d) => `${d.area}:${d.product_sku}:${d.category}`),
+  );
+  const companionAllowed = new Set(
+    reasoning.companions.filter((c) => c.applied).map((c) => c.category),
+  );
+
   const scored: { category: ProtocolCategory; score: number; tier: ProtocolDoseTier }[] = [];
-  for (const category of PROTOCOL_CATEGORIES) {
-    const score = input.scores?.[category];
-    const tier = tierForScore(score);
-    if (!tier || !isScore(score)) continue;
-    scored.push({ category, score, tier });
+  for (const priority of reasoning.priorities) {
+    const tier = tierForScore(priority.score);
+    if (!tier) continue;
+    scored.push({ category: priority.category, score: priority.score, tier });
   }
-  // Weakest (lowest health score) first — that is the priority concern.
-  scored.sort((a, b) => a.score - b.score || a.category.localeCompare(b.category));
 
   const byArea: Record<ProtocolArea, Map<string, ProtocolProduct>> = {
     face: new Map(),
@@ -400,6 +419,12 @@ export function resolveProtocol(input: ResolveProtocolInput): ProtocolResult {
 
     for (const row of rows) {
       const area: ProtocolArea = row.area === 'body' ? 'body' : 'face';
+
+      // Minimum effective protocol: only lines the reasoning pass decided to
+      // recommend are realised. Everything else keeps its recorded reason.
+      if (!recommended.has(`${area}:${row.product_sku}:${category}`)) continue;
+
+
 
       // NON-customizable products are recommended only: no DS ingredient,
       // no ml quantity, no dose tier — ever.
@@ -472,9 +497,10 @@ export function resolveProtocol(input: ResolveProtocolInput): ProtocolResult {
         }
       }
 
-      // Required companion: always paired with the pigmentation and
-      // oil/congestion primaries at the same tier dose, never on its own.
-      if (ANTI_INFLAMMATORY_CATEGORIES.includes(category)) {
+      // Required companion for pigmentation and oil/congestion, at the same
+      // tier dose, never standalone. The reasoning pass may withhold it for a
+      // maintenance-level concern — that exclusion carries a recorded reason.
+      if (ANTI_INFLAMMATORY_CATEGORIES.includes(category) && companionAllowed.has(category)) {
         if (!card.additions.some((a) => a.category === category && a.companion)) {
           if (dsMapped(DS_ANTI_INFLAMMATORY.sku)) {
             card.additions.push({
@@ -530,6 +556,7 @@ export function resolveProtocol(input: ResolveProtocolInput): ProtocolResult {
     anti_inflammatory_applied: antiInflammatoryApplied,
     mapping_gaps: mappingGaps,
     mapping_required: mappingGaps.length > 0,
+    reasoning,
   };
 }
 
@@ -666,4 +693,527 @@ export function sanitizeProtocolAddons(value: unknown): ProtocolAddonDisplay[] {
     });
   }
   return out;
+}
+
+/* ============================================================
+ * INTELLIGENT REASONING ENGINE
+ *
+ * scores -> severity -> band -> priority -> interactions ->
+ * activation -> redundancy -> compatibility -> decisions
+ *
+ * Pure and deterministic. Every product is either RECOMMENDED or
+ * NOT RECOMMENDED, always with a stated reason, so the decision can be
+ * shown to the practitioner and stored in the immutable snapshot.
+ *
+ * Polarity: the engine keeps 100 = healthiest internally. Everything the
+ * client and practitioner read is expressed as SEVERITY = 100 - score.
+ * ============================================================ */
+
+export const RECOMMENDATION_CONFIG_VERSION = 1;
+
+export type SeverityBandCode = 'maintenance' | 'supportive' | 'intervention' | 'priority';
+
+export interface SeverityBand {
+  code: SeverityBandCode;
+  label: string;
+  severity_min: number;
+  severity_max: number;
+  sort_order: number;
+}
+
+export interface ActivationRule {
+  category: ProtocolCategory;
+  product_sku: string;
+  area: ProtocolArea;
+  /** Minimum severity (0-100) before the product is considered at all. */
+  min_severity: number;
+  priority_weight: number;
+  /** True when this product can satisfy the concern on its own. */
+  satisfies_need: boolean;
+  /** Foundation products are always appropriate (Cleanse -> Prepare -> Repair). */
+  foundation: boolean;
+}
+
+export interface InteractionRule {
+  code: string;
+  when_category: ProtocolCategory;
+  when_min_severity: number;
+  and_category: ProtocolCategory | null;
+  and_min_severity: number;
+  and_max_severity: number;
+  boost_category: ProtocolCategory | null;
+  priority_boost: number;
+  client_text: string;
+  practitioner_text: string;
+  sort_order: number;
+}
+
+export type CompatibilityStatus =
+  | 'allow'
+  | 'prefer'
+  | 'optional'
+  | 'avoid'
+  | 'requires_review';
+
+export interface CompatibilityRule {
+  product_sku_a: string;
+  product_sku_b: string;
+  status: CompatibilityStatus;
+  note?: string | null;
+}
+
+export interface RecommendationConfig {
+  version: number;
+  bands: SeverityBand[];
+  activation: ActivationRule[];
+  interactions: InteractionRule[];
+  compatibility: CompatibilityRule[];
+}
+
+/**
+ * Compiled fallback of the published database configuration (config v1).
+ * Kept in sync with the seed migration so the edge/public path still
+ * resolves when the config tables are unreachable.
+ */
+export const DEFAULT_RECOMMENDATION_CONFIG: RecommendationConfig = {
+  version: RECOMMENDATION_CONFIG_VERSION,
+  bands: [
+    { code: 'maintenance', label: 'Maintenance', severity_min: 0, severity_max: 24, sort_order: 0 },
+    { code: 'supportive', label: 'Supportive', severity_min: 25, severity_max: 49, sort_order: 1 },
+    { code: 'intervention', label: 'Intervention', severity_min: 50, severity_max: 74, sort_order: 2 },
+    { code: 'priority', label: 'Priority intervention', severity_min: 75, severity_max: 100, sort_order: 3 },
+  ],
+  activation: [
+    { category: 'oil_congestion_balance', product_sku: 'XC-PURIFYING-CLEANSER', area: 'face', min_severity: 0, priority_weight: 1, satisfies_need: true, foundation: true },
+    { category: 'oil_congestion_balance', product_sku: 'XC-AF-TONER', area: 'face', min_severity: 0, priority_weight: 1, satisfies_need: true, foundation: true },
+    { category: 'oil_congestion_balance', product_sku: 'XC-FACE-CREAM', area: 'face', min_severity: 0, priority_weight: 1, satisfies_need: true, foundation: true },
+    { category: 'oil_congestion_balance', product_sku: 'XC-BODY-MILK', area: 'body', min_severity: 40, priority_weight: 1, satisfies_need: true, foundation: false },
+    { category: 'barrier_surface_hydration', product_sku: 'XC-AF-TONER', area: 'face', min_severity: 0, priority_weight: 1, satisfies_need: false, foundation: true },
+    { category: 'barrier_surface_hydration', product_sku: 'XC-FACE-CREAM', area: 'face', min_severity: 0, priority_weight: 1.1, satisfies_need: true, foundation: true },
+    { category: 'barrier_surface_hydration', product_sku: 'XC-TREATMENT-GLYCERINE', area: 'body', min_severity: 60, priority_weight: 1, satisfies_need: false, foundation: false },
+    { category: 'barrier_surface_hydration', product_sku: 'XC-BODY-MILK', area: 'body', min_severity: 40, priority_weight: 1, satisfies_need: true, foundation: false },
+    { category: 'firmness_skin_support', product_sku: 'XC-FACE-CREAM', area: 'face', min_severity: 0, priority_weight: 1, satisfies_need: true, foundation: true },
+    { category: 'firmness_skin_support', product_sku: 'XC-BODY-MILK', area: 'body', min_severity: 40, priority_weight: 1, satisfies_need: true, foundation: false },
+    { category: 'pigmentation_stability', product_sku: 'XC-FACE-CREAM', area: 'face', min_severity: 0, priority_weight: 1, satisfies_need: false, foundation: true },
+    { category: 'pigmentation_stability', product_sku: 'XC-ADVANCED-SERUM', area: 'face', min_severity: 50, priority_weight: 1.2, satisfies_need: true, foundation: false },
+    { category: 'pigmentation_stability', product_sku: 'XC-BODY-MILK', area: 'body', min_severity: 40, priority_weight: 1, satisfies_need: false, foundation: false },
+    { category: 'pigmentation_stability', product_sku: 'XC-ADVANCED-SERUM', area: 'body', min_severity: 60, priority_weight: 1, satisfies_need: false, foundation: false },
+    { category: 'pigmentation_stability', product_sku: 'XC-TREATMENT-GLYCERINE', area: 'body', min_severity: 70, priority_weight: 1, satisfies_need: false, foundation: false },
+  ],
+  interactions: [
+    {
+      code: 'oil_with_dehydration',
+      when_category: 'oil_congestion_balance',
+      when_min_severity: 50,
+      and_category: 'barrier_surface_hydration',
+      and_min_severity: 40,
+      and_max_severity: 100,
+      boost_category: 'barrier_surface_hydration',
+      priority_boost: 8,
+      client_text:
+        'Your skin is producing excess surface oil while still reading as dehydrated, so your protocol controls oil without stripping the surface.',
+      practitioner_text:
+        'High oil + moderate/high dehydration: control without stripping. Hydration and barrier support are protected; no escalation of cleansing intensity.',
+      sort_order: 0,
+    },
+    {
+      code: 'dehydration_with_elasticity',
+      when_category: 'barrier_surface_hydration',
+      when_min_severity: 50,
+      and_category: 'firmness_skin_support',
+      and_min_severity: 50,
+      and_max_severity: 100,
+      boost_category: 'barrier_surface_hydration',
+      priority_boost: 6,
+      client_text:
+        'Hydration and barrier support are foundational to improving how firm and supported your skin looks.',
+      practitioner_text:
+        'High dehydration + weak elasticity: hydration/barrier support becomes foundational to the elasticity strategy.',
+      sort_order: 1,
+    },
+    {
+      code: 'pigmentation_with_oil',
+      when_category: 'pigmentation_stability',
+      when_min_severity: 50,
+      and_category: 'oil_congestion_balance',
+      and_min_severity: 50,
+      and_max_severity: 100,
+      boost_category: 'oil_congestion_balance',
+      priority_boost: 6,
+      client_text:
+        'Uneven tone is being addressed alongside the surface conditions that contribute to it, rather than in isolation.',
+      practitioner_text:
+        'High pigmentation + high oil/congestion: treat the contributing environment together with pigmentation.',
+      sort_order: 2,
+    },
+    {
+      code: 'pigmentation_direct',
+      when_category: 'pigmentation_stability',
+      when_min_severity: 50,
+      and_category: 'oil_congestion_balance',
+      and_min_severity: 0,
+      and_max_severity: 49,
+      boost_category: 'pigmentation_stability',
+      priority_boost: 6,
+      client_text:
+        'Your tone concerns are being addressed directly, since surface oil is not a significant factor for you.',
+      practitioner_text:
+        'High pigmentation + low oil/congestion: direct pigmentation-management pathway.',
+      sort_order: 3,
+    },
+  ],
+  compatibility: [
+    { product_sku_a: 'XC-PURIFYING-CLEANSER', product_sku_b: 'XC-AF-TONER', status: 'prefer', note: 'Cleanse then rebalance — the confirmed foundation sequence.' },
+    { product_sku_a: 'XC-AF-TONER', product_sku_b: 'XC-FACE-CREAM', status: 'prefer', note: 'Rebalance then hydrate/repair.' },
+    { product_sku_a: 'XC-ADVANCED-SERUM', product_sku_b: 'XC-FACE-CREAM', status: 'allow', note: 'Serum sits under the customized cream.' },
+    { product_sku_a: 'XC-ADVANCED-SERUM', product_sku_b: 'XC-TREATMENT-GLYCERINE', status: 'optional', note: 'Both may be used; body glycerine is independent of the facial serum.' },
+    { product_sku_a: 'XC-TREATMENT-GLYCERINE', product_sku_b: 'XC-BODY-MILK', status: 'prefer', note: 'Glycerine before the customized body milk.' },
+  ],
+};
+
+/** Fallback activation rule for a product/concern the config does not cover. */
+export const FALLBACK_ACTIVATION: Omit<ActivationRule, 'category' | 'product_sku' | 'area'> = {
+  min_severity: 50,
+  priority_weight: 1,
+  satisfies_need: false,
+  foundation: false,
+};
+
+/** Severity (0 = healthy, 100 = weakest) derived from a health score. */
+export function severityFromScore(score: number | null | undefined): number | null {
+  if (!isScore(score)) return null;
+  return 100 - score;
+}
+
+export function bandForSeverity(
+  severity: number,
+  bands: SeverityBand[] = DEFAULT_RECOMMENDATION_CONFIG.bands,
+): SeverityBand {
+  const found = bands.find((b) => severity >= b.severity_min && severity <= b.severity_max);
+  return found ?? bands[bands.length - 1] ?? DEFAULT_RECOMMENDATION_CONFIG.bands[0];
+}
+
+export type PriorityTier = 'primary' | 'secondary' | 'supportive' | 'maintenance';
+
+export interface ConcernPriority {
+  category: ProtocolCategory;
+  concern: string;
+  /** Raw engine health score (100 = healthiest). */
+  score: number;
+  /** 100 - score. Everything client-facing speaks in severity. */
+  severity: number;
+  band: SeverityBandCode;
+  band_label: string;
+  /** Severity x weight, adjusted by matched interactions. */
+  priority_score: number;
+  rank: number;
+  tier: PriorityTier;
+}
+
+export interface InteractionFinding {
+  code: string;
+  categories: ProtocolCategory[];
+  client_text: string;
+  practitioner_text: string;
+}
+
+export type DecisionCode =
+  | 'foundation'
+  | 'activated'
+  | 'below_threshold'
+  | 'redundant'
+  | 'incompatible'
+  | 'requires_review'
+  | 'no_score';
+
+export interface ProductDecision {
+  product_sku: string;
+  product_name: string;
+  area: ProtocolArea;
+  category: ProtocolCategory;
+  concern: string;
+  recommended: boolean;
+  code: DecisionCode;
+  reason: string;
+  severity: number | null;
+  activation_threshold: number;
+  /** True when a practitioner must look at this line before approving. */
+  requires_review: boolean;
+}
+
+export interface CompanionDecision {
+  category: ProtocolCategory;
+  concern: string;
+  applied: boolean;
+  reason: string;
+}
+
+export interface ReasoningResult {
+  config_version: number;
+  priorities: ConcernPriority[];
+  primary: ConcernPriority | null;
+  secondary: ConcernPriority | null;
+  /** Concerns deliberately left out of the current protocol. */
+  not_targeted: ConcernPriority[];
+  interactions: InteractionFinding[];
+  decisions: ProductDecision[];
+  companions: CompanionDecision[];
+  requires_review: boolean;
+}
+
+const findActivation = (
+  config: RecommendationConfig,
+  category: ProtocolCategory,
+  product_sku: string,
+  area: ProtocolArea,
+): ActivationRule => {
+  const row = config.activation.find(
+    (a) => a.category === category && a.product_sku === product_sku && a.area === area,
+  );
+  return row ?? { category, product_sku, area, ...FALLBACK_ACTIVATION };
+};
+
+const compatibilityBetween = (
+  config: RecommendationConfig,
+  a: string,
+  b: string,
+): CompatibilityRule | null =>
+  config.compatibility.find(
+    (r) =>
+      (r.product_sku_a === a && r.product_sku_b === b) ||
+      (r.product_sku_a === b && r.product_sku_b === a),
+  ) ?? null;
+
+/** Rank the four concerns by severity, weight and interaction effects. */
+export function rankConcerns(
+  scores: Partial<Record<ProtocolCategory, number | null | undefined>>,
+  config: RecommendationConfig = DEFAULT_RECOMMENDATION_CONFIG,
+): { priorities: ConcernPriority[]; interactions: InteractionFinding[] } {
+  const base: ConcernPriority[] = [];
+  for (const category of PROTOCOL_CATEGORIES) {
+    const score = scores?.[category];
+    const severity = severityFromScore(score);
+    if (severity == null || !isScore(score)) continue;
+    const band = bandForSeverity(severity, config.bands);
+    const weights = config.activation
+      .filter((a) => a.category === category)
+      .map((a) => a.priority_weight);
+    const weight = weights.length > 0 ? Math.max(...weights) : 1;
+    base.push({
+      category,
+      concern: CONCERN_LABEL[category],
+      score,
+      severity,
+      band: band.code,
+      band_label: band.label,
+      priority_score: round2(severity * weight),
+      rank: 0,
+      tier: 'maintenance',
+    });
+  }
+
+  const severityOf = (category: ProtocolCategory): number | null =>
+    base.find((b) => b.category === category)?.severity ?? null;
+
+  const interactions: InteractionFinding[] = [];
+  for (const rule of [...config.interactions].sort((a, b) => a.sort_order - b.sort_order)) {
+    const primarySeverity = severityOf(rule.when_category);
+    if (primarySeverity == null || primarySeverity < rule.when_min_severity) continue;
+    if (rule.and_category) {
+      const other = severityOf(rule.and_category);
+      if (other == null || other < rule.and_min_severity || other > rule.and_max_severity) continue;
+    }
+    interactions.push({
+      code: rule.code,
+      categories: rule.and_category
+        ? [rule.when_category, rule.and_category]
+        : [rule.when_category],
+      client_text: rule.client_text,
+      practitioner_text: rule.practitioner_text,
+    });
+    if (rule.boost_category && rule.priority_boost !== 0) {
+      const target = base.find((b) => b.category === rule.boost_category);
+      if (target) target.priority_score = round2(target.priority_score + rule.priority_boost);
+    }
+  }
+
+  base.sort(
+    (a, b) =>
+      b.priority_score - a.priority_score ||
+      b.severity - a.severity ||
+      a.category.localeCompare(b.category),
+  );
+  base.forEach((p, i) => {
+    p.rank = i + 1;
+    p.tier =
+      p.band === 'maintenance'
+        ? 'maintenance'
+        : i === 0
+          ? 'primary'
+          : i === 1
+            ? 'secondary'
+            : 'supportive';
+  });
+
+  return { priorities: base, interactions };
+}
+
+export interface ReasonProtocolInput {
+  scores: Partial<Record<ProtocolCategory, number | null | undefined>>;
+  alignments?: ProtocolAlignment[];
+  config?: RecommendationConfig | null;
+}
+
+/**
+ * The full reasoning pass. Produces the concern ranking, interaction
+ * findings and a RECOMMEND / DO NOT RECOMMEND decision (with reason) for
+ * every aligned product, plus the anti-inflammatory companion decision.
+ */
+export function reasonProtocol(input: ReasonProtocolInput): ReasoningResult {
+  const config = input.config ?? DEFAULT_RECOMMENDATION_CONFIG;
+  const alignments = (input.alignments ?? DEFAULT_ALIGNMENTS).filter((a) => a.is_active);
+  const { priorities, interactions } = rankConcerns(input.scores, config);
+
+  const decisions: ProductDecision[] = [];
+  /** area -> category -> activated products that satisfy the need. */
+  const satisfied = new Map<string, string[]>();
+  const activatedSkus: string[] = [];
+
+  for (const priority of priorities) {
+    const rows = alignments
+      .filter((a) => a.category === priority.category && isProtocolCategory(a.category))
+      .sort((a, b) => a.sort_order - b.sort_order || a.product_name.localeCompare(b.product_name));
+
+    for (const row of rows) {
+      const area: ProtocolArea = row.area === 'body' ? 'body' : 'face';
+      const rule = findActivation(config, priority.category, row.product_sku, area);
+      const key = `${area}:${priority.category}`;
+      const push = (
+        recommended: boolean,
+        code: DecisionCode,
+        reason: string,
+        requiresReview = false,
+      ) => {
+        decisions.push({
+          product_sku: row.product_sku,
+          product_name: row.product_name,
+          area,
+          category: priority.category,
+          concern: priority.concern,
+          recommended,
+          code,
+          reason,
+          severity: priority.severity,
+          activation_threshold: rule.min_severity,
+          requires_review: requiresReview,
+        });
+        if (recommended) {
+          activatedSkus.push(row.product_sku);
+          if (rule.satisfies_need) {
+            satisfied.set(key, [...(satisfied.get(key) ?? []), row.product_name]);
+          }
+        }
+      };
+
+      // 1. Foundation products are always appropriate.
+      if (rule.foundation) {
+        push(true, 'foundation', 'Part of the XCAPE foundation routine for this concern.');
+        continue;
+      }
+
+      // 2. Activation threshold.
+      if (priority.severity < rule.min_severity) {
+        push(
+          false,
+          'below_threshold',
+          `Not recommended because this concern is below the activation threshold (severity ${priority.severity} of ${rule.min_severity} required).`,
+        );
+        continue;
+      }
+
+      // 3. Redundancy — the need is already covered. A concern at
+      // intervention or priority level still justifies the extra support
+      // product; anything milder does not.
+      const covering = satisfied.get(key) ?? [];
+      const mildEnoughToSkip = priority.band === 'maintenance' || priority.band === 'supportive';
+      if (covering.length > 0 && !rule.satisfies_need && mildEnoughToSkip) {
+        push(
+          false,
+          'redundant',
+          `Not recommended because ${covering[0]} already addresses this need — adding it would create unnecessary treatment overlap.`,
+        );
+        continue;
+      }
+
+
+      // 4. Compatibility with what is already in the protocol.
+      let blocked = false;
+      let review: CompatibilityRule | null = null;
+      for (const sku of activatedSkus) {
+        const rel = compatibilityBetween(config, row.product_sku, sku);
+        if (!rel) continue;
+        if (rel.status === 'avoid') {
+          push(
+            false,
+            'incompatible',
+            rel.note ?? 'Not recommended because it is not compatible with the selected protocol.',
+          );
+          blocked = true;
+          break;
+        }
+        if (rel.status === 'requires_review') review = rel;
+      }
+      if (blocked) continue;
+
+      if (review) {
+        push(
+          true,
+          'requires_review',
+          review.note ?? 'Included, but this combination requires practitioner review.',
+          true,
+        );
+        continue;
+      }
+
+      push(
+        true,
+        'activated',
+        `Recommended because ${priority.concern.toLowerCase()} is a ${priority.band_label.toLowerCase()} finding (severity ${priority.severity}).`,
+      );
+    }
+  }
+
+  // Anti-inflammatory companion — required with pigmentation and
+  // oil/congestion primaries, but suppressed with a stated reason when the
+  // concern is only at maintenance level.
+  const companions: CompanionDecision[] = [];
+  for (const category of ANTI_INFLAMMATORY_CATEGORIES) {
+    const priority = priorities.find((p) => p.category === category);
+    if (!priority) continue;
+    const applied = priority.band !== 'maintenance';
+    companions.push({
+      category,
+      concern: priority.concern,
+      applied,
+      reason: applied
+        ? `Required companion for ${priority.concern.toLowerCase()} at the same tier dose as the primary solution.`
+        : `Companion not applied because ${priority.concern.toLowerCase()} is only a maintenance finding (severity ${priority.severity}) — the minimum effective protocol does not need it.`,
+    });
+  }
+
+  const notTargeted = priorities.filter(
+    (p) => p.tier === 'maintenance' || !decisions.some((d) => d.category === p.category && d.recommended && d.code !== 'foundation'),
+  );
+
+  return {
+    config_version: config.version,
+    priorities,
+    primary: priorities.find((p) => p.tier === 'primary') ?? null,
+    secondary: priorities.find((p) => p.tier === 'secondary') ?? null,
+    not_targeted: notTargeted,
+    interactions,
+    decisions,
+    companions,
+    requires_review: decisions.some((d) => d.requires_review),
+  };
 }

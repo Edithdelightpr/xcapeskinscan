@@ -89,12 +89,20 @@ describe('resolveProtocol — alignment', () => {
   });
 
   it('weak elasticity aligns face cream + body milk with DS Anti-Aging', () => {
-    const r = resolveProtocol({ scores: { firmness_skin_support: 80 } });
+    // severity 40 -> body pathway activates (threshold 40).
+    const r = resolveProtocol({ scores: { firmness_skin_support: 60 } });
     expect(face(r)).toEqual(['XCAPE Face Cream']);
     expect(body(r)).toEqual(['XCAPE Body Milk']);
     expect(r.face[0].additions[0].ds_name).toBe('DS Anti-Aging');
-    expect(r.face[0].additions[0].dose_ml).toBe(0.5);
-    expect(r.body[0].additions[0].dose_ml).toBe(1.5);
+    expect(r.face[0].additions[0].dose_ml).toBe(1);
+    expect(r.body[0].additions[0].dose_ml).toBe(3);
+  });
+
+  it('a maintenance-level concern does not open the body pathway', () => {
+    // health 80 = severity 20 = maintenance, below the body threshold.
+    const r = resolveProtocol({ scores: { firmness_skin_support: 80 } });
+    expect(face(r)).toEqual(['XCAPE Face Cream']);
+    expect(body(r)).toEqual([]);
   });
 
   it('surface dehydration aligns toner + face cream, body milk + glycerine with DS Sebum Control', () => {
@@ -227,9 +235,9 @@ describe('DS Anti-Inflammatory required companion', () => {
     ]);
   });
 
-  it('resolves as protocol version 1.1', () => {
+  it('resolves as protocol version 2.0', () => {
     expect(resolveProtocol({ scores: { pigmentation_stability: 30 } }).version).toBe(
-      'xcape-protocol-1.1',
+      'xcape-protocol-2.0',
     );
   });
 });
@@ -334,7 +342,8 @@ describe('customizable vs recommended-only products', () => {
   });
 
   it('body milk carries customization at exactly 3x the face dose', () => {
-    for (const score of [10, 30, 60, 90]) {
+    // Health scores whose severity clears the body activation threshold.
+    for (const score of [10, 30, 60] ) {
       const r = resolveProtocol({ scores: { firmness_skin_support: score } });
       const cream = r.face.find((p) => p.product_sku === 'XC-FACE-CREAM');
       const milk = r.body.find((p) => p.product_sku === 'XC-BODY-MILK');

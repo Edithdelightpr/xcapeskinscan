@@ -9892,6 +9892,56 @@ export type Database = {
         }
         Relationships: []
       }
+      xcape_activation_rules: {
+        Row: {
+          area: string
+          category: string
+          config_id: string
+          created_at: string
+          foundation: boolean
+          id: string
+          min_severity: number
+          priority_weight: number
+          product_sku: string
+          satisfies_need: boolean
+          updated_at: string
+        }
+        Insert: {
+          area?: string
+          category: string
+          config_id: string
+          created_at?: string
+          foundation?: boolean
+          id?: string
+          min_severity?: number
+          priority_weight?: number
+          product_sku: string
+          satisfies_need?: boolean
+          updated_at?: string
+        }
+        Update: {
+          area?: string
+          category?: string
+          config_id?: string
+          created_at?: string
+          foundation?: boolean
+          id?: string
+          min_severity?: number
+          priority_weight?: number
+          product_sku?: string
+          satisfies_need?: boolean
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "xcape_activation_rules_config_id_fkey"
+            columns: ["config_id"]
+            isOneToOne: false
+            referencedRelation: "xcape_recommendation_configs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       xcape_admin_mockups: {
         Row: {
           config: Json
@@ -10055,6 +10105,47 @@ export type Database = {
           },
         ]
       }
+      xcape_compatibility_rules: {
+        Row: {
+          config_id: string
+          created_at: string
+          id: string
+          note: string | null
+          product_sku_a: string
+          product_sku_b: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          config_id: string
+          created_at?: string
+          id?: string
+          note?: string | null
+          product_sku_a: string
+          product_sku_b: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          config_id?: string
+          created_at?: string
+          id?: string
+          note?: string | null
+          product_sku_a?: string
+          product_sku_b?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "xcape_compatibility_rules_config_id_fkey"
+            columns: ["config_id"]
+            isOneToOne: false
+            referencedRelation: "xcape_recommendation_configs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       xcape_contraindications: {
         Row: {
           created_at: string
@@ -10117,6 +10208,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           decision_reason: string | null
+          decisions: Json
           dose_ml: number | null
           dose_tier: Json | null
           formula_lines: Json
@@ -10127,8 +10219,10 @@ export type Database = {
           kit_product_id: string | null
           kit_unit_price: number | null
           override_note: string | null
+          product_catalogue_version: string | null
           proposal_id: string | null
           protocol_version: string | null
+          recommendation_rule_version: number | null
           rule_id: string | null
           rule_version: number | null
           rule_version_id: string | null
@@ -10153,6 +10247,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           decision_reason?: string | null
+          decisions?: Json
           dose_ml?: number | null
           dose_tier?: Json | null
           formula_lines?: Json
@@ -10163,8 +10258,10 @@ export type Database = {
           kit_product_id?: string | null
           kit_unit_price?: number | null
           override_note?: string | null
+          product_catalogue_version?: string | null
           proposal_id?: string | null
           protocol_version?: string | null
+          recommendation_rule_version?: number | null
           rule_id?: string | null
           rule_version?: number | null
           rule_version_id?: string | null
@@ -10189,6 +10286,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           decision_reason?: string | null
+          decisions?: Json
           dose_ml?: number | null
           dose_tier?: Json | null
           formula_lines?: Json
@@ -10199,8 +10297,10 @@ export type Database = {
           kit_product_id?: string | null
           kit_unit_price?: number | null
           override_note?: string | null
+          product_catalogue_version?: string | null
           proposal_id?: string | null
           protocol_version?: string | null
+          recommendation_rule_version?: number | null
           rule_id?: string | null
           rule_version?: number | null
           rule_version_id?: string | null
@@ -10341,6 +10441,68 @@ export type Database = {
             columns: ["proposal_id"]
             isOneToOne: false
             referencedRelation: "xcape_recommendation_proposals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      xcape_interaction_rules: {
+        Row: {
+          and_category: string | null
+          and_max_severity: number
+          and_min_severity: number
+          boost_category: string | null
+          client_text: string
+          code: string
+          config_id: string
+          created_at: string
+          id: string
+          practitioner_text: string
+          priority_boost: number
+          sort_order: number
+          updated_at: string
+          when_category: string
+          when_min_severity: number
+        }
+        Insert: {
+          and_category?: string | null
+          and_max_severity?: number
+          and_min_severity?: number
+          boost_category?: string | null
+          client_text: string
+          code: string
+          config_id: string
+          created_at?: string
+          id?: string
+          practitioner_text: string
+          priority_boost?: number
+          sort_order?: number
+          updated_at?: string
+          when_category: string
+          when_min_severity?: number
+        }
+        Update: {
+          and_category?: string | null
+          and_max_severity?: number
+          and_min_severity?: number
+          boost_category?: string | null
+          client_text?: string
+          code?: string
+          config_id?: string
+          created_at?: string
+          id?: string
+          practitioner_text?: string
+          priority_boost?: number
+          sort_order?: number
+          updated_at?: string
+          when_category?: string
+          when_min_severity?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "xcape_interaction_rules_config_id_fkey"
+            columns: ["config_id"]
+            isOneToOne: false
+            referencedRelation: "xcape_recommendation_configs"
             referencedColumns: ["id"]
           },
         ]
@@ -10542,6 +10704,36 @@ export type Database = {
           status?: string
           steps?: Json
           updated_at?: string
+        }
+        Relationships: []
+      }
+      xcape_recommendation_configs: {
+        Row: {
+          created_at: string
+          id: string
+          notes: string | null
+          published_at: string | null
+          status: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          notes?: string | null
+          published_at?: string | null
+          status?: string
+          updated_at?: string
+          version: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          notes?: string | null
+          published_at?: string | null
+          status?: string
+          updated_at?: string
+          version?: number
         }
         Relationships: []
       }
@@ -10788,6 +10980,50 @@ export type Database = {
             columns: ["rule_id"]
             isOneToOne: false
             referencedRelation: "xcape_recommendation_rules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      xcape_severity_bands: {
+        Row: {
+          code: string
+          config_id: string
+          created_at: string
+          id: string
+          label: string
+          severity_max: number
+          severity_min: number
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          config_id: string
+          created_at?: string
+          id?: string
+          label: string
+          severity_max: number
+          severity_min: number
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          config_id?: string
+          created_at?: string
+          id?: string
+          label?: string
+          severity_max?: number
+          severity_min?: number
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "xcape_severity_bands_config_id_fkey"
+            columns: ["config_id"]
+            isOneToOne: false
+            referencedRelation: "xcape_recommendation_configs"
             referencedColumns: ["id"]
           },
         ]
