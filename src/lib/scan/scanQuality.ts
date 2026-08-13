@@ -109,36 +109,56 @@ export function neutralGuidance(view: ScanViewId): Guidance {
  * the guidance shown to the practitioner.
  */
 export function evaluateFrame(m: FrameMetrics, view: ScanViewId): Guidance {
+  const T = thresholdsFor(view);
   if (m.faceCount === 0) return issue('no_face', 'No face detected');
   if (m.faceCount > 1) return issue('multiple_faces', 'Only one face should be in frame');
 
-  if (m.faceHeightRatio < SCAN_THRESHOLDS.minFaceHeight) return issue('move_closer', 'Move closer');
-  if (m.faceHeightRatio > SCAN_THRESHOLDS.maxFaceHeight) return issue('move_back', 'Move back');
+  if (m.faceHeightRatio < T.minFaceHeight) return issue('move_closer', 'Move closer');
+  if (m.faceHeightRatio > T.maxFaceHeight) return issue('move_back', 'Move back');
 
   if (
-    Math.abs(m.centerOffsetX) > SCAN_THRESHOLDS.maxCenterOffsetX ||
-    Math.abs(m.centerOffsetY) > SCAN_THRESHOLDS.maxCenterOffsetY
+    Math.abs(m.centerOffsetX) > T.maxCenterOffsetX ||
+    Math.abs(m.centerOffsetY) > T.maxCenterOffsetY
   ) {
     return issue('center', 'Center your face in the oval');
   }
 
-  if (m.brightness < SCAN_THRESHOLDS.minBrightness) return issue('lighting_low', 'Improve lighting — too dark');
-  if (m.brightness > SCAN_THRESHOLDS.maxBrightness) return issue('lighting_glare', 'Reduce glare — too bright');
+  if (m.brightness < T.minBrightness) return issue('lighting_low', 'Improve lighting — too dark');
+  if (m.brightness > T.maxBrightness) return issue('lighting_glare', 'Reduce glare — too bright');
 
   if (view === 'front') {
-    if (Math.abs(m.yaw) > SCAN_THRESHOLDS.frontMaxYaw) return issue('face_forward', 'Face forward, look at the camera');
+    if (Math.abs(m.yaw) > T.frontMaxYaw) return issue('face_forward', 'Face forward, look at the camera');
   } else if (view === 'left') {
-    if (m.yaw < SCAN_THRESHOLDS.sideMinYaw) return issue('turn_left', 'Turn slowly to your left');
-    if (m.yaw > SCAN_THRESHOLDS.sideMaxYaw) return issue('turn_back', 'Turn back slightly — not so far');
+    if (m.yaw < T.sideMinYaw) return issue('turn_left', 'Turn slowly to your left');
+    if (m.yaw > T.sideMaxYaw) return issue('turn_back', 'Turn back slightly — not so far');
   } else {
-    if (m.yaw > -SCAN_THRESHOLDS.sideMinYaw) return issue('turn_right', 'Turn slowly to your right');
-    if (m.yaw < -SCAN_THRESHOLDS.sideMaxYaw) return issue('turn_back', 'Turn back slightly — not so far');
+    if (m.yaw > -T.sideMinYaw) return issue('turn_right', 'Turn slowly to your right');
+    if (m.yaw < -T.sideMaxYaw) return issue('turn_back', 'Turn back slightly — not so far');
   }
 
-  if (m.sharpness < SCAN_THRESHOLDS.minSharpness) return issue('hold_still', 'Hold still — image is soft');
+  if (m.sharpness < T.minSharpness) return issue('hold_still', 'Hold still — image is soft');
 
   return ok;
 }
+
+/**
+ * Framing/steadiness nits that must never block the manual shutter: the pose
+ * and face gates still apply, and the server re-verifies every upload, so a
+ * visitor is never trapped on a view that will not auto-capture.
+ */
+const SOFT_CODES: ReadonlySet<GuidanceCode> = new Set<GuidanceCode>([
+  'ok',
+  'center',
+  'move_closer',
+  'move_back',
+  'hold_still',
+]);
+
+/** True when a manual capture may proceed despite the current guidance. */
+export function allowsManualCapture(g: Guidance): boolean {
+  return g.ok || SOFT_CODES.has(g.code);
+}
+
 
 /* ------------------------------------------------------------------ */
 /* Geometry / pixel helpers                                            */
