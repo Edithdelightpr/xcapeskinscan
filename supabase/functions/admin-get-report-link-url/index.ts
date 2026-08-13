@@ -6,6 +6,8 @@
 // case we return `recoverable: false` and the UI offers a Regenerate action.
 // We NEVER silently revoke a legacy link.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
+// Single source of truth for deterministic report-link tokens.
+import { deriveToken, reportUrl, sha256Hex } from '../_shared/reportLinkToken.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -15,35 +17,6 @@ const corsHeaders = {
 
 const APP_URL = Deno.env.get('APP_PUBLIC_URL') || 'https://xcapeskinscan.lovable.app';
 const ALLOWED_ROLES = new Set(['admin', 'front_desk', 'medical_aesthetician', 'outreach']);
-
-function base64UrlEncode(bytes: Uint8Array): string {
-  let bin = '';
-  for (const b of bytes) bin += String.fromCharCode(b);
-  return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
-}
-
-async function sha256Hex(input: string): Promise<string> {
-  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(input));
-  return Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, '0')).join('');
-}
-
-async function deriveToken(linkId: string): Promise<string> {
-  const secret = Deno.env.get('REPORT_LINK_SIGNING_SECRET');
-  if (!secret) throw new Error('REPORT_LINK_SIGNING_SECRET not configured');
-  const key = await crypto.subtle.importKey(
-    'raw',
-    new TextEncoder().encode(secret),
-    { name: 'HMAC', hash: 'SHA-256' },
-    false,
-    ['sign'],
-  );
-  const sig = await crypto.subtle.sign(
-    'HMAC',
-    key,
-    new TextEncoder().encode(`v1:${linkId}`),
-  );
-  return base64UrlEncode(new Uint8Array(sig));
-}
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -130,7 +103,7 @@ Deno.serve(async (req) => {
 
     return json({
       ok: true,
-      url: `${APP_URL}/report/${token}`,
+      url: reportUrl(APP_URL, token),
       link_id: link.id,
       token_prefix: link.token_prefix,
       expires_at: link.expires_at,

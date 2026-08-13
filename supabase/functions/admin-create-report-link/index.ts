@@ -13,6 +13,8 @@
 //     "Create link" is idempotent and never silently invalidates an existing
 //     link the client may still be using.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
+// Single source of truth for deterministic report-link tokens.
+import { deriveToken, reportUrl, sha256Hex } from '../_shared/reportLinkToken.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -30,40 +32,6 @@ interface Body {
   assessment_id: string;
   /** Only revoke an existing active link when this is explicitly true. */
   revoke_previous?: boolean;
-}
-
-function base64UrlEncode(bytes: Uint8Array): string {
-  let bin = '';
-  for (const b of bytes) bin += String.fromCharCode(b);
-  return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
-}
-
-async function sha256Hex(input: string): Promise<string> {
-  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(input));
-  return Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, '0')).join('');
-}
-
-/**
- * Deterministic per-link token. `v1:` is a version tag so we can rotate the
- * signing algorithm later without invalidating existing hashes silently.
- * The token is unpredictable to anyone without `REPORT_LINK_SIGNING_SECRET`.
- */
-async function deriveToken(linkId: string): Promise<string> {
-  const secret = Deno.env.get('REPORT_LINK_SIGNING_SECRET');
-  if (!secret) throw new Error('REPORT_LINK_SIGNING_SECRET not configured');
-  const key = await crypto.subtle.importKey(
-    'raw',
-    new TextEncoder().encode(secret),
-    { name: 'HMAC', hash: 'SHA-256' },
-    false,
-    ['sign'],
-  );
-  const sig = await crypto.subtle.sign(
-    'HMAC',
-    key,
-    new TextEncoder().encode(`v1:${linkId}`),
-  );
-  return base64UrlEncode(new Uint8Array(sig));
 }
 
 function json(body: unknown, status = 200) {
@@ -154,7 +122,7 @@ Deno.serve(async (req) => {
       if (derivedHash === existing.token_hash) {
         return json({
           ok: true,
-          url: `${APP_URL}/report/${token}`,
+          url: reportUrl(APP_URL, token),
           token,
           link_id: existing.id,
           token_prefix: token.slice(0, 8),
@@ -215,7 +183,7 @@ Deno.serve(async (req) => {
 
     return json({
       ok: true,
-      url: `${APP_URL}/report/${token}`,
+      url: reportUrl(APP_URL, token),
       token,
       link_id: patched.id,
       token_prefix: patched.token_prefix,

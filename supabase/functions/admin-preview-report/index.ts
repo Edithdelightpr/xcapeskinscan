@@ -9,6 +9,7 @@ import { buildTreatmentPlanBlock } from '../_shared/reportTreatmentPlan.ts';
 import { buildCareJourneyBlock } from '../_shared/reportCareJourney.ts';
 import { sanitizeSnapshotLines } from '../_shared/xcapeProtocol.ts';
 import { sanitizePublicProtocolSnapshot } from '../_shared/publicProtocolSnapshot.ts';
+import { sanitizeReportSkinAnalysis } from '../_shared/reportSkinAnalysis.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -192,7 +193,9 @@ Deno.serve(async (req) => {
         created_at: assessment.created_at,
         main_concern: assessment.main_concern,
         client_goal: assessment.client_goal,
-        skin_analysis: assessment.skin_analysis,
+        // Same whitelist as the client-facing report — staff preview must
+        // show exactly what the client sees, nothing more.
+        skin_analysis: sanitizeReportSkinAnalysis(assessment.skin_analysis),
         home_care: assessment.home_care,
         follow_up_recommendation: assessment.follow_up_recommendation,
         next_visit_in_weeks: assessment.next_visit_in_weeks,

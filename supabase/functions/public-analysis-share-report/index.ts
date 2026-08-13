@@ -123,30 +123,46 @@ Deno.serve(async (req) => {
     const assessment_id = result.assessment_id!;
 
     // ---- Persist the XCAPE protocol recommendation ONCE, write-once ----
-    // Resolved from the session's stored engine scores so the shared report
-    // shows the same deterministic protocol the scanner showed. The RPC is a
-    // no-op when a snapshot already exists, keeping repeat shares idempotent.
+    // A completed public scan always carries all four engine scores, so a
+    // missing protocol is a real defect — not an acceptable degradation. We
+    // therefore FAIL CLOSED before minting the report link rather than
+    // delivering a report without its customization. The claim above is
+    // idempotent, so the visitor can simply retry.
     try {
-      const { data: sessionRow } = await admin
+      const { data: sessionRow, error: sessionErr } = await admin
         .from('public_analysis_sessions')
         .select('engine')
         .eq('token_hash', token_hash)
         .maybeSingle();
-      if (sessionRow?.engine) {
-        const alignments = await loadAlignments(admin);
-        const snapshot = buildPublicProtocolSnapshot(sessionRow.engine, alignments);
-        if (snapshot) {
-          await admin.rpc('public_analysis_store_protocol_snapshot', {
-            p_assessment_id: assessment_id,
-            p_snapshot: snapshot,
-          });
-        }
+      if (sessionErr) throw sessionErr;
+      if (!sessionRow?.engine) throw new Error('session engine missing');
+
+      const alignments = await loadAlignments(admin);
+      const snapshot = buildPublicProtocolSnapshot(sessionRow.engine, alignments);
+      if (!snapshot) throw new Error('protocol snapshot could not be built');
+
+      const { data: stored, error: storeErr } = await admin.rpc(
+        'public_analysis_store_protocol_snapshot',
+        { p_assessment_id: assessment_id, p_snapshot: snapshot },
+      );
+      if (storeErr) throw storeErr;
+      // `stored: false` with `ok: true` means a snapshot already exists —
+      // the write-once contract holding, which is a success for repeat shares.
+      const outcome = stored as { ok?: boolean; reason?: string } | null;
+      if (!outcome?.ok) {
+        throw new Error(`snapshot not stored: ${outcome?.reason ?? 'unknown'}`);
       }
     } catch (snapErr) {
-      // Never block report delivery on the snapshot.
       console.error('public-analysis-share-report snapshot error', snapErr);
+      return json(
+        {
+          ok: false,
+          code: 'protocol_unavailable',
+          error: 'Your report is still being prepared. Please try again in a moment.',
+        },
+        503,
+      );
     }
-
 
     // ---- Issue (or recover) the persistent report link ----
     const nowIso = new Date().toISOString();
