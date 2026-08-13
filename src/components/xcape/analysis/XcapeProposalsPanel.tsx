@@ -393,7 +393,12 @@ const XcapeProposalsPanel = ({
           // A customization proposal without an active category mapping shows
           // its matched protocol/dose logic for review but can NOT be
           // approved — no formula, no snapshot, no purchase path.
-          const mappingMissing = !!customizationOut && !formula;
+          // A required DS solution for this category that is not an active
+          // catalogue product also blocks approval — never substituted.
+          const dsGaps = customizationOut
+            ? protocolResult.mapping_gaps.filter((g) => g.category === customizationOut.category)
+            : [];
+          const mappingMissing = (!!customizationOut && !formula) || dsGaps.length > 0;
           const rawCategoryScore = customizationOut ? ctx[`score.${customizationOut.category}`] : null;
           const pendingDose =
             customizationOut && typeof rawCategoryScore === 'number'
