@@ -18,6 +18,7 @@ import type {
   ProtocolDisplayAddon,
   ProtocolDisplayProduct,
 } from '@/components/xcape/protocol/ProtocolRecommendations';
+import type { ReasoningResult } from './reasoning';
 
 export type ProtocolArea = 'face' | 'body';
 
@@ -151,8 +152,24 @@ export interface ProtocolPlanStep {
   mapping_required: boolean;
 }
 
+/** Plain-language summary of what the scan found and where the focus sits. */
+export interface ProtocolPlanSummary {
+  /** Every scored concern, worst first, in severity language. */
+  findings: Array<{ concern: string; severity: number; band_label: string }>;
+  /** The concern the protocol is built around. */
+  focus: string | null;
+  /** The next concern being supported. */
+  secondary_focus: string | null;
+  /** Observations about how the concerns interact. */
+  observations: string[];
+  /** Concerns deliberately not targeted yet, with their level. */
+  not_targeted: Array<{ concern: string; severity: number; band_label: string }>;
+}
+
 export interface ProtocolPlan {
   steps: ProtocolPlanStep[];
+  /** Present when the resolver's reasoning trace is supplied. */
+  summary: ProtocolPlanSummary | null;
   /** True when any step is unmapped — blocks approval and purchase. */
   mapping_required: boolean;
   /** True when at least one customized (Face Cream / Body Milk) step exists. */
@@ -170,6 +187,8 @@ export function buildProtocolPlan(input: {
   face?: ProtocolDisplayProduct[] | null;
   body?: ProtocolDisplayProduct[] | null;
   addons?: ProtocolDisplayAddon[] | null;
+  /** Optional reasoning trace; when present the client summary is built. */
+  reasoning?: ReasoningResult | null;
 }): ProtocolPlan {
   type Draft = Omit<ProtocolPlanStep, 'step'> & { order: number };
   const drafts = new Map<string, Draft>();
@@ -251,8 +270,25 @@ export function buildProtocolPlan(input: {
     ...rest,
   }));
 
+  const r = input.reasoning ?? null;
+  const level = (p: { concern: string; severity: number; band_label: string }) => ({
+    concern: p.concern,
+    severity: p.severity,
+    band_label: p.band_label,
+  });
+  const summary: ProtocolPlanSummary | null = r
+    ? {
+        findings: r.priorities.map(level),
+        focus: r.primary?.concern ?? null,
+        secondary_focus: r.secondary?.concern ?? null,
+        observations: r.interactions.map((i) => i.client_text).filter(Boolean),
+        not_targeted: r.not_targeted.map(level),
+      }
+    : null;
+
   return {
     steps,
+    summary,
     mapping_required: steps.some((s) => s.mapping_required),
     has_customization: steps.some((s) => s.customized && s.customization.length > 0),
   };

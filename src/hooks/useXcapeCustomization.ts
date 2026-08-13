@@ -165,6 +165,10 @@ export interface CreateFormulaSnapshotInput {
    *  alignment or catalogue edits can never rewrite an issued report. */
   protocolLines?: ProtocolFormulaLine[];
   protocolVersion?: string | null;
+  /** Versioned reasoning configuration that produced these lines. */
+  recommendationRuleVersion?: number | null;
+  /** Full reasoning trace (priority, interactions, every decision + reason). */
+  decisions?: unknown;
 }
 
 /**
@@ -208,6 +212,8 @@ export const useCreateFormulaSnapshot = () => {
           decision_reason: input.decisionReason ?? null,
           formula_lines: input.protocolLines ?? [],
           protocol_version: input.protocolLines?.length ? (input.protocolVersion ?? null) : null,
+          recommendation_rule_version: input.recommendationRuleVersion ?? null,
+          decisions: input.decisions ?? null,
           is_demo: input.formula.is_demo,
           created_by: uid,
           approved_by: uid,
