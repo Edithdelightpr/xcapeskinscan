@@ -35,7 +35,7 @@ export default defineConfig(({ mode }) => ({
         globPatterns: ["**/*.{js,css,html,woff2,svg,ico,png,webp}"],
         // Never precache large model binaries or generated data files.
         globIgnores: ["**/models/**", "**/sitemap.xml", "**/llms.txt"],
-        maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
+        maximumFileSizeToCacheInBytes: 8 * 1024 * 1024,
         cleanupOutdatedCaches: true,
         clientsClaim: true,
         skipWaiting: true,
