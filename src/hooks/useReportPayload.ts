@@ -159,6 +159,16 @@ export interface ReportCareJourney {
  * verbatim from the immutable snapshot — the client never sees a rule
  * engine or constructs anything themselves.
  */
+export interface ReportFormulaLine {
+  area: 'face' | 'body';
+  product_name: string;
+  concern: string;
+  ds_name: string;
+  dose_ml: number;
+  tier_label: string;
+  companion: boolean;
+}
+
 export interface ReportFormula {
   id: string;
   category: string;
@@ -175,6 +185,10 @@ export interface ReportFormula {
   warnings: string[];
   rule_version: number | null;
   approved_at: string | null;
+  /** Immutable multi-product protocol lines captured at approval time
+   *  (display fields only; empty for legacy single-base snapshots). */
+  formula_lines?: ReportFormulaLine[];
+  protocol_version?: string | null;
   is_demo?: boolean;
   /** Presentation-only hydration from the catalogue (edge function). The
    *  snapshot's own name/price stay authoritative — these never overwrite

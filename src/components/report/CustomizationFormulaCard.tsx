@@ -58,11 +58,32 @@ const CustomizationFormulaCard = ({ token, formula, compact = false, mock = fals
     });
   };
 
+  const protocolLines = formula.formula_lines ?? [];
+
   const formulaLines = (
     <div className="space-y-1.5">
       <div className="text-[10px] uppercase tracking-[0.18em] text-bronze font-semibold">
         Your exact formula
       </div>
+      {/* Multi-product protocol lines, exactly as snapshotted at approval. */}
+      {(['face', 'body'] as const).map((area) => {
+        const group = protocolLines.filter((l) => l.area === area);
+        if (group.length === 0) return null;
+        return (
+          <div key={area} className="space-y-0.5">
+            <p className="text-[11px] uppercase tracking-[0.14em] text-cocoa/55">
+              {area === 'face' ? 'Face' : 'Body — always alongside face'}
+            </p>
+            {group.map((l, i) => (
+              <p key={i} className="text-[12.5px] text-cocoa">
+                <span className="font-medium">{l.product_name}</span> + {l.ds_name}
+                <span className="font-semibold"> — {l.dose_ml} ml</span>
+                {l.companion && <span className="text-cocoa/60"> (required companion)</span>}
+              </p>
+            ))}
+          </div>
+        );
+      })}
       {formula.base_product_name && (
         <p className="text-[12.5px] text-cocoa">
           Customized product: <span className="font-medium">{formula.base_product_name}</span>
