@@ -17,7 +17,11 @@ import {
   type PublicScores,
 } from '@/lib/publicAnalysisScores';
 import { formatConcerns, type FormattedConcern } from '@/lib/reportConcernFormatter';
-import { sanitizeProductImageUrl } from '@/lib/xcapeRules/protocol';
+import {
+  sanitizeProductImageUrl,
+  sanitizeProtocolAddons,
+  type ProtocolAddonDisplay,
+} from '@/lib/xcapeRules/protocol';
 
 export interface PublicReportVariable {
   score: number;
@@ -44,8 +48,11 @@ export interface PublicProtocolProduct {
 }
 
 export interface PublicProtocol {
+  /** Customizable base products only (Face Cream / Body Milk). */
   face: PublicProtocolProduct[];
   body: PublicProtocolProduct[];
+  /** Recommended, non-customizable products — reason copy, never a dose. */
+  addons: ProtocolAddonDisplay[];
 }
 
 export interface PublicAnalysisReport {
@@ -133,8 +140,9 @@ export function sanitizeProtocol(raw: unknown): PublicProtocol | null {
   const row = raw as Record<string, unknown>;
   const face = protocolProducts(row.face, AREAS[0]);
   const body = protocolProducts(row.body, AREAS[1]);
-  if (face.length === 0 && body.length === 0) return null;
-  return { face, body };
+  const addons = sanitizeProtocolAddons(row.addons);
+  if (face.length === 0 && body.length === 0 && addons.length === 0) return null;
+  return { face, body, addons };
 }
 
 export function sanitizeReportPayload(raw: unknown): PublicAnalysisReport {

@@ -3,6 +3,9 @@ import { describe, expect, it } from 'vitest';
 import {
   ANTI_INFLAMMATORY_CATEGORIES,
   CONFIRMED_FACE_DOSE_TIERS,
+  CUSTOMIZABLE_PRODUCT_SKUS,
+  isCustomizableProductSku,
+  sanitizeProtocolAddons,
   DEFAULT_ALIGNMENTS,
   PROTOCOL_CATEGORIES,
   doseFor,
@@ -59,13 +62,16 @@ describe('confirmed dose tiers', () => {
 describe('resolveProtocol — alignment', () => {
   const face = (r: ReturnType<typeof resolveProtocol>) => r.face.map((p) => p.product_name).sort();
   const body = (r: ReturnType<typeof resolveProtocol>) => r.body.map((p) => p.product_name).sort();
+  const addons = (r: ReturnType<typeof resolveProtocol>) =>
+    r.addons.map((p) => p.product_name).sort();
 
-  it('hyperpigmentation aligns the confirmed face and body products', () => {
+  it('hyperpigmentation customizes only face cream + body milk', () => {
     const r = resolveProtocol({ scores: { pigmentation_stability: 30 } });
-    expect(face(r)).toEqual(['XCAPE Advanced Serum', 'XCAPE Face Cream']);
-    expect(body(r)).toEqual([
+    expect(face(r)).toEqual(['XCAPE Face Cream']);
+    expect(body(r)).toEqual(['XCAPE Body Milk']);
+    expect(addons(r)).toEqual([
       'XCAPE Advanced Serum',
-      'XCAPE Body Milk',
+      'XCAPE Advanced Serum',
       'XCAPE Treatment Glycerine',
     ]);
     expect(r.face[0].additions[0].ds_name).toBe('DS Tyrosinase Inhibitor');
@@ -74,14 +80,11 @@ describe('resolveProtocol — alignment', () => {
     expect(r.body[0].additions[0].dose_ml).toBe(4.5);
   });
 
-  it('oversebaceous activity aligns cleanser, toner, face cream and body milk', () => {
+  it('oversebaceous activity customizes face cream + body milk, recommends cleanser/toner', () => {
     const r = resolveProtocol({ scores: { oil_congestion_balance: 60 } });
-    expect(face(r)).toEqual([
-      'XCAPE Alcohol-Free Toner',
-      'XCAPE Face Cream',
-      'XCAPE Purifying Cleanser',
-    ]);
+    expect(face(r)).toEqual(['XCAPE Face Cream']);
     expect(body(r)).toEqual(['XCAPE Body Milk']);
+    expect(addons(r)).toEqual(['XCAPE Alcohol-Free Toner', 'XCAPE Purifying Cleanser']);
     expect(r.face[0].additions[0].ds_name).toBe('DS P Bacterium');
   });
 
@@ -96,8 +99,9 @@ describe('resolveProtocol — alignment', () => {
 
   it('surface dehydration aligns toner + face cream, body milk + glycerine with DS Sebum Control', () => {
     const r = resolveProtocol({ scores: { barrier_surface_hydration: 20 } });
-    expect(face(r)).toEqual(['XCAPE Alcohol-Free Toner', 'XCAPE Face Cream']);
-    expect(body(r)).toEqual(['XCAPE Body Milk', 'XCAPE Treatment Glycerine']);
+    expect(face(r)).toEqual(['XCAPE Face Cream']);
+    expect(body(r)).toEqual(['XCAPE Body Milk']);
+    expect(addons(r)).toEqual(['XCAPE Alcohol-Free Toner', 'XCAPE Treatment Glycerine']);
     expect(r.face[0].additions[0].ds_name).toBe('DS Sebum Control');
     expect(r.face[0].additions[0].dose_ml).toBe(2);
     expect(r.body[0].additions[0].dose_ml).toBe(6);
@@ -307,5 +311,100 @@ describe('product visuals (v1.1 display plumbing)', () => {
       },
     ]);
     expect(line.product_image_url).toBeNull();
+  });
+});
+
+
+describe('customizable vs recommended-only products', () => {
+  it('only face cream and body milk are customizable', () => {
+    expect([...CUSTOMIZABLE_PRODUCT_SKUS]).toEqual(['XC-FACE-CREAM', 'XC-BODY-MILK']);
+    expect(isCustomizableProductSku('XC-FACE-CREAM')).toBe(true);
+    expect(isCustomizableProductSku('XC-BODY-MILK')).toBe(true);
+    for (const sku of ['XC-PURIFYING-CLEANSER', 'XC-AF-TONER', 'XC-ADVANCED-SERUM', 'XC-TREATMENT-GLYCERINE']) {
+      expect(isCustomizableProductSku(sku)).toBe(false);
+    }
+  });
+
+  it('face cream carries customization lines and quantities', () => {
+    const r = resolveProtocol({ scores: { pigmentation_stability: 30 } });
+    const cream = r.face.find((p) => p.product_sku === 'XC-FACE-CREAM');
+    expect(cream?.customizable).toBe(true);
+    expect(cream?.additions.length).toBeGreaterThan(0);
+    expect(cream?.additions[0].dose_ml).toBe(1.5);
+  });
+
+  it('body milk carries customization at exactly 3x the face dose', () => {
+    for (const score of [10, 30, 60, 90]) {
+      const r = resolveProtocol({ scores: { firmness_skin_support: score } });
+      const cream = r.face.find((p) => p.product_sku === 'XC-FACE-CREAM');
+      const milk = r.body.find((p) => p.product_sku === 'XC-BODY-MILK');
+      expect(milk?.customizable).toBe(true);
+      expect(milk!.additions[0].dose_ml).toBe(cream!.additions[0].dose_ml * 3);
+    }
+  });
+
+  it('non-customizable products are recommended but never customized', () => {
+    const r = resolveProtocol({ scores: allScores(30) });
+    const customizedSkus = [...r.face, ...r.body].map((p) => p.product_sku);
+    expect(new Set(customizedSkus)).toEqual(new Set(['XC-FACE-CREAM', 'XC-BODY-MILK']));
+    expect(r.addons.length).toBeGreaterThan(0);
+    for (const addon of r.addons) {
+      expect(isCustomizableProductSku(addon.product_sku)).toBe(false);
+      expect(addon.customizable).toBe(false);
+      expect(addon.reason.length).toBeGreaterThan(0);
+      expect(addon.supports.length).toBeGreaterThan(0);
+      expect(Object.keys(addon)).not.toContain('additions');
+      expect(Object.keys(addon)).not.toContain('dose_ml');
+      expect(Object.keys(addon)).not.toContain('ds_name');
+      expect(Object.keys(addon)).not.toContain('tier_label');
+    }
+  });
+
+  it('snapshot formula lines only ever contain customizable products', () => {
+    const lines = protocolFormulaLines(resolveProtocol({ scores: allScores(20) }));
+    expect(lines.length).toBeGreaterThan(0);
+    for (const line of lines) expect(isCustomizableProductSku(line.product_sku)).toBe(true);
+  });
+
+  it('anti-inflammatory companion stays on pigmentation and oil lines only', () => {
+    const pig = resolveProtocol({ scores: { pigmentation_stability: 30 } });
+    const oil = resolveProtocol({ scores: { oil_congestion_balance: 60 } });
+    for (const r of [pig, oil]) {
+      expect(r.anti_inflammatory_applied).toBe(true);
+      for (const card of [...r.face, ...r.body]) {
+        const primary = card.additions.find((a) => !a.companion)!;
+        const companion = card.additions.find((a) => a.companion)!;
+        expect(companion.ds_name).toBe('DS Anti-Inflammatory');
+        expect(companion.dose_ml).toBe(primary.dose_ml);
+      }
+      // never attached to a recommended-only product
+      for (const addon of r.addons) expect(JSON.stringify(addon)).not.toContain('Anti-Inflammatory');
+    }
+    const firm = resolveProtocol({ scores: { firmness_skin_support: 40 } });
+    const hyd = resolveProtocol({ scores: { barrier_surface_hydration: 40 } });
+    for (const r of [firm, hyd]) {
+      expect(r.anti_inflammatory_applied).toBe(false);
+      for (const card of [...r.face, ...r.body]) {
+        expect(card.additions.some((a) => a.companion)).toBe(false);
+      }
+    }
+  });
+
+  it('sanitizeProtocolAddons drops dose/DS fields from untrusted rows', () => {
+    const [clean] = sanitizeProtocolAddons([
+      {
+        product_name: 'XCAPE Purifying Cleanser',
+        area: 'face',
+        concern: 'Oversebaceous activity',
+        reason: 'Recommended for elevated sebaceous activity.',
+        supports: 'Helps support a cleaner, more balanced skin surface.',
+        dose_ml: 2,
+        ds_name: 'DS P Bacterium',
+        additions: [{ ds_name: 'DS P Bacterium', dose_ml: 2 }],
+      },
+    ]);
+    expect(clean.product_name).toBe('XCAPE Purifying Cleanser');
+    expect(JSON.stringify(clean)).not.toContain('DS P Bacterium');
+    expect(JSON.stringify(clean)).not.toContain('dose_ml');
   });
 });

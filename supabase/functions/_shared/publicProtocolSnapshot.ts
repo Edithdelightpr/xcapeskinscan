@@ -16,6 +16,9 @@ import {
   type ProtocolArea,
   type ProtocolCategory,
   sanitizeProductImageUrl,
+  sanitizeProtocolAddons,
+  publicProtocolAddons,
+  type ProtocolAddonDisplay,
   type ProtocolProduct,
 } from './xcapeProtocol.ts';
 
@@ -46,8 +49,11 @@ export interface PublicProtocolSnapshot {
   resolved_at: string;
   approved: false;
   purchasable: false;
+  /** Customizable base products only (Face Cream / Body Milk). */
   face: PublicProtocolProduct[];
   body: PublicProtocolProduct[];
+  /** Recommended, NON-customizable products: reason copy only, no doses. */
+  addons: ProtocolAddonDisplay[];
 }
 
 /** Strip a resolved protocol down to client-safe display fields. */
@@ -130,7 +136,9 @@ export function buildPublicProtocolSnapshot(
     scores: scores as Partial<Record<ProtocolCategory, number>>,
     alignments,
   });
-  if (resolved.face.length === 0 && resolved.body.length === 0) return null;
+  if (resolved.face.length === 0 && resolved.body.length === 0 && resolved.addons.length === 0) {
+    return null;
+  }
   return {
     protocol_version: resolved.version || PROTOCOL_VERSION,
     status: PUBLIC_PROTOCOL_STATUS,
@@ -140,6 +148,7 @@ export function buildPublicProtocolSnapshot(
     purchasable: false,
     face: publicProtocolProducts(resolved.face),
     body: publicProtocolProducts(resolved.body),
+    addons: publicProtocolAddons(resolved.addons),
   };
 }
 
@@ -194,7 +203,8 @@ export function sanitizePublicProtocolSnapshot(value: unknown): PublicProtocolSn
 
   const face = group(v.face, 'face');
   const body = group(v.body, 'body');
-  if (face.length === 0 && body.length === 0) return null;
+  const addons = sanitizeProtocolAddons(v.addons);
+  if (face.length === 0 && body.length === 0 && addons.length === 0) return null;
 
   return {
     protocol_version:
@@ -206,5 +216,6 @@ export function sanitizePublicProtocolSnapshot(value: unknown): PublicProtocolSn
     purchasable: false,
     face,
     body,
+    addons,
   };
 }

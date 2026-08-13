@@ -1,5 +1,8 @@
 import { useEffect, useState } from 'react';
-import type { ProtocolDisplayProduct } from '@/components/xcape/protocol/ProtocolRecommendations';
+import type {
+  ProtocolDisplayAddon,
+  ProtocolDisplayProduct,
+} from '@/components/xcape/protocol/ProtocolRecommendations';
 import type { SkinAnalysisPayload } from '@/hooks/useVisitAssessments';
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
@@ -215,6 +218,8 @@ export interface ReportProtocolRecommendation {
   purchasable: false;
   face: ProtocolDisplayProduct[];
   body: ProtocolDisplayProduct[];
+  /** Recommended, non-customizable products (reason only). */
+  addons?: ProtocolDisplayAddon[];
 }
 
 export interface ReportPayload {

@@ -120,7 +120,8 @@ const PublicReportStage = ({
               tone="dark"
               face={report.protocol.face}
               body={report.protocol.body}
-              footnote="XCAPE protocol recommendations, resolved from your four health scores. Body is always recommended alongside face at 3× the face dose. Availability and pricing are confirmed by XCAPE before anything is prepared."
+              addons={report.protocol.addons}
+              footnote="XCAPE protocol recommendations, resolved from your four health scores. Only your Face Cream and Body Milk are customized (body at 3× the face dose); the other products are simply recommended for your routine. Availability and pricing are confirmed by XCAPE before anything is prepared."
             />
           )}
 

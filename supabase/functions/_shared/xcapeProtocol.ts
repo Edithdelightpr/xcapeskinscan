@@ -71,6 +71,47 @@ export const ANTI_INFLAMMATORY_CATEGORIES: ProtocolCategory[] = [
   'oil_congestion_balance',
 ];
 
+/* ---------- Customizable vs recommended-only products ---------- */
+
+/**
+ * CONFIRMED: only these two base products are ever customized with DS
+ * solutions. Every other catalogue product may be RECOMMENDED for a concern,
+ * but must never carry DS ingredients, ml quantities or dose tiers.
+ */
+export const CUSTOMIZABLE_PRODUCT_SKUS = ['XC-FACE-CREAM', 'XC-BODY-MILK'] as const;
+
+export function isCustomizableProductSku(sku: unknown): boolean {
+  return typeof sku === 'string' && (CUSTOMIZABLE_PRODUCT_SKUS as readonly string[]).includes(sku);
+}
+
+/** Why a non-customizable product is being recommended, per concern. */
+export const ADDON_REASON_BY_CATEGORY: Record<ProtocolCategory, string> = {
+  pigmentation_stability: 'Recommended for uneven pigmentation and dark marks.',
+  oil_congestion_balance: 'Recommended for elevated sebaceous activity.',
+  firmness_skin_support: 'Recommended for reduced firmness and elasticity.',
+  barrier_surface_hydration: 'Recommended for surface dehydration.',
+};
+
+/** Short "what it supports" statement — product first, concern as fallback. */
+export const ADDON_SUPPORT_BY_SKU: Record<string, string> = {
+  'XC-PURIFYING-CLEANSER': 'Helps support a cleaner, more balanced skin surface.',
+  'XC-AF-TONER': 'Helps support a calm, comfortable surface after cleansing.',
+  'XC-ADVANCED-SERUM': 'Helps support an even-looking, well-conditioned complexion.',
+  'XC-TREATMENT-GLYCERINE': 'Helps support softer, better-hydrated skin.',
+};
+
+export const ADDON_SUPPORT_BY_CATEGORY: Record<ProtocolCategory, string> = {
+  pigmentation_stability: 'Helps support a more even-looking skin tone.',
+  oil_congestion_balance: 'Helps support a cleaner, more balanced skin surface.',
+  firmness_skin_support: 'Helps support firmer, better-conditioned skin.',
+  barrier_surface_hydration: 'Helps support a comfortable, better-hydrated surface.',
+};
+
+export function addonSupportFor(sku: string, category: ProtocolCategory): string {
+  return ADDON_SUPPORT_BY_SKU[sku] ?? ADDON_SUPPORT_BY_CATEGORY[category];
+}
+
+
 /* ---------- Confirmed dose tiers ---------- */
 
 export interface ProtocolDoseTier {
@@ -220,7 +261,10 @@ export interface ProtocolAddition {
   companion: boolean;
 }
 
-/** One de-duplicated product card, carrying every applicable DS addition. */
+/**
+ * One de-duplicated CUSTOMIZABLE product card (Face Cream / Body Milk only),
+ * carrying every applicable DS addition.
+ */
 export interface ProtocolProduct {
   product_sku: string;
   product_name: string;
@@ -229,17 +273,43 @@ export interface ProtocolProduct {
   area: ProtocolArea;
   additions: ProtocolAddition[];
   sort_order: number;
+  /** Always true — this shape only ever carries customizable base products. */
+  customizable: true;
+}
+
+/**
+ * A recommended, NON-customizable product. Carries a reason tied to the
+ * analysis result and a short support statement — never DS ingredients,
+ * never a dose, never a tier.
+ */
+export interface ProtocolAddon {
+  product_sku: string;
+  product_name: string;
+  product_image_url?: string | null;
+  area: ProtocolArea;
+  category: ProtocolCategory;
+  concern: string;
+  score: number;
+  reason: string;
+  supports: string;
+  sort_order: number;
+  customizable: false;
 }
 
 export interface ProtocolResult {
   version: string;
+  /** Customizable FACE base products (Face Cream) with their DS additions. */
   face: ProtocolProduct[];
+  /** Customizable BODY base products (Body Milk) at 3x the face dose. */
   body: ProtocolProduct[];
+  /** Recommended-only products: reason copy, never customization. */
+  addons: ProtocolAddon[];
   /** Categories that produced recommendations, weakest score first. */
   categories: ProtocolCategory[];
   /** True when the required anti-inflammatory companion was applied anywhere. */
   anti_inflammatory_applied: boolean;
 }
+
 
 export interface ResolveProtocolInput {
   /** Engine health scores, 0–100 where 100 = healthiest. */
@@ -279,6 +349,7 @@ export function resolveProtocol(input: ResolveProtocolInput): ProtocolResult {
     face: new Map(),
     body: new Map(),
   };
+  const addonMap = new Map<string, ProtocolAddon>();
   let antiInflammatoryApplied = false;
 
   for (const { category, score, tier } of scored) {
@@ -289,6 +360,29 @@ export function resolveProtocol(input: ResolveProtocolInput): ProtocolResult {
 
     for (const row of rows) {
       const area: ProtocolArea = row.area === 'body' ? 'body' : 'face';
+
+      // NON-customizable products are recommended only: no DS ingredient,
+      // no ml quantity, no dose tier — ever.
+      if (!isCustomizableProductSku(row.product_sku)) {
+        const key = `${area}:${row.product_sku}`;
+        if (!addonMap.has(key)) {
+          addonMap.set(key, {
+            product_sku: row.product_sku,
+            product_name: row.product_name,
+            product_image_url: sanitizeProductImageUrl(row.product_image_url),
+            area,
+            category,
+            concern: CONCERN_LABEL[category],
+            score,
+            reason: ADDON_REASON_BY_CATEGORY[category],
+            supports: addonSupportFor(row.product_sku, category),
+            sort_order: row.sort_order,
+            customizable: false,
+          });
+        }
+        continue;
+      }
+
       const multiplier = Number.isFinite(row.dose_multiplier) && row.dose_multiplier > 0
         ? row.dose_multiplier
         : area === 'body'
@@ -307,6 +401,7 @@ export function resolveProtocol(input: ResolveProtocolInput): ProtocolResult {
           area,
           additions: [],
           sort_order: row.sort_order,
+          customizable: true,
         };
         bucket.set(row.product_sku, card);
       }
@@ -347,14 +442,24 @@ export function resolveProtocol(input: ResolveProtocolInput): ProtocolResult {
   const order = (list: ProtocolProduct[]): ProtocolProduct[] =>
     list.sort((a, b) => a.sort_order - b.sort_order || a.product_name.localeCompare(b.product_name));
 
+  const addons = [...addonMap.values()].sort(
+    (a, b) =>
+      (a.area === b.area ? 0 : a.area === 'face' ? -1 : 1) ||
+      a.score - b.score ||
+      a.sort_order - b.sort_order ||
+      a.product_name.localeCompare(b.product_name),
+  );
+
   return {
     version: PROTOCOL_VERSION,
     face: order([...byArea.face.values()]),
     body: order([...byArea.body.values()]),
+    addons,
     categories: scored.map((s) => s.category),
     anti_inflammatory_applied: antiInflammatoryApplied,
   };
 }
+
 
 /** Flat immutable snapshot lines (one row per product + DS addition). */
 export interface ProtocolFormulaLine {
@@ -437,6 +542,53 @@ export function sanitizeSnapshotLines(value: unknown): Array<{
       dose_ml: dose,
       tier_label: typeof l?.tier_label === 'string' ? l.tier_label.slice(0, 24) : '',
       companion: l?.companion === true,
+    });
+  }
+  return out;
+}
+
+/** Public/display shape of a recommended, non-customizable product. */
+export interface ProtocolAddonDisplay {
+  product_name: string;
+  product_image_url: string | null;
+  area: ProtocolArea;
+  concern: string;
+  reason: string;
+  supports: string;
+}
+
+/** Strip resolved addons to display fields (no SKUs, ids, prices, doses). */
+export function publicProtocolAddons(items: ProtocolAddon[]): ProtocolAddonDisplay[] {
+  return items.map((a) => ({
+    product_name: a.product_name,
+    product_image_url: sanitizeProductImageUrl(a.product_image_url),
+    area: a.area,
+    concern: a.concern,
+    reason: a.reason,
+    supports: a.supports,
+  }));
+}
+
+/**
+ * Re-whitelist addons coming OUT of storage or an untrusted payload. Any
+ * dose/DS field a legacy or hand-edited row may carry is dropped here, so a
+ * non-customizable product can never render as customized.
+ */
+export function sanitizeProtocolAddons(value: unknown): ProtocolAddonDisplay[] {
+  if (!Array.isArray(value)) return [];
+  const out: ProtocolAddonDisplay[] = [];
+  for (const raw of value.slice(0, 24)) {
+    const a = (raw ?? {}) as Record<string, unknown>;
+    const name = typeof a.product_name === 'string' ? a.product_name.trim().slice(0, 120) : '';
+    const reason = typeof a.reason === 'string' ? a.reason.trim().slice(0, 240) : '';
+    if (!name || !reason) continue;
+    out.push({
+      product_name: name,
+      product_image_url: sanitizeProductImageUrl(a.product_image_url),
+      area: a.area === 'body' ? 'body' : 'face',
+      concern: typeof a.concern === 'string' ? a.concern.slice(0, 120) : '',
+      reason,
+      supports: typeof a.supports === 'string' ? a.supports.slice(0, 240) : '',
     });
   }
   return out;

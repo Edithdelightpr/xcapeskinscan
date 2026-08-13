@@ -41,13 +41,16 @@ const StaffProtocolPanel = ({ skin }: Props) => {
     [skin, alignments],
   );
 
-  if (result.face.length === 0 && result.body.length === 0) return null;
+  if (result.face.length === 0 && result.body.length === 0 && result.addons.length === 0) {
+    return null;
+  }
 
   return (
     <ProtocolRecommendations
       face={result.face}
       body={result.body}
-      footnote="Deterministic XCAPE protocol resolved from the approved scores and the admin product alignment. Body accompanies face at 3× the face dose. DS Anti-Inflammatory is a required companion for pigmentation and oil/congestion lines. Accepting a formula proposal below stores these exact lines in the immutable snapshot that the client report and PDF read."
+      addons={result.addons}
+      footnote="Deterministic XCAPE protocol resolved from the approved scores and the admin product alignment. Only XCAPE Face Cream and Body Milk are customized (body at 3× the face dose); every other product is a recommendation only. DS Anti-Inflammatory is a required companion for pigmentation and oil/congestion lines. Accepting a formula proposal below stores these exact lines in the immutable snapshot that the client report and PDF read."
     />
   );
 };
