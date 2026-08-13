@@ -1,5 +1,36 @@
 import { FlaskConical, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { productCutout } from '@/lib/productImages';
+
+/**
+ * Shared product visual: a transparent packshot sitting directly on the report
+ * surface — no tile, no frame, no colored background. Fixed box + object-contain
+ * keeps every product optically the same weight regardless of source ratio.
+ */
+const ProductShot = ({
+  name,
+  url,
+  size = 'lg',
+}: {
+  name: string;
+  url?: string | null;
+  size?: 'lg' | 'sm';
+}) => {
+  const src = productCutout(name, url);
+  if (!src) return null;
+  return (
+    <img
+      src={src}
+      alt={name}
+      loading="lazy"
+      className={cn(
+        'shrink-0 object-contain object-center',
+        size === 'lg' ? 'h-20 w-14 sm:h-24 sm:w-16' : 'h-16 w-12 sm:h-20 sm:w-14',
+      )}
+    />
+  );
+};
+
 
 /**
  * Display shape shared by the staff resolver and the server-derived public
@@ -77,26 +108,13 @@ const AreaGroup = ({
           {subtitle}
         </span>
       </div>
-      <ul className="space-y-2">
+      <ul className={cn('divide-y', dark ? 'divide-slate-800' : 'divide-border/50')}>
         {items.map((p) => (
           <li
             key={`${p.area}-${p.product_name}`}
-            className={cn(
-              'flex gap-3 rounded-2xl border p-3 sm:gap-4 sm:p-4',
-              dark ? 'border-slate-700/80 bg-slate-900/40' : 'border-border/60 bg-surface/40',
-            )}
+            className="flex items-start gap-4 py-4 first:pt-1 sm:gap-5"
           >
-            {p.product_image_url && (
-              <img
-                src={p.product_image_url}
-                alt={p.product_name}
-                loading="lazy"
-                className={cn(
-                  'h-16 w-16 shrink-0 rounded-xl border object-cover sm:h-20 sm:w-20',
-                  dark ? 'border-slate-700/80' : 'border-border/60',
-                )}
-              />
-            )}
+            <ProductShot name={p.product_name} url={p.product_image_url} />
             <div className="min-w-0 flex-1">
               <p
                 className={cn(
@@ -130,7 +148,7 @@ const AreaGroup = ({
                     <span
                       className={cn(
                         'font-semibold tabular-nums',
-                        dark ? 'text-sky-300' : 'text-primary',
+                        dark ? 'text-slate-50' : 'text-foreground',
                       )}
                     >
                       {a.dose_ml} ml
@@ -145,6 +163,7 @@ const AreaGroup = ({
           </li>
         ))}
       </ul>
+
 
     </div>
   );
@@ -175,26 +194,13 @@ const AddonGroup = ({
           not customized — supporting routine
         </span>
       </div>
-      <ul className="space-y-2">
+      <ul className={cn('divide-y', dark ? 'divide-slate-800' : 'divide-border/50')}>
         {items.map((p) => (
           <li
             key={`${p.area}-${p.product_name}`}
-            className={cn(
-              'flex gap-3 rounded-2xl border p-3 sm:gap-4 sm:p-4',
-              dark ? 'border-slate-800 bg-slate-900/25' : 'border-border/50 bg-surface/25',
-            )}
+            className="flex items-start gap-4 py-4 first:pt-1 sm:gap-5"
           >
-            {p.product_image_url && (
-              <img
-                src={p.product_image_url}
-                alt={p.product_name}
-                loading="lazy"
-                className={cn(
-                  'h-14 w-14 shrink-0 rounded-xl border object-cover sm:h-16 sm:w-16',
-                  dark ? 'border-slate-700/80' : 'border-border/60',
-                )}
-              />
-            )}
+            <ProductShot name={p.product_name} url={p.product_image_url} size="sm" />
             <div className="min-w-0 flex-1">
               <p className={cn('text-sm font-medium', dark ? 'text-slate-100' : 'text-foreground')}>
                 {p.product_name}
@@ -211,6 +217,7 @@ const AddonGroup = ({
           </li>
         ))}
       </ul>
+
     </div>
   );
 };

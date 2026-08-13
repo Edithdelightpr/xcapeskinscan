@@ -5,6 +5,8 @@ import { CUSTOMIZATION_CATEGORIES } from '@/lib/xcapeRules/customization';
 import { buildFormulaCartItem } from '@/lib/reportFormulas';
 import { logReportEvent, type ReportFormula } from '@/hooks/useReportPayload';
 import { useCartStore } from '@/store/cartStore';
+import { productCutout } from '@/lib/productImages';
+
 
 interface Props {
   token: string;
@@ -86,15 +88,16 @@ const CustomizationFormulaCard = ({ token, formula, compact = false, mock = fals
               {area === 'face' ? 'Face' : 'Body — always alongside face'}
             </p>
             {products.map((p) => (
-              <div key={p.name} className="flex items-start gap-2.5">
-                {p.image && (
+              <div key={p.name} className="flex items-start gap-3">
+                {productCutout(p.name, p.image) && (
                   <img
-                    src={p.image}
+                    src={productCutout(p.name, p.image)!}
                     alt={p.name}
                     loading="lazy"
-                    className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl object-cover border border-bronze/15 shrink-0"
+                    className="h-16 w-11 sm:h-20 sm:w-14 shrink-0 object-contain object-center"
                   />
                 )}
+
                 <div className="min-w-0">
                   <p className="text-[12.5px] font-medium text-cocoa">{p.name}</p>
                   {p.lines.map((l, i) => (
@@ -201,13 +204,14 @@ const CustomizationFormulaCard = ({ token, formula, compact = false, mock = fals
 
   const header = (
     <div className="flex items-start gap-3">
-      {formula.kit_image_url ? (
+      {productCutout(formula.kit_name, formula.kit_image_url) ? (
         <img
-          src={formula.kit_image_url}
+          src={productCutout(formula.kit_name, formula.kit_image_url)!}
           alt={formula.kit_name ?? 'Customized XCAPE kit'}
           loading="lazy"
-          className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl object-cover border border-bronze/15 shrink-0"
+          className="h-16 w-12 sm:h-20 sm:w-14 shrink-0 object-contain object-center"
         />
+
       ) : mock ? (
         <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl border border-dashed border-bronze/30 bg-cream-warm/60 flex flex-col items-center justify-center gap-1 shrink-0">
           <ImageIcon className="w-4 h-4 text-bronze/60" strokeWidth={1.8} />
