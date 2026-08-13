@@ -78,6 +78,30 @@ const PersonalReportView = ({ data, token, onDownloadPdf, downloadDisabled }: Pr
             </div>
           </section>
         )}
+        {/* Deterministic XCAPE protocol recommendation from the free public
+            scan. Only present when no practitioner-approved kit exists — the
+            server drops it as soon as a formula snapshot is approved. */}
+        {data.protocol_recommendation && (
+          <section aria-labelledby="protocol-recommendation" className="space-y-4 sm:space-y-5">
+            <div>
+              <div className="text-[10.5px] uppercase tracking-[0.22em] text-bronze font-semibold">
+                Your XCAPE customization
+              </div>
+              <h2
+                id="protocol-recommendation"
+                className="mt-1 font-display text-xl sm:text-3xl text-cocoa tracking-tight"
+              >
+                What your scores recommend
+              </h2>
+            </div>
+            <ProtocolRecommendations
+              face={data.protocol_recommendation.face}
+              body={data.protocol_recommendation.body}
+              tone="light"
+              footnote="Derived from your four skin-health scores using the XCAPE customization protocol. Your practitioner reviews and confirms this before anything is prepared or purchased."
+            />
+          </section>
+        )}
         <HomeCareRoutine homeCare={data.assessment.home_care} />
         <div id="recommended-treatments" className="scroll-mt-24">
           <RecommendedTreatments
