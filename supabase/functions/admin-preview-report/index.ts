@@ -8,6 +8,7 @@ import { resolveClientFirstName } from '../_shared/clientName.ts';
 import { buildTreatmentPlanBlock } from '../_shared/reportTreatmentPlan.ts';
 import { buildCareJourneyBlock } from '../_shared/reportCareJourney.ts';
 import { sanitizeSnapshotLines } from '../_shared/xcapeProtocol.ts';
+import { sanitizePublicProtocolSnapshot } from '../_shared/publicProtocolSnapshot.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -194,6 +195,7 @@ Deno.serve(async (req) => {
       payment_settings,
       care_journey,
       formulas: hydratedFormulas,
+      protocol_recommendation,
       // Synthetic link stub — the shared renderer's inner components accept
       // a `token` + `link.prefix`. Preview links are non-functional; CTAs
       // that require a real token still render but are visually consistent.
