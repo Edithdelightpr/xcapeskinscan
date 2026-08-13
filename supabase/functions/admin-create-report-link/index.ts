@@ -20,7 +20,7 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
-const APP_URL = Deno.env.get('APP_PUBLIC_URL') || 'https://tropics-medspa-pro.lovable.app';
+const APP_URL = Deno.env.get('APP_PUBLIC_URL') || 'https://xcapeskinscan.lovable.app';
 // Every role that can manage a client's Reports tab is allowed to create /
 // recover its personal-report link. `outreach` is intentionally excluded.
 const ALLOWED_ROLES = new Set(['admin', 'front_desk', 'medical_aesthetician', 'outreach']);

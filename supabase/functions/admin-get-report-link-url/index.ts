@@ -13,7 +13,7 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
-const APP_URL = Deno.env.get('APP_PUBLIC_URL') || 'https://tropics-medspa-pro.lovable.app';
+const APP_URL = Deno.env.get('APP_PUBLIC_URL') || 'https://xcapeskinscan.lovable.app';
 const ALLOWED_ROLES = new Set(['admin', 'front_desk', 'medical_aesthetician', 'outreach']);
 
 function base64UrlEncode(bytes: Uint8Array): string {
