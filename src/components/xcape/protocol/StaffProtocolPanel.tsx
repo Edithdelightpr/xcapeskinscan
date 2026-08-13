@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { AlertTriangle } from 'lucide-react';
 import ProtocolRecommendations from '@/components/xcape/protocol/ProtocolRecommendations';
-import { useProtocolAlignments } from '@/hooks/useProductAlignments';
+import { useDsAvailability, useProtocolAlignments } from '@/hooks/useProductAlignments';
 import { PROTOCOL_CATEGORIES, resolveProtocol, type ProtocolCategory } from '@/lib/xcapeRules/protocol';
 import type { SkinAnalysisPayload } from '@/hooks/useVisitAssessments';
 
@@ -33,13 +33,15 @@ export function scoresFromSkin(
  */
 const StaffProtocolPanel = ({ skin }: Props) => {
   const { alignments } = useProtocolAlignments();
+  const { dsAvailable } = useDsAvailability();
   const result = useMemo(
     () =>
       resolveProtocol({
         scores: scoresFromSkin(skin),
         alignments,
+        ds_available: dsAvailable,
       }),
-    [skin, alignments],
+    [skin, alignments, dsAvailable],
   );
 
   const hasScores = Object.keys(scoresFromSkin(skin)).length > 0;
@@ -69,6 +71,23 @@ const StaffProtocolPanel = ({ skin }: Props) => {
 
   return (
     <div className="space-y-3">
+      {result.mapping_gaps.length > 0 && (
+        <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-3 text-[11.5px] text-amber-600">
+          <p className="flex items-start gap-1.5 font-medium">
+            <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
+            XCAPE product/kit mapping required
+          </p>
+          <ul className="mt-1 space-y-0.5 pl-5 list-disc">
+            {result.mapping_gaps.map((g) => (
+              <li key={`${g.area}-${g.product_sku}-${g.ds_sku}`}>
+                {g.ds_name}
+                {g.companion ? ' (required companion)' : ''} for {g.concern} on {g.product_name} is
+                not an active catalogue product. That line is withheld — nothing is substituted.
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
       {customizationMissing && (
         <p className="flex items-start gap-1.5 rounded-xl border border-amber-500/40 bg-amber-500/10 p-3 text-[11.5px] text-amber-600">
           <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
