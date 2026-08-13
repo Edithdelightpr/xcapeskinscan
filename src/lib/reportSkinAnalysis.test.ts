@@ -114,7 +114,7 @@ describe('sanitizeReportSkinAnalysis', () => {
   });
 
   it('drops the embedded public protocol snapshot (delivered separately)', () => {
-    const out = sanitizeReportSkinAnalysis(dirtyBlob) as Record<string, unknown>;
+    const out = sanitizeReportSkinAnalysis(dirtyBlob) as unknown as Record<string, unknown>;
     expect(out.public_protocol_snapshot).toBeUndefined();
     expect(JSON.stringify(out)).not.toContain('xcape-protocol-1.1');
   });
