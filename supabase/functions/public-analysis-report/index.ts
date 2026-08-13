@@ -78,6 +78,7 @@ export function sanitizeReport(row: Record<string, unknown>) {
 function publicProtocolProducts(items: ProtocolProduct[]) {
   return items.map((p) => ({
     product_name: p.product_name,
+    product_image_url: sanitizeProductImageUrl(p.product_image_url),
     area: p.area,
     additions: p.additions.map((a) => ({
       concern: a.concern,
@@ -97,18 +98,24 @@ async function loadAlignments(
   try {
     const { data, error } = await admin
       .from('xcape_product_alignments')
-      .select('category, area, dose_multiplier, is_active, sort_order, product:products(name,sku,active)')
+      .select('category, area, dose_multiplier, is_active, sort_order, product:products(name,sku,active,image_url)')
       .eq('is_active', true);
     if (error || !Array.isArray(data)) return DEFAULT_ALIGNMENTS;
     const rows: ProtocolAlignment[] = [];
     for (const r of data as Record<string, any>[]) {
-      const product = r.product as { name?: string; sku?: string; active?: boolean } | null;
+      const product = r.product as {
+        name?: string;
+        sku?: string;
+        active?: boolean;
+        image_url?: string | null;
+      } | null;
       if (!product?.sku || !product?.name || product.active === false) continue;
       rows.push({
         category: r.category as ProtocolCategory,
         area: (r.area === 'body' ? 'body' : 'face') as ProtocolArea,
         product_sku: product.sku,
         product_name: product.name,
+        product_image_url: sanitizeProductImageUrl(product.image_url),
         dose_multiplier: Number(r.dose_multiplier) || (r.area === 'body' ? 3 : 1),
         is_active: true,
         sort_order: Number(r.sort_order) || 0,
