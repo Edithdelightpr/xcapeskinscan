@@ -74,9 +74,21 @@ const PublicShareReportForm = ({ token, onShared }: Props) => {
         <p className="break-all rounded-xl border border-slate-700 bg-slate-900/60 p-3 text-xs text-slate-300">
           {result.url}
         </p>
+        {/* Primary handoff: take the visitor straight into the canonical
+            Personal Report they just earned, in the same tab. */}
+        <Button
+          className="min-h-[44px] w-full bg-slate-100 text-slate-900 hover:bg-white"
+          asChild
+        >
+          <a href={result.url} target="_blank" rel="noopener noreferrer">
+            <ExternalLink className="mr-2 h-4 w-4" aria-hidden />
+            Open my full report
+          </a>
+        </Button>
         <div className="flex flex-col gap-2 sm:flex-row">
           <Button
-            className="min-h-[44px] bg-emerald-500 text-slate-950 hover:bg-emerald-400"
+            variant="outline"
+            className="min-h-[44px] border-emerald-500/50 bg-transparent text-emerald-200 hover:bg-emerald-500/10 hover:text-emerald-100"
             asChild
           >
             <a href={result.whatsapp_url} target="_blank" rel="noopener noreferrer">
