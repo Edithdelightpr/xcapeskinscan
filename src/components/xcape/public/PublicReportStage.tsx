@@ -14,7 +14,7 @@ import {
 } from '@/lib/publicAnalysisScores';
 import { SCAN_VIEWS, type ScanViewId } from '@/lib/scan/scanQuality';
 import PublicConcernBreakdown from '@/components/xcape/public/PublicConcernBreakdown';
-import ProtocolRecommendations from '@/components/xcape/protocol/ProtocolRecommendations';
+import ClientProtocolPlan from '@/components/xcape/protocol/ClientProtocolPlan';
 import { concernsFromReport, type PublicAnalysisReport } from '@/lib/publicAnalysisReport';
 
 interface Props {
@@ -116,12 +116,12 @@ const PublicReportStage = ({
           <PublicConcernBreakdown concerns={concerns} report={report} />
 
           {report?.protocol && (
-            <ProtocolRecommendations
+            <ClientProtocolPlan
               tone="dark"
               face={report.protocol.face}
               body={report.protocol.body}
               addons={report.protocol.addons}
-              footnote="XCAPE protocol recommendations, resolved from your four health scores. Only your Face Cream and Body Milk are customized (body at 3× the face dose); the other products are simply recommended for your routine. Availability and pricing are confirmed by XCAPE before anything is prepared."
+              footnote="Your XCAPE protocol, resolved from your four health scores. Use the steps in order. Only your Face Cream and Body Milk are customized (body at 3× the face dose); the other products are simply recommended for your routine. Availability and pricing are confirmed by XCAPE before anything is prepared."
             />
           )}
 

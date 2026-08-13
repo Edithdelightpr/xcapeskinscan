@@ -6,6 +6,7 @@ import { buildFormulaCartItem } from '@/lib/reportFormulas';
 import { logReportEvent, type ReportFormula } from '@/hooks/useReportPayload';
 import { useCartStore } from '@/store/cartStore';
 import { productCutout } from '@/lib/productImages';
+import { roleForProductName } from '@/lib/xcapeRules/protocolPlan';
 
 
 interface Props {
@@ -100,6 +101,17 @@ const CustomizationFormulaCard = ({ token, formula, compact = false, mock = fals
 
                 <div className="min-w-0">
                   <p className="text-[12.5px] font-medium text-cocoa">{p.name}</p>
+                  {(() => {
+                    // Confirmed routine metadata for the mapped XCAPE product.
+                    // Never invented: unmapped products simply show nothing.
+                    const meta = roleForProductName(p.name);
+                    if (!meta) return null;
+                    return (
+                      <p className="text-[11px] text-cocoa/55">
+                        {meta.role} · {meta.when} · {meta.frequency}
+                      </p>
+                    );
+                  })()}
                   {p.lines.map((l, i) => (
                     <p key={i} className="text-[12.5px] text-cocoa/80">
                       + {l.ds_name}
