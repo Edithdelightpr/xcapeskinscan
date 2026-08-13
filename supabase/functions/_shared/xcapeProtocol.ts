@@ -381,10 +381,6 @@ export function protocolFormulaLines(result: ProtocolResult): ProtocolFormulaLin
   return out;
 }
 
-/**
- * Client-safe view of immutable snapshot lines: display fields only — no
- * product ids, no SKUs, no prices, no internal flags.
- */
 export function sanitizeSnapshotLines(value: unknown): Array<{
   area: string;
   product_name: string;
