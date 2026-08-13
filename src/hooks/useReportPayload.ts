@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import type { ProtocolDisplayProduct } from '@/components/xcape/protocol/ProtocolRecommendations';
 import type { SkinAnalysisPayload } from '@/hooks/useVisitAssessments';
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
@@ -235,6 +236,7 @@ export interface ReportPayload {
   promo: ReportPromo | null;
   care_journey?: ReportCareJourney;
   formulas?: ReportFormula[];
+  protocol_recommendation?: ReportProtocolRecommendation | null;
   link: { prefix: string; expires_at: string };
 }
 
