@@ -15,6 +15,7 @@ import { buildReportShareMessage, whatsAppShareUrl } from '../_shared/reportShar
 import {
   buildPublicProtocolSnapshot,
   loadAlignments,
+  loadDsAvailability,
 } from '../_shared/publicProtocolSnapshot.ts';
 
 const APP_URL = Deno.env.get('APP_PUBLIC_URL') || 'https://xcapeskinscan.lovable.app';
@@ -138,7 +139,13 @@ Deno.serve(async (req) => {
       if (!sessionRow?.engine) throw new Error('session engine missing');
 
       const alignments = await loadAlignments(admin);
-      const snapshot = buildPublicProtocolSnapshot(sessionRow.engine, alignments);
+      const dsAvailable = await loadDsAvailability(admin);
+      const snapshot = buildPublicProtocolSnapshot(
+        sessionRow.engine,
+        alignments,
+        new Date().toISOString(),
+        dsAvailable,
+      );
       if (!snapshot) throw new Error('protocol snapshot could not be built');
 
       const { data: stored, error: storeErr } = await admin.rpc(

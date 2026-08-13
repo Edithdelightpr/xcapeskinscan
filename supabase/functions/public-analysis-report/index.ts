@@ -7,6 +7,7 @@
 // `ai_raw` or the raw provider envelope.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
 import { corsHeaders, json, sha256Hex } from '../_shared/publicAnalysis.ts';
+import { loadDsAvailability } from '../_shared/publicProtocolSnapshot.ts';
 import {
   DEFAULT_ALIGNMENTS,
   resolveProtocol,
