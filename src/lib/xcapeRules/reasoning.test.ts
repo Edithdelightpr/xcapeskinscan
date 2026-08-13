@@ -256,8 +256,17 @@ describe('product activation and exclusion', () => {
   });
 
   it('records a redundancy exclusion when another product already covers the need', () => {
+    // Lower the glycerine threshold so it clears activation and the
+    // minimisation pass — not the threshold — is what removes it.
+    const config: RecommendationConfig = {
+      ...DEFAULT_RECOMMENDATION_CONFIG,
+      activation: DEFAULT_RECOMMENDATION_CONFIG.activation.map((a) =>
+        a.product_sku === 'XC-TREATMENT-GLYCERINE' ? { ...a, min_severity: 20 } : a,
+      ),
+    };
     const r = reasonProtocol({
-      scores: scores({ pigmentation_stability: 45, barrier_surface_hydration: 45 }),
+      scores: scores({ barrier_surface_hydration: 45 }),
+      config,
     });
     const redundant = r.decisions.filter((d) => d.code === 'redundant');
     expect(redundant.length).toBeGreaterThan(0);
