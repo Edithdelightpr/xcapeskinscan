@@ -144,20 +144,37 @@ describe('interaction engine', () => {
 });
 
 describe('priority ranking', () => {
-  it('the 20 / 50 / 70 / 78 example ranks elasticity first and pigmentation last', () => {
+  // LOCKED CASE — raw HEALTH scores, no severity conversion helper.
+  it('raw health 20 / 50 / 70 / 78 ranks pigmentation first and firmness last', () => {
     const r = reasonProtocol({
-      scores: scores({
+      scores: {
         pigmentation_stability: 20,
         barrier_surface_hydration: 50,
         oil_congestion_balance: 70,
         firmness_skin_support: 78,
-      }),
+      },
     });
-    expect(r.primary?.category).toBe('firmness_skin_support');
-    expect(r.secondary?.category).toBe('oil_congestion_balance');
-    expect(r.priorities[2].category).toBe('barrier_surface_hydration');
-    expect(r.priorities[3].category).toBe('pigmentation_stability');
+    expect(r.priorities.map((p) => p.category)).toEqual([
+      'pigmentation_stability',
+      'barrier_surface_hydration',
+      'oil_congestion_balance',
+      'firmness_skin_support',
+    ]);
+    expect(r.primary?.category).toBe('pigmentation_stability');
+    expect(r.secondary?.category).toBe('barrier_surface_hydration');
     expect(r.priorities[3].tier).toBe('maintenance');
+  });
+
+  it('raw health 78 firmness never activates the Body Milk pathway', () => {
+    const r = reasonProtocol({
+      scores: {
+        pigmentation_stability: 20,
+        barrier_surface_hydration: 50,
+        oil_congestion_balance: 70,
+        firmness_skin_support: 78,
+      },
+    });
+    expect(recommendedSkus(r).has('XC-BODY-MILK')).toBe(false);
   });
 
   it('low severity across all four dimensions is maintenance only', () => {
