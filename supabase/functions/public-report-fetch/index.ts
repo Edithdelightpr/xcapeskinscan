@@ -148,6 +148,16 @@ Deno.serve(async (req) => {
       };
     });
 
+    // ---- Public XCAPE protocol recommendation (NOT practitioner-approved) ----
+    // Shown only when no approved formula snapshot exists for this assessment,
+    // so an approved kit always wins. Re-whitelisted on the way out.
+    const protocol_recommendation = hydratedFormulas.length > 0
+      ? null
+      : sanitizePublicProtocolSnapshot(
+        // deno-lint-ignore no-explicit-any
+        (assessment.skin_analysis as any)?.public_protocol_snapshot,
+      );
+
     // ---- Promo block: practitioner code + clinic contact + defaults ----
     const [{ data: creator }, { data: outreach }, { data: siteRow }] = await Promise.all([
       linkFull?.created_by
