@@ -50,11 +50,21 @@ const DuplicateReviewModal = ({ open, onOpenChange, matches, attempted, onReuse,
           </div>
         ) : (
           <div className="space-y-3 max-h-80 overflow-y-auto pr-1">
-            {visible.map(({ client, reasons }) => (
+            {visible.map(({ client, reasons, crossOperator, assessmentCount }) => (
               <div
                 key={client.id}
                 className="rounded-lg border border-border/50 bg-surface/40 p-3 space-y-2"
               >
+                {crossOperator && (
+                  <p className="text-[11px] rounded-md bg-primary/10 border border-primary/25 text-primary px-2 py-1.5">
+                    Already registered in XCAPE by another partner
+                    {typeof assessmentCount === 'number' && assessmentCount > 0
+                      ? ` · ${assessmentCount} previous ${assessmentCount === 1 ? 'analysis' : 'analyses'}`
+                      : ''}
+                    . Continue with this person to keep one permanent history — their
+                    past analyses stay private to whoever created them.
+                  </p>
+                )}
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
                     <p className="text-sm font-medium text-foreground truncate">{client.full_name}</p>

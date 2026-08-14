@@ -12921,6 +12921,10 @@ export type Database = {
           id: string
         }[]
       }
+      has_client_touchpoint: {
+        Args: { _client: string; _user: string }
+        Returns: boolean
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -13493,9 +13497,75 @@ export type Database = {
       }
       verify_cron_secret: { Args: { candidate: string }; Returns: boolean }
       visit_finance_netting: { Args: { p_visit_id: string }; Returns: Json }
+      xcape_lookup_client_by_phone: {
+        Args: { _phone: string }
+        Returns: {
+          already_accessible: boolean
+          assessment_count: number
+          created_at: string
+          full_name: string
+          id: string
+          phone_masked: string
+        }[]
+      }
+      xcape_normalise_phone: { Args: { _raw: string }; Returns: string }
       xcape_resolved_price: {
         Args: { _org: string; _product: string }
         Returns: number
+      }
+      xcape_reuse_client: {
+        Args: { _client_id: string; _phone: string }
+        Returns: {
+          acquisition_locked: boolean
+          acquisition_owner_id: string | null
+          age_group: string | null
+          archived: boolean
+          archived_at: string | null
+          attributed_staff_id: string | null
+          captured_via: string | null
+          client_code: string
+          consent_captured_at: string | null
+          consent_given_at: string | null
+          consent_status: string
+          consultation_owner_id: string | null
+          created_at: string
+          dob: string | null
+          email: string | null
+          first_seen_at: string | null
+          full_name: string
+          gender: string | null
+          id: string
+          intake_source: string | null
+          intake_source_other: string | null
+          is_demo: boolean
+          last_contact_date: string | null
+          last_interaction_at: string | null
+          location: string | null
+          marketing_consent: boolean
+          membership_type: Database["public"]["Enums"]["membership_type"]
+          notes: string | null
+          origin_org_id: string | null
+          origin_role: string | null
+          origin_user_id: string | null
+          original_source: string | null
+          outreach_id: string | null
+          phone: string | null
+          pipeline_stage: Database["public"]["Enums"]["pipeline_stage"]
+          recurring_owner_id: string | null
+          referral_meta: Json
+          skin_analysis: Json | null
+          source_type: string | null
+          status: Database["public"]["Enums"]["client_status"]
+          tier_since: string | null
+          treatment_plan: Json | null
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "clients"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       xcape_root_org_id: { Args: never; Returns: string }
     }

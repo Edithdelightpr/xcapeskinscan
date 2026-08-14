@@ -1,0 +1,1 @@
+ALTER FUNCTION public.xcape_normalise_phone(text) SET search_path = '';
