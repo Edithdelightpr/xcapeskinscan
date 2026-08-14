@@ -174,6 +174,8 @@ export interface CrmTimelineEntry {
   /** Display value for orders; null elsewhere. */
   amount: number | null;
   status: string | null;
+  /** Report links only: how many times the client opened the shared report. */
+  opens?: number | null;
 }
 
 /**
@@ -205,6 +207,7 @@ export const buildClientTimeline = (input: {
       originOrgId: l.origin_org_id ?? null,
       fulfilmentOrgId: null,
       amount: null,
+      opens: l.open_count ?? 0,
       status: l.revoked_at
         ? 'revoked'
         : l.expires_at && new Date(l.expires_at).getTime() <= Date.now()
