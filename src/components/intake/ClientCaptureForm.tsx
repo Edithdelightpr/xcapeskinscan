@@ -11,6 +11,7 @@ import { useCreateRealClient, useMergeClientFields, useRealClients, type RealCli
 import { findPotentialDuplicates, hasStrongMatch, type DupeMatch } from '@/lib/clientDedupe';
 import DuplicateReviewModal from '@/components/intake/DuplicateReviewModal';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 export type CaptureMode = 'walk-in' | 'outreach';
 
@@ -140,6 +141,27 @@ const ClientCaptureForm = ({
   };
 
   const handleReuseExisting = async (clientId: string) => {
+    const match = dupeMatches.find((m) => m.client.id === clientId);
+    // Cross-operator identity: the record belongs to another partner, so we
+    // attach to the same permanent person via the secure RPC instead of
+    // merging fields we are not allowed to overwrite.
+    if (match?.crossOperator) {
+      try {
+        const { data, error: rpcError } = await supabase.rpc('xcape_reuse_client', {
+          _client_id: clientId,
+          _phone: form.phone.trim(),
+        });
+        if (rpcError) throw rpcError;
+        const existing = data as unknown as RealClient | null;
+        if (!existing) throw new Error('Could not load that client');
+        toast.success(`Continuing with existing record for ${existing.full_name}`);
+        setDupeOpen(false);
+        onCreated(existing);
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : 'Could not link to existing client');
+      }
+      return;
+    }
     try {
       const merged = await mergeMut.mutateAsync({ id: clientId, candidate: buildPayload() });
       const existing = allClients.find((c) => c.id === clientId) ?? merged;
