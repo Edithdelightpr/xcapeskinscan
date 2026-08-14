@@ -1387,6 +1387,7 @@ export type Database = {
           last_opened_at: string | null
           open_count: number
           origin_org_id: string | null
+          origin_role: string | null
           revoked_at: string | null
           token_hash: string
           token_prefix: string
@@ -1403,6 +1404,7 @@ export type Database = {
           last_opened_at?: string | null
           open_count?: number
           origin_org_id?: string | null
+          origin_role?: string | null
           revoked_at?: string | null
           token_hash: string
           token_prefix: string
@@ -1419,6 +1421,7 @@ export type Database = {
           last_opened_at?: string | null
           open_count?: number
           origin_org_id?: string | null
+          origin_role?: string | null
           revoked_at?: string | null
           token_hash?: string
           token_prefix?: string
@@ -13346,6 +13349,10 @@ export type Database = {
         Args: { p_items: Json; p_plan_id: string }
         Returns: Json
       }
+      set_xcape_partner_status: {
+        Args: { _org_id: string; _status: string }
+        Returns: Json
+      }
       sign_in_client_v2: {
         Args: {
           p_allow_second_same_day?: boolean
@@ -13534,6 +13541,7 @@ export type Database = {
         Args: { _default_dial?: string; _raw: string }
         Returns: string
       }
+      xcape_report_merchant_org: { Args: { _token: string }; Returns: string }
       xcape_resolved_price: {
         Args: { _org: string; _product: string }
         Returns: number
@@ -13594,6 +13602,10 @@ export type Database = {
         }
       }
       xcape_root_org_id: { Args: never; Returns: string }
+      xcape_unit_price: {
+        Args: { _merchant_org: string; _product_id: string }
+        Returns: number
+      }
     }
     Enums: {
       app_role:
