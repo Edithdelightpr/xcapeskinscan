@@ -58,21 +58,47 @@ const useFulfilmentQueue = (orgId: string | null | undefined) =>
     },
   });
 
+/** The schema's own lifecycle: pending -> paid | cancelled. No new statuses. */
 const statusTone = (s: string) =>
-  s === 'confirmed' ? 'bg-primary/15 text-primary' :
+  s === 'paid' ? 'bg-primary/15 text-primary' :
   s === 'cancelled' ? 'bg-destructive/15 text-destructive' :
   'bg-amber-500/15 text-amber-500';
+
+const statusLabel = (s: string) => (s === 'paid' ? 'fulfilled' : s);
 
 /**
  * Fulfilment queue. CDPs see only orders their organisation fulfils;
  * XCAPE admins see the whole network (RLS enforces both).
+ *
+ * Affiliates never reach this screen — they originate sales but XCAPE
+ * fulfils them, so they get no fulfilment controls.
  */
 const XcapeOrders = () => {
-  const { isAdmin } = useAuth();
+  const { isAdmin, accountType } = useAuth();
+  const qc = useQueryClient();
   const { data: org } = useMyOrganization();
   const scopeOrgId = isAdmin ? null : org?.id ?? null;
   const { data, isLoading } = useFulfilmentQueue(scopeOrgId);
   const orders = data?.orders ?? [];
+  const canFulfil = isAdmin || accountType === 'cdp';
+
+  const mutate = useMutation({
+    mutationFn: async (input: { id: string; action: 'confirm' | 'cancel' }) => {
+      // Reuse the existing order RPCs rather than writing status directly, so
+      // stock, finance and attribution side effects stay intact.
+      const { error } =
+        input.action === 'confirm'
+          ? await (supabase as any).rpc('confirm_pending_outreach_order', { _id: input.id })
+          : await (supabase as any).rpc('cancel_pending_outreach_order', { _id: input.id });
+      if (error) throw error;
+    },
+    onSuccess: (_d, v) => {
+      toast.success(v.action === 'confirm' ? 'Order marked fulfilled' : 'Order cancelled');
+      qc.invalidateQueries({ queryKey: ['xcape-fulfilment-orders'] });
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : 'Could not update order'),
+  });
+
 
   return (
     <div className="px-4 sm:px-6 py-8 max-w-6xl mx-auto space-y-5">
