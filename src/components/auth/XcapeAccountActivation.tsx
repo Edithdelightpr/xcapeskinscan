@@ -67,10 +67,13 @@ const XcapeAccountActivation = ({ onClaimed, onSignOut }: Props) => {
             >
               <Sparkles className="w-5 h-5 text-primary shrink-0 mt-0.5" />
               <span className="min-w-0">
-                <span className="block text-sm font-medium text-foreground">
+                <span className="flex flex-wrap items-center gap-2 text-sm font-medium text-foreground">
                   XCAPE Affiliate
+                  <span className="rounded-full border border-primary/40 bg-primary/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-primary">
+                    Free · instant access
+                  </span>
                   {busy === 'affiliate' && (
-                    <Loader2 className="inline w-3.5 h-3.5 ml-2 animate-spin" />
+                    <Loader2 className="inline w-3.5 h-3.5 animate-spin" />
                   )}
                 </span>
                 <span className="block text-xs text-muted-foreground mt-1">
@@ -88,8 +91,11 @@ const XcapeAccountActivation = ({ onClaimed, onSignOut }: Props) => {
             >
               <Store className="w-5 h-5 text-primary shrink-0 mt-0.5" />
               <span className="min-w-0">
-                <span className="block text-sm font-medium text-foreground">
+                <span className="flex flex-wrap items-center gap-2 text-sm font-medium text-foreground">
                   Certified Distribution Partner
+                  <span className="rounded-full border border-border/60 bg-muted/40 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    Approval required
+                  </span>
                 </span>
                 <span className="block text-xs text-muted-foreground mt-1">
                   A partner location with its own team, pricing and fulfilment.
