@@ -291,8 +291,17 @@ const Checkout = () => {
       clear();
       navigate(`/checkout/thanks?ref=${encodeURIComponent(ref)}`);
     } catch (e) {
+      // The server refuses a report-sourced order whose share link is dead, so
+      // the buyer gets a next step instead of a raw database error.
       const msg = e instanceof Error ? e.message : 'Could not place order';
-      toast({ title: 'Order failed', description: msg, variant: 'destructive' });
+      const deadLink = /revoked|expired|not valid|report link/i.test(msg);
+      toast({
+        title: deadLink ? 'This report link is no longer active' : 'Order failed',
+        description: deadLink
+          ? 'Ask your XCAPE consultant for a fresh report link, then try again.'
+          : msg,
+        variant: 'destructive',
+      });
     } finally {
       setSubmitting(false);
     }
