@@ -39,17 +39,18 @@ export const XCAPE_ROLES: XcapeRole[] = [
   {
     role: 'affiliate',
     name: 'Affiliate',
-    tagline: 'Refer & earn',
-    description: 'Refer clients and earn through XCAPE.',
+    tagline: 'Free · instant scanner access',
+    description:
+      'Free to join. Your XCAPE Affiliate account is active the moment you sign up — run skin analyses, share reports and earn on what you refer.',
     cta: 'Sign up as an Affiliate',
     publicPath: true,
   },
   {
     role: 'cdp',
     name: 'Certified Distribution Partner',
-    tagline: 'For approved locations',
+    tagline: 'For approved locations · approval required',
     description:
-      'Operate XCAPE analysis and product services from an approved physical location.',
+      'Operate XCAPE analysis and product services from a physical location. Applications are reviewed by XCAPE before your location goes live.',
     cta: 'Apply as a Partner Location',
     publicPath: true,
   },

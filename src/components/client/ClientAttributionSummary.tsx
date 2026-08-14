@@ -76,6 +76,10 @@ const ClientAttributionSummary = ({
         ))}
       </div>
 
+      <p className="text-xs text-muted-foreground">
+        Last analysis {fmt(lifetime?.lastAnalysisAt ?? null)} · Last purchase {fmt(lifetime?.lastPurchaseAt ?? null)}
+      </p>
+
       {timeline.length === 0 ? (
         <p className="text-xs text-muted-foreground">No analyses, reports or orders recorded yet.</p>
       ) : (
@@ -99,6 +103,7 @@ const ClientAttributionSummary = ({
                   {e.kind === 'analysis' ? 'Skin analysis' : e.kind === 'report' ? 'Report link shared' : 'Order'}
                   {e.amount != null ? ` · ${naira(e.amount)}` : ''}
                   {e.status ? ` · ${e.status}` : ''}
+                  {e.kind === 'report' ? ` · opened ${e.opens ?? 0}×` : ''}
                 </p>
                 <p className="text-muted-foreground flex flex-wrap gap-x-2">
                   <span>{fmt(e.at)}</span>

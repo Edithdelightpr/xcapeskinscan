@@ -19,6 +19,9 @@ export interface CartAttribution {
   outreach_id: string | null;
   attributed_staff_id: string | null;
   utm: Record<string, string> | null;
+  /** Secure report share token the cart was built from. Carries the
+   *  originating operator/organisation onto an otherwise anonymous order. */
+  report_token: string | null;
 }
 
 interface CartState {
@@ -38,6 +41,7 @@ const emptyAttribution: CartAttribution = {
   outreach_id: null,
   attributed_staff_id: null,
   utm: null,
+  report_token: null,
 };
 
 export const useCartStore = create<CartState>()(

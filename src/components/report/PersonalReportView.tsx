@@ -132,6 +132,12 @@ const PersonalReportView = ({ data, token, onDownloadPdf, downloadDisabled }: Pr
             </div>
           </>
         )}
+        {data.merchant && data.merchant.kind === 'cdp' && (
+          <p className="rounded-xl border border-bronze/25 bg-white/70 px-4 py-3 text-sm text-cocoa/80">
+            Available through <span className="font-medium text-cocoa">{data.merchant.name}</span> — your
+            XCAPE partner location handles pricing, payment and collection for anything you order here.
+          </p>
+        )}
         <div id="recommended-products" className="scroll-mt-24">
           <RecommendedProducts token={token} products={data.recommended_products} />
         </div>
