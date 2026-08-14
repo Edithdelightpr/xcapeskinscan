@@ -30,6 +30,26 @@ export const normalisePhone = (raw: string | null | undefined): string => {
   return digits.slice(-10);
 };
 
+/**
+ * True when two stored/typed phone values belong to the same person.
+ *
+ * Canonical E.164 identity wins: `+2348031234567`, `08031234567` and
+ * `234 803 123 4567` are one person, while a +1 number that happens to end in
+ * the same ten digits is NOT. Rows captured before normalisation may hold a
+ * bare national number with no country context — for those we fall back to the
+ * legacy last-10 comparison so historic records still de-duplicate.
+ */
+export const samePhoneRecord = (
+  a: string | null | undefined,
+  b: string | null | undefined,
+): boolean => {
+  const ka = normalizePhoneKey(a);
+  const kb = normalizePhoneKey(b);
+  if (ka && kb) return ka === kb;
+  const la = normalisePhone(a);
+  return !!la && la.length >= 7 && la === normalisePhone(b);
+};
+
 export const normaliseEmail = (raw: string | null | undefined): string => {
   if (!raw) return '';
   return String(raw).trim().toLowerCase();
