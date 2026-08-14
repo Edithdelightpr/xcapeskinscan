@@ -8,6 +8,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
 // Single source of truth for deterministic report-link tokens.
 import { deriveToken, reportUrl, sha256Hex } from '../_shared/reportLinkToken.ts';
+import { resolveReportLinkAccess } from '../_shared/reportLinkAccess.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -16,7 +17,6 @@ const corsHeaders = {
 };
 
 const APP_URL = Deno.env.get('APP_PUBLIC_URL') || 'https://xcapeskinscan.lovable.app';
-const ALLOWED_ROLES = new Set(['admin', 'front_desk', 'medical_aesthetician', 'outreach']);
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -44,11 +44,6 @@ Deno.serve(async (req) => {
     if (callerErr || !caller) return json({ error: 'Invalid session' }, 401);
 
     const admin = createClient(SUPABASE_URL, SERVICE_KEY);
-    const { data: roles } = await admin
-      .from('user_roles').select('role').eq('user_id', caller.id);
-    const hasAccess = (roles ?? []).some((r: { role: string }) => ALLOWED_ROLES.has(r.role));
-    if (!hasAccess) return json({ error: 'Not authorized' }, 403);
-
     let body: { client_id?: string; assessment_id?: string; link_id?: string };
     try { body = await req.json(); } catch { return json({ error: 'Invalid JSON body' }, 400); }
     const isUuid = (s: unknown) => typeof s === 'string' && /^[0-9a-f-]{36}$/i.test(s);
@@ -58,6 +53,9 @@ Deno.serve(async (req) => {
     if (body.link_id !== undefined && !isUuid(body.link_id)) {
       return json({ error: 'link_id must be uuid' }, 400);
     }
+
+    const access = await resolveReportLinkAccess(admin, caller.id, body.client_id!);
+    if (!access.allowed) return json({ error: 'Not authorized' }, 403);
 
     // Load link and verify entity relationships (§11).
     const query = admin

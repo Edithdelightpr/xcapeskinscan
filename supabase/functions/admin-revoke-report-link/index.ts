@@ -1,5 +1,6 @@
 // Admin edge function: revokes a Personal Report link by id.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
+import { resolveReportLinkAccess } from '../_shared/reportLinkAccess.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -7,7 +8,6 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
-const ALLOWED_ROLES = new Set(['admin', 'front_desk', 'medical_aesthetician', 'outreach']);
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -35,13 +35,6 @@ Deno.serve(async (req) => {
     if (callerErr || !caller) return json({ error: 'Invalid session' }, 401);
 
     const admin = createClient(SUPABASE_URL, SERVICE_KEY);
-    const { data: roles } = await admin
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', caller.id);
-    const hasAccess = (roles ?? []).some((r: { role: string }) => ALLOWED_ROLES.has(r.role));
-    if (!hasAccess) return json({ error: 'Not authorized' }, 403);
-
     let body: { link_id?: string; client_id?: string; assessment_id?: string };
     try { body = await req.json(); } catch { return json({ error: 'Invalid JSON body' }, 400); }
     const isUuid = (s: unknown) => typeof s === 'string' && /^[0-9a-f-]{36}$/i.test(s);
@@ -62,6 +55,10 @@ Deno.serve(async (req) => {
     if (body.assessment_id && link.assessment_id !== body.assessment_id) {
       return json({ error: 'Not authorized' }, 403);
     }
+
+    // Role + record-level authorisation against the link's own client.
+    const access = await resolveReportLinkAccess(admin, caller.id, link.client_id);
+    if (!access.allowed) return json({ error: 'Not authorized' }, 403);
 
     const { error } = await admin
       .from('client_report_links')
