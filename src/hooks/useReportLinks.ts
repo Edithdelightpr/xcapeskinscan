@@ -11,6 +11,11 @@ export interface ReportLink {
   revoked_at: string | null;
   created_by: string | null;
   created_at: string;
+  /** Server-side engagement counters, incremented on each public fetch. */
+  open_count?: number | null;
+  first_opened_at?: string | null;
+  last_opened_at?: string | null;
+  origin_org_id?: string | null;
 }
 
 export interface ReportEvent {
