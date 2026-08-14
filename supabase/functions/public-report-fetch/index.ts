@@ -50,7 +50,7 @@ Deno.serve(async (req) => {
 
     const { data: link, error: linkErr } = await admin
       .from('client_report_links')
-      .select('id, client_id, assessment_id, expires_at, revoked_at, token_prefix')
+      .select('id, client_id, assessment_id, expires_at, revoked_at, token_prefix, origin_org_id, open_count, first_opened_at')
       .eq('token_hash', token_hash)
       .maybeSingle();
     if (linkErr) throw linkErr;
@@ -213,6 +213,62 @@ Deno.serve(async (req) => {
       }
     }
 
+    // ---- Commercial routing: who sells and at what price ----
+    // The report's originating organisation decides the merchant. A CDP with an
+    // active price-book override sells at its own price; everyone else (XCAPE
+    // staff, affiliates, unattributed links) sells at the XCAPE system price.
+    // Approved formula snapshots keep their own immutable kit_unit_price.
+    let merchant: { org_id: string | null; name: string; kind: string } = {
+      org_id: null,
+      name: 'XCAPE',
+      kind: 'xcape_root',
+    };
+    const priceOverrides: Record<string, number> = {};
+    if (link.origin_org_id) {
+      const { data: org } = await admin
+        .from('organizations')
+        .select('id, name, kind, status')
+        .eq('id', link.origin_org_id)
+        .maybeSingle();
+      if (org && org.status === 'active') {
+        merchant = { org_id: org.id, name: org.name, kind: org.kind };
+        if (org.kind === 'cdp') {
+          const priceIds = [
+            ...new Set([
+              ...prodIds,
+              ...kitIds,
+            ]),
+          ] as string[];
+          if (priceIds.length > 0) {
+            const { data: book } = await admin
+              .from('organization_product_prices')
+              .select('product_id, price, active')
+              .eq('organization_id', org.id)
+              .in('product_id', priceIds);
+            // deno-lint-ignore no-explicit-any
+            for (const row of (book ?? []) as any[]) {
+              if (row.active) priceOverrides[row.product_id] = Number(row.price);
+            }
+          }
+        }
+      }
+    }
+    // deno-lint-ignore no-explicit-any
+    const pricedProducts = ((products ?? []) as any[]).map((p) => (
+      priceOverrides[p.id] != null ? { ...p, selling_price: priceOverrides[p.id] } : p
+    ));
+
+    // ---- Engagement: persistent open counters on the link itself ----
+    const nowIso = new Date().toISOString();
+    await admin
+      .from('client_report_links')
+      .update({
+        open_count: Number(link.open_count ?? 0) + 1,
+        first_opened_at: link.first_opened_at ?? nowIso,
+        last_opened_at: nowIso,
+      })
+      .eq('id', link.id);
+
     // Dedupe link_viewed within 60s
     const sixtySecAgo = new Date(Date.now() - 60_000).toISOString();
     const { data: recentView } = await admin
@@ -258,7 +314,8 @@ Deno.serve(async (req) => {
         next_visit_in_weeks: assessment.next_visit_in_weeks,
       },
       recommended_services: services ?? [],
-      recommended_products: products ?? [],
+      recommended_products: pricedProducts,
+      merchant,
       recommended_sessions_by_service_id,
       treatment_plan,
       payment_settings,
