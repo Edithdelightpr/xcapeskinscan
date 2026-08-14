@@ -30,6 +30,12 @@ export interface OrgRef {
   id: string;
   name: string;
   kind: 'xcape_root' | 'cdp';
+  /**
+   * Partner lifecycle state. Omitted by callers that already loaded an
+   * approved org; an explicit non-`active` value means the partner is not
+   * cleared to sell, so the sale belongs to XCAPE.
+   */
+  status?: string | null;
 }
 
 export interface OriginContext {
