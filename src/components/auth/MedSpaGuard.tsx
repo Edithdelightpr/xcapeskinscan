@@ -3,10 +3,11 @@ import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 
 /**
- * Keeps XCAPE field-Team members out of the legacy MedSpa console.
+ * Keeps XCAPE-only audiences out of the legacy MedSpa console.
  *
- * Team members are an XCAPE-only audience: they get the three launch tabs and
- * never the operational MedSpa interface. This is a navigational guard only —
+ * Field Team, XCAPE Affiliates and Certified Distribution Partners are
+ * XCAPE-only audiences: they work entirely inside the XCAPE shell and never
+ * the operational MedSpa interface. This is a navigational guard only —
  * the real enforcement lives in the RLS policies and section permissions, so a
  * hand-typed URL still cannot read MedSpa data.
  */
@@ -15,7 +16,8 @@ const MedSpaGuard = ({ children }: { children: ReactNode }) => {
 
   if (loading) return null;
 
-  if (!isAdmin && roles.includes('team')) {
+  const xcapeOnly = roles.some((r) => r === 'team' || r === 'affiliate' || r === 'cdp');
+  if (!isAdmin && xcapeOnly) {
     return <Navigate to="/xcape/analysis" replace />;
   }
 

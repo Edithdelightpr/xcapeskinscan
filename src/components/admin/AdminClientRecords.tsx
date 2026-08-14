@@ -44,7 +44,7 @@ const AdminClientRecords = () => {
   const { data: clients = [], isLoading } = useRealClients();
   const { data: staff = [] } = useRealStaff();
   const { data: appointments = [] } = useRealAppointments();
-  const { user, isAdmin } = useAuth();
+  const { user, isAdmin, accountType } = useAuth();
   const createMut = useCreateRealClient();
   const deleteMut = useDeleteRealClient();
   const bulkDeleteMut = useBulkDeleteRealClients();

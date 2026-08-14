@@ -156,6 +156,9 @@ const App = () => (
               <Route index element={<Navigate to="/xcape/analysis" replace />} />
               <Route path="analysis" element={<XcapeSectionGate section="xcape-analysis"><XcapeNewAnalysis /></XcapeSectionGate>} />
               <Route path="clients" element={<XcapeSectionGate section="xcape-clients"><XcapeClients /></XcapeSectionGate>} />
+              {/* Same profile component as the MedSpa console, inside the XCAPE
+                  shell so partner accounts never cross into MedSpa. */}
+              <Route path="clients/:id" element={<XcapeSectionGate section="xcape-clients"><ClientProfile /></XcapeSectionGate>} />
               <Route path="reports" element={<XcapeSectionGate section="xcape-reports"><XcapeReports /></XcapeSectionGate>} />
               <Route path="events" element={<XcapeSectionGate section="xcape-events"><XcapeEvents /></XcapeSectionGate>} />
               <Route path="history" element={<XcapeSectionGate section="xcape-history"><XcapeHistory /></XcapeSectionGate>} />
