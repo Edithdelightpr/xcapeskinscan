@@ -55,6 +55,9 @@ import XcapeHistory from "./pages/xcape/XcapeHistory";
 import XcapeProtocols from "./pages/xcape/XcapeProtocols";
 import XcapeAccount from "./pages/xcape/XcapeAccount";
 import XcapeEvents from "./pages/xcape/XcapeEvents";
+import XcapePerformance from "./pages/xcape/XcapePerformance";
+import XcapeOrders from "./pages/xcape/XcapeOrders";
+import XcapePricing from "./pages/xcape/XcapePricing";
 import XcapeSectionGate from "./components/xcape/XcapeSectionGate";
 import EventInvite from "./pages/EventInvite";
 import XcapeAdminAccess from "./pages/xcape/admin/XcapeAdminAccess";
@@ -67,6 +70,8 @@ import XcapeAdminProducts from "./pages/xcape/admin/XcapeAdminProducts";
 import XcapeAdminContraindications from "./pages/xcape/admin/XcapeAdminContraindications";
 import XcapeAdminReportTemplates from "./pages/xcape/admin/XcapeAdminReportTemplates";
 import XcapeAdminSystem from "./pages/xcape/admin/XcapeAdminSystem";
+import XcapeAdminCrm from "./pages/xcape/admin/XcapeAdminCrm";
+import XcapeAdminOrganizations from "./pages/xcape/admin/XcapeAdminOrganizations";
 
 const queryClient = new QueryClient();
 
@@ -156,6 +161,9 @@ const App = () => (
               <Route path="history" element={<XcapeSectionGate section="xcape-history"><XcapeHistory /></XcapeSectionGate>} />
               <Route path="protocols" element={<XcapeSectionGate section="xcape-protocols"><XcapeProtocols /></XcapeSectionGate>} />
               <Route path="account" element={<XcapeSectionGate section="xcape-account"><XcapeAccount /></XcapeSectionGate>} />
+              <Route path="performance" element={<XcapePerformance />} />
+              <Route path="orders" element={<XcapeOrders />} />
+              <Route path="pricing" element={<XcapePricing />} />
               <Route path="admin" element={<XcapeAdminGate />}>
                 <Route path="access" element={<XcapeAdminAccess />} />
                 <Route path="practitioners" element={<XcapeAdminPractitioners />} />
@@ -166,6 +174,8 @@ const App = () => (
                 <Route path="products" element={<XcapeAdminProducts />} />
                 <Route path="contraindications" element={<XcapeAdminContraindications />} />
                 <Route path="report-templates" element={<XcapeAdminReportTemplates />} />
+                <Route path="crm" element={<XcapeAdminCrm />} />
+                <Route path="organizations" element={<XcapeAdminOrganizations />} />
                 <Route path="system" element={<XcapeAdminSystem />} />
               </Route>
             </Route>

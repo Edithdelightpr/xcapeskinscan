@@ -2,7 +2,7 @@ import { Link, Outlet, useLocation } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import {
   History, ShieldCheck, Stethoscope, Gauge, LibraryBig, Package, AlertTriangle,
-  LayoutTemplate, Activity, LogOut, ExternalLink, SlidersHorizontal,
+  LayoutTemplate, Activity, LogOut, ExternalLink, SlidersHorizontal, Building2, TrendingUp, ShoppingCart,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useAuth, APP_ROLE_LABELS } from '@/hooks/useAuth';
@@ -19,7 +19,10 @@ import {
 } from '@/components/ui/sidebar';
 
 const ADMIN_NAV: XcapeNavItem[] = [
+  { title: 'CRM Overview', url: '/xcape/admin/crm', icon: TrendingUp },
   { title: 'Access Management', url: '/xcape/admin/access', icon: ShieldCheck },
+  { title: 'Partner Locations', url: '/xcape/admin/organizations', icon: Building2 },
+  { title: 'Orders', url: '/xcape/orders', icon: ShoppingCart },
   { title: 'Practitioners', url: '/xcape/admin/practitioners', icon: Stethoscope },
   { title: 'XCAPE Scoring Standard', url: '/xcape/admin/scoring-standard', icon: Gauge },
   { title: 'Protocol Library', url: '/xcape/admin/protocol-library', icon: LibraryBig },
@@ -33,7 +36,7 @@ const ADMIN_NAV: XcapeNavItem[] = [
 
 const XcapeSidebar = () => {
   const { pathname } = useLocation();
-  const { isAdmin, profile, roles, signOut } = useAuth();
+  const { isAdmin, profile, roles, signOut, accountType } = useAuth();
   // Field-Team members get three genuine top-level tabs instead of the full
   // practitioner list. Admins always keep the complete navigation.
   const isTeam = !isAdmin && roles.includes('team');
@@ -41,7 +44,7 @@ const XcapeSidebar = () => {
   const collapsed = state === 'collapsed';
   // null = show everything (admin or no JobRole bundle assigned, legacy behaviour)
   const xcapeSections = useXcapeSections();
-  const primaryNav = buildXcapeNav(xcapeSections, isTeam);
+  const primaryNav = buildXcapeNav(xcapeSections, isTeam, accountType);
 
   const isActive = (url: string) => pathname === url || pathname.startsWith(`${url}/`);
 
@@ -78,7 +81,7 @@ const XcapeSidebar = () => {
       <SidebarContent>
         <SidebarGroup>
           {!collapsed && (
-            <SidebarGroupLabel>{isTeam ? 'XCAPE Field' : 'Practice'}</SidebarGroupLabel>
+            <SidebarGroupLabel>{accountType === 'affiliate' ? 'XCAPE Affiliate' : accountType === 'cdp' ? 'Partner Location' : isTeam ? 'XCAPE Field' : 'Practice'}</SidebarGroupLabel>
           )}
           <SidebarGroupContent>{renderNav(primaryNav)}</SidebarGroupContent>
         </SidebarGroup>
