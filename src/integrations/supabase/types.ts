@@ -1382,7 +1382,11 @@ export type Database = {
           created_at: string
           created_by: string | null
           expires_at: string | null
+          first_opened_at: string | null
           id: string
+          last_opened_at: string | null
+          open_count: number
+          origin_org_id: string | null
           revoked_at: string | null
           token_hash: string
           token_prefix: string
@@ -1394,7 +1398,11 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           expires_at?: string | null
+          first_opened_at?: string | null
           id?: string
+          last_opened_at?: string | null
+          open_count?: number
+          origin_org_id?: string | null
           revoked_at?: string | null
           token_hash: string
           token_prefix: string
@@ -1406,7 +1414,11 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           expires_at?: string | null
+          first_opened_at?: string | null
           id?: string
+          last_opened_at?: string | null
+          open_count?: number
+          origin_org_id?: string | null
           revoked_at?: string | null
           token_hash?: string
           token_prefix?: string
@@ -1454,6 +1466,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "stale_leads_view"
             referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "client_report_links_origin_org_id_fkey"
+            columns: ["origin_org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -1618,6 +1637,9 @@ export type Database = {
           id: string
           main_concern: string | null
           next_visit_in_weeks: number | null
+          origin_org_id: string | null
+          origin_role: string | null
+          origin_user_id: string | null
           plan_conversions: Json
           practitioner_observation: string | null
           recommended_products: Json
@@ -1642,6 +1664,9 @@ export type Database = {
           id?: string
           main_concern?: string | null
           next_visit_in_weeks?: number | null
+          origin_org_id?: string | null
+          origin_role?: string | null
+          origin_user_id?: string | null
           plan_conversions?: Json
           practitioner_observation?: string | null
           recommended_products?: Json
@@ -1666,6 +1691,9 @@ export type Database = {
           id?: string
           main_concern?: string | null
           next_visit_in_weeks?: number | null
+          origin_org_id?: string | null
+          origin_role?: string | null
+          origin_user_id?: string | null
           plan_conversions?: Json
           practitioner_observation?: string | null
           recommended_products?: Json
@@ -1726,6 +1754,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "stale_leads_view"
             referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "client_visit_assessments_origin_org_id_fkey"
+            columns: ["origin_org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "client_visit_assessments_visit_id_fkey"
@@ -2038,6 +2073,9 @@ export type Database = {
           marketing_consent: boolean
           membership_type: Database["public"]["Enums"]["membership_type"]
           notes: string | null
+          origin_org_id: string | null
+          origin_role: string | null
+          origin_user_id: string | null
           original_source: string | null
           outreach_id: string | null
           phone: string | null
@@ -2080,6 +2118,9 @@ export type Database = {
           marketing_consent?: boolean
           membership_type?: Database["public"]["Enums"]["membership_type"]
           notes?: string | null
+          origin_org_id?: string | null
+          origin_role?: string | null
+          origin_user_id?: string | null
           original_source?: string | null
           outreach_id?: string | null
           phone?: string | null
@@ -2122,6 +2163,9 @@ export type Database = {
           marketing_consent?: boolean
           membership_type?: Database["public"]["Enums"]["membership_type"]
           notes?: string | null
+          origin_org_id?: string | null
+          origin_role?: string | null
+          origin_user_id?: string | null
           original_source?: string | null
           outreach_id?: string | null
           phone?: string | null
@@ -2197,6 +2241,13 @@ export type Database = {
             columns: ["consultation_owner_id"]
             isOneToOne: false
             referencedRelation: "staff_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clients_origin_org_id_fkey"
+            columns: ["origin_org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
           {
@@ -5182,6 +5233,151 @@ export type Database = {
           },
         ]
       }
+      organization_members: {
+        Row: {
+          created_at: string
+          id: string
+          member_role: string
+          organization_id: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          member_role?: string
+          organization_id: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          member_role?: string
+          organization_id?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_members_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organization_product_prices: {
+        Row: {
+          active: boolean
+          created_at: string
+          created_by: string | null
+          currency: string
+          id: string
+          organization_id: string
+          price: number
+          product_id: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          id?: string
+          organization_id: string
+          price: number
+          product_id: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          id?: string
+          organization_id?: string
+          price?: number
+          product_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_product_prices_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_product_prices_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "product_performance"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "organization_product_prices_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "product_performance_v2"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "organization_product_prices_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organizations: {
+        Row: {
+          contact_email: string | null
+          contact_phone: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          kind: string
+          location: string | null
+          name: string
+          slug: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          contact_email?: string | null
+          contact_phone?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          kind?: string
+          location?: string | null
+          name: string
+          slug: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          contact_email?: string | null
+          contact_phone?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          kind?: string
+          location?: string | null
+          name?: string
+          slug?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       outreach_assigned_staff: {
         Row: {
           created_at: string
@@ -5954,18 +6150,24 @@ export type Database = {
           delivery_settings_snapshot: Json | null
           formula_snapshot_id: string | null
           formula_summary: Json | null
+          fulfilment_org_id: string | null
           id: string
           notes: string | null
           order_ref: string | null
+          origin_org_id: string | null
+          origin_role: string | null
+          origin_user_id: string | null
           outreach_id: string | null
           payment_method: string | null
           payment_reference: string | null
+          price_snapshot: Json | null
           product_id: string
           promo_code: string | null
           promo_discount_amount: number | null
           promo_discount_pct: number | null
           promo_staff_id: string | null
           quantity: number
+          report_link_id: string | null
           resulting_finance_entry_id: string | null
           status: string
           unit_price: number
@@ -5989,18 +6191,24 @@ export type Database = {
           delivery_settings_snapshot?: Json | null
           formula_snapshot_id?: string | null
           formula_summary?: Json | null
+          fulfilment_org_id?: string | null
           id?: string
           notes?: string | null
           order_ref?: string | null
+          origin_org_id?: string | null
+          origin_role?: string | null
+          origin_user_id?: string | null
           outreach_id?: string | null
           payment_method?: string | null
           payment_reference?: string | null
+          price_snapshot?: Json | null
           product_id: string
           promo_code?: string | null
           promo_discount_amount?: number | null
           promo_discount_pct?: number | null
           promo_staff_id?: string | null
           quantity: number
+          report_link_id?: string | null
           resulting_finance_entry_id?: string | null
           status?: string
           unit_price: number
@@ -6024,18 +6232,24 @@ export type Database = {
           delivery_settings_snapshot?: Json | null
           formula_snapshot_id?: string | null
           formula_summary?: Json | null
+          fulfilment_org_id?: string | null
           id?: string
           notes?: string | null
           order_ref?: string | null
+          origin_org_id?: string | null
+          origin_role?: string | null
+          origin_user_id?: string | null
           outreach_id?: string | null
           payment_method?: string | null
           payment_reference?: string | null
+          price_snapshot?: Json | null
           product_id?: string
           promo_code?: string | null
           promo_discount_amount?: number | null
           promo_discount_pct?: number | null
           promo_staff_id?: string | null
           quantity?: number
+          report_link_id?: string | null
           resulting_finance_entry_id?: string | null
           status?: string
           unit_price?: number
@@ -6082,6 +6296,20 @@ export type Database = {
             columns: ["formula_snapshot_id"]
             isOneToOne: false
             referencedRelation: "xcape_formula_snapshots"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pending_outreach_orders_fulfilment_org_id_fkey"
+            columns: ["fulfilment_org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pending_outreach_orders_origin_org_id_fkey"
+            columns: ["origin_org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
           {
@@ -6132,6 +6360,20 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "staff_users"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pending_outreach_orders_report_link_id_fkey"
+            columns: ["report_link_id"]
+            isOneToOne: false
+            referencedRelation: "client_report_links"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pending_outreach_orders_report_link_id_fkey"
+            columns: ["report_link_id"]
+            isOneToOne: false
+            referencedRelation: "operational_truth_shadow_v"
+            referencedColumns: ["report_link_id"]
           },
         ]
       }
@@ -12408,6 +12650,10 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      claim_xcape_account_role: {
+        Args: { _org_name?: string; _role: string }
+        Returns: Json
+      }
       cleanup_expired_booking_tokens: { Args: never; Returns: number }
       client_has_completed_consultation: {
         Args: { _client_id: string }
@@ -12684,6 +12930,7 @@ export type Database = {
         Returns: boolean
       }
       is_clinical_writer: { Args: { _uid: string }; Returns: boolean }
+      is_org_member: { Args: { _org: string; _user: string }; Returns: boolean }
       is_task_collaborator: {
         Args: { _task_id: string; _task_type: string; _user_id: string }
         Returns: boolean
@@ -12763,6 +13010,7 @@ export type Database = {
         Args: { _s: Database["public"]["Enums"]["pipeline_stage"] }
         Returns: number
       }
+      primary_org_id: { Args: { _user: string }; Returns: string }
       produce_batch_v2: {
         Args: {
           _notes?: string
@@ -13223,6 +13471,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      user_org_ids: { Args: { _user: string }; Returns: string[] }
       validate_public_promo_code: { Args: { _code: string }; Returns: Json }
       validate_visit_reconciled: {
         Args: { p_visit_id: string }
@@ -13236,6 +13485,11 @@ export type Database = {
       }
       verify_cron_secret: { Args: { candidate: string }; Returns: boolean }
       visit_finance_netting: { Args: { p_visit_id: string }; Returns: Json }
+      xcape_resolved_price: {
+        Args: { _org: string; _product: string }
+        Returns: number
+      }
+      xcape_root_org_id: { Args: never; Returns: string }
     }
     Enums: {
       app_role:
