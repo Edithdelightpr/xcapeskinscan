@@ -1,4 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
+import { normalizePhoneKey } from '@/lib/phone';
 import type { RealClient } from '@/hooks/useRealClients';
 
 export type DupeReason = 'exact_phone' | 'exact_email' | 'name_match' | 'existing_identity';
