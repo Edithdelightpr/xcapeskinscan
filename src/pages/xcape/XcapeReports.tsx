@@ -1,11 +1,12 @@
-import { useState } from 'react';
+import { Fragment, useState } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { Link } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Copy, Eye, Link2Off, Loader2 } from 'lucide-react';
+import { Copy, Eye, Link2Off, Loader2, Settings2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useRecoverReportLinkUrl, useRevokeReportLink } from '@/hooks/useReportLinks';
+import ShareReportPanel from '@/components/report/ShareReportPanel';
 import XcapePageHeader from '@/components/xcape/XcapePageHeader';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -29,6 +30,7 @@ interface ReportRow {
 const XcapeReports = () => {
   const qc = useQueryClient();
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [manageId, setManageId] = useState<string | null>(null);
   const recoverMut = useRecoverReportLinkUrl();
   const revokeMut = useRevokeReportLink();
 
@@ -108,7 +110,8 @@ const XcapeReports = () => {
                 {rows.map((row) => {
                   const revoked = !!row.revoked_at;
                   return (
-                    <tr key={row.id} className="hover:bg-surface/40 transition-colors">
+                  <Fragment key={row.id}>
+                    <tr className="hover:bg-surface/40 transition-colors">
                       <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">
                         {new Date(row.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
                       </td>
@@ -155,9 +158,32 @@ const XcapeReports = () => {
                               <Link2Off className="w-3.5 h-3.5 mr-1" /> Revoke
                             </Button>
                           )}
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="text-xs"
+                            onClick={() => setManageId((id) => (id === row.id ? null : row.id))}
+                          >
+                            <Settings2 className="w-3.5 h-3.5 mr-1" />
+                            {manageId === row.id ? 'Close' : 'Manage'}
+                          </Button>
                         </div>
                       </td>
                     </tr>
+                    {manageId === row.id && (
+                      <tr>
+                        <td colSpan={5} className="px-4 pb-4">
+                          <ShareReportPanel
+                            clientId={row.client_id}
+                            assessmentId={row.assessment_id}
+                            clientName={row.clients?.full_name ?? null}
+                            compact
+                          />
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
                   );
                 })}
               </tbody>
