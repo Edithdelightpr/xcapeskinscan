@@ -16,6 +16,7 @@ import ClientQuickActions from '@/components/client/ClientQuickActions';
 import ClientVisitsTab from '@/components/client/ClientVisitsTab';
 import ClientPurchasesTab from '@/components/client/ClientPurchasesTab';
 import ClientCrmTab from '@/components/client/ClientCrmTab';
+import ClientAttributionSummary from '@/components/client/ClientAttributionSummary';
 import { useEffectivePermissions } from '@/hooks/useEffectivePermissions';
 import { AGE_GROUPS, AGE_GROUP_LABELS } from '@/lib/ageGroups';
 import ClientAssessmentsTab from '@/components/client/ClientAssessmentsTab';
