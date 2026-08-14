@@ -12531,8 +12531,16 @@ export type Database = {
         }[]
       }
       backfill_revenue_allocations: { Args: never; Returns: number }
+      can_manage_org_pricing: {
+        Args: { _org: string; _user: string }
+        Returns: boolean
+      }
       can_manage_outreach: {
         Args: { _outreach_id: string; _user_id: string }
+        Returns: boolean
+      }
+      can_read_org_scope: {
+        Args: { _org: string; _user: string }
         Returns: boolean
       }
       can_receive_appointment: {
