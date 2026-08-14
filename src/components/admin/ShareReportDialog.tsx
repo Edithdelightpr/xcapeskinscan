@@ -354,6 +354,15 @@ const ShareReportDialog = ({
                       ? `expires ${new Date(active.expires_at).toLocaleDateString()}`
                       : 'persistent — expires only when revoked'}
                   </p>
+                  {/* Persisted open counters — recorded server-side on every
+                      report fetch, so they survive refreshes and devices. */}
+                  <p className="text-muted-foreground">
+                    Opened {Number(active.open_count ?? 0)}{' '}
+                    {Number(active.open_count ?? 0) === 1 ? 'time' : 'times'}
+                    {active.last_opened_at
+                      ? ` · last ${new Date(active.last_opened_at).toLocaleString()}`
+                      : ' · not opened yet'}
+                  </p>
                   {legacyUnrecoverable && (
                     <p className="text-amber-600 dark:text-amber-400">
                       This link was minted before secure recovery was added.
