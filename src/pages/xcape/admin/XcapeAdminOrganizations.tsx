@@ -25,16 +25,14 @@ const XcapeAdminOrganizations = () => {
 
   const setStatus = useMutation({
     mutationFn: async (input: { id: string; status: Organization['status'] }) => {
-      const { error } = await (supabase as any)
-        .from('organizations')
-        .update({ status: input.status })
-        .eq('id', input.id);
+      // One admin-only RPC keeps org status, membership status and the partner's
+      // own account activation in step — approving here is what actually lets a
+      // reviewed CDP past the "under review" screen.
+      const { error } = await (supabase as any).rpc('set_xcape_partner_status', {
+        _org_id: input.id,
+        _status: input.status,
+      });
       if (error) throw error;
-      const { error: memberError } = await (supabase as any)
-        .from('organization_members')
-        .update({ status: input.status === 'active' ? 'active' : 'suspended' })
-        .eq('organization_id', input.id);
-      if (memberError) throw memberError;
     },
     onSuccess: () => {
       toast.success('Partner location updated');
@@ -43,6 +41,7 @@ const XcapeAdminOrganizations = () => {
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : 'Could not update partner'),
   });
+
 
   const rows = organizations ?? [];
 
