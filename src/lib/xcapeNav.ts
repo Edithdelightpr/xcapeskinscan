@@ -71,10 +71,45 @@ export const TEAM_LAUNCH_NAV: XcapeNavItem[] = [
  *   JobRole bundle assigned — legacy behaviour). Otherwise the resolved set.
  * @param isTeam   the user holds the `team` app role and is not an admin.
  */
+export const AFFILIATE_NAV: XcapeNavItem[] = [
+  {
+    title: 'New Analysis',
+    url: '/xcape/analysis',
+    icon: ScanFace,
+    hint: 'Run a skin analysis and share the report',
+  },
+  { title: 'Clients', url: '/xcape/clients', icon: Users, hint: 'Clients you originated' },
+  { title: 'Reports', url: '/xcape/reports', icon: FileText, hint: 'Reports you generated and shared' },
+  { title: 'Performance', url: '/xcape/performance', icon: TrendingUp, hint: 'Your attribution funnel' },
+  { title: 'Account', url: '/xcape/account', icon: UserCircle },
+];
+
+export const CDP_NAV: XcapeNavItem[] = [
+  { title: 'New Analysis', url: '/xcape/analysis', icon: ScanFace, hint: 'Run a skin analysis in your location' },
+  { title: 'Clients', url: '/xcape/clients', icon: Users, hint: "Your organisation's clients" },
+  { title: 'Reports', url: '/xcape/reports', icon: FileText, hint: 'Reports issued by your organisation' },
+  { title: 'Orders', url: '/xcape/orders', icon: ShoppingCart, hint: 'Orders you fulfil' },
+  { title: 'Pricing', url: '/xcape/pricing', icon: Tags, hint: 'Your price book' },
+  { title: 'Performance', url: '/xcape/performance', icon: TrendingUp, hint: 'Your funnel' },
+  { title: 'Account', url: '/xcape/account', icon: UserCircle },
+];
+
+/** Nav for a specific XCAPE account type; `null` = use the legacy resolution. */
+export const navForAccountType = (accountType: XcapeAccountType): XcapeNavItem[] | null => {
+  if (accountType === 'affiliate') return AFFILIATE_NAV;
+  if (accountType === 'cdp') return CDP_NAV;
+  return null;
+};
+
 export const buildXcapeNav = (
   sections: Set<SectionKey> | null,
   isTeam: boolean,
+  accountType?: XcapeAccountType,
 ): XcapeNavItem[] => {
+  // Affiliate / CDP workspaces are account-type driven, not job-role driven —
+  // they never carry a staff JobRole bundle.
+  const partnerNav = accountType ? navForAccountType(accountType) : null;
+  if (partnerNav) return partnerNav;
   const source = isTeam ? TEAM_LAUNCH_NAV : PRACTITIONER_NAV;
   if (!sections) return source;
   return source.filter((item) => !item.section || sections.has(item.section));
