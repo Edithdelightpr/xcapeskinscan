@@ -99,7 +99,7 @@ export const findPotentialDuplicates = async (
   (data ?? []).forEach((c) => {
     if (excludeIds.has(c.id)) return;
     const reasons: DupeReason[] = [];
-    if (phoneKey && normalisePhone(c.phone) === phoneKey) reasons.push('exact_phone');
+    if (phoneKey && samePhoneRecord(input.phone, c.phone)) reasons.push('exact_phone');
     if (emailKey && normaliseEmail(c.email) === emailKey) reasons.push('exact_email');
     if (nameKey && normaliseName(c.full_name) === nameKey) reasons.push('name_match');
     if (reasons.length > 0) matches.push({ client: c, reasons });
