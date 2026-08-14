@@ -58,14 +58,16 @@ export const XCAPE_MERCHANT_NAME = 'XCAPE';
 
 /**
  * Resolves who sells and at which price book. A CDP only becomes the merchant
- * when the report genuinely originated inside that CDP organisation — an
- * affiliate attached to the XCAPE root org always sells at XCAPE prices.
+ * when the report genuinely originated inside that CDP organisation and that
+ * partner is approved and live — an affiliate attached to the XCAPE root org,
+ * or a partner still under review, always sells at XCAPE prices.
  */
 export const resolveCommercialContext = (
   origin: OriginContext,
   root: OrgRef | null,
 ): CommercialContext => {
-  const isCdpOrigin = origin.role === 'cdp' && origin.org?.kind === 'cdp';
+  const orgLive = origin.org?.status == null || origin.org.status === 'active';
+  const isCdpOrigin = origin.role === 'cdp' && origin.org?.kind === 'cdp' && orgLive;
   if (isCdpOrigin && origin.org) {
     return {
       merchant_org_id: origin.org.id,
