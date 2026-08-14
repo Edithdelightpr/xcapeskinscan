@@ -1,6 +1,11 @@
-import { ScanFace, Users, CalendarDays, FileText, History, BookOpen, UserCircle } from 'lucide-react';
+import {
+  ScanFace, Users, CalendarDays, FileText, History, BookOpen, UserCircle,
+  TrendingUp, ShoppingCart, Tags,
+} from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import type { SectionKey } from '@/lib/permissions';
+import type { XcapeAccountType } from '@/hooks/useAuth';
+
 
 export interface XcapeNavItem {
   title: string;
