@@ -13397,6 +13397,24 @@ export type Database = {
         }
         Returns: Json
       }
+      submit_public_cart_order_from_report: {
+        Args: {
+          _attributed_staff_id?: string
+          _customer_email?: string
+          _customer_name: string
+          _customer_phone: string
+          _delivery_address?: string
+          _delivery_method?: string
+          _items: Json
+          _notes?: string
+          _order_ref?: string
+          _outreach_id?: string
+          _promo_code?: string
+          _referral_staff_id?: string
+          _report_token: string
+        }
+        Returns: Json
+      }
       submit_public_product_order: {
         Args: {
           _customer_email?: string
