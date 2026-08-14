@@ -24,6 +24,7 @@ const ADMIN_NAV: XcapeNavItem[] = [
   { title: 'Affiliates & Access', url: '/xcape/admin/access', icon: ShieldCheck },
   { title: 'Partner Locations (CDPs)', url: '/xcape/admin/organizations', icon: Building2 },
   { title: 'Orders', url: '/xcape/orders', icon: ShoppingCart },
+  { title: 'System Pricing', url: '/xcape/pricing', icon: Tags },
   { title: 'Attribution & Performance', url: '/xcape/performance', icon: TrendingUp },
   { title: 'Practitioners', url: '/xcape/admin/practitioners', icon: Stethoscope },
   { title: 'XCAPE Scoring Standard', url: '/xcape/admin/scoring-standard', icon: Gauge },
