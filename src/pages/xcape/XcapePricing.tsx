@@ -188,7 +188,10 @@ const XcapePricing = () => {
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-semibold text-foreground truncate">{p.name}</p>
                 <p className="text-xs text-muted-foreground">
-                  XCAPE price: {p.selling_price != null ? NGN.format(p.selling_price) : 'not configured'}
+                  XCAPE price:{' '}
+                  {p.selling_price != null && p.selling_price > 0
+                    ? NGN.format(p.selling_price)
+                    : 'not configured'}
                   {' · '}Client sees: {resolved != null ? NGN.format(resolved) : 'pricing required'}
                 </p>
               </div>
