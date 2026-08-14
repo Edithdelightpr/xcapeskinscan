@@ -15,6 +15,7 @@ import {
   ChevronUp,
   CalendarCheck,
   Sparkles,
+  Share2,
 } from 'lucide-react';
 import {
   Dialog,
@@ -219,6 +220,30 @@ const ShareReportDialog = ({
         return;
       }
       toast.error(err instanceof Error ? err.message : 'Could not create link');
+    }
+  };
+
+  // Native share sheet on mobile (Web Share API); desktop falls back to the
+  // existing Copy / WhatsApp / Email actions.
+  const canNativeShare =
+    typeof navigator !== 'undefined' && typeof navigator.share === 'function';
+
+  const handleNativeShare = async () => {
+    if (!displayUrl) return;
+    const first =
+      resolveClientFirstName(
+        // deno-lint-ignore no-explicit-any
+        (client as any).first_name ?? null,
+        client.full_name ?? null,
+      ) ?? 'there';
+    try {
+      await navigator.share({
+        title: `${BRAND.name} personal report`,
+        text: buildShareMessage({ first, reportUrl: displayUrl, promoCode, promoPct, referralLink }),
+        url: displayUrl,
+      });
+    } catch {
+      /* user dismissed the share sheet — nothing to report */
     }
   };
 
