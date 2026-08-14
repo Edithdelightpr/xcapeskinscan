@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { clientProfilePath } from '@/lib/clientProfilePath';
 import { Link } from 'react-router-dom';
 import {
   useRealClients,
@@ -324,7 +325,7 @@ const AdminClientRecords = () => {
                         <FlaskConical className="w-3.5 h-3.5" />
                       </button>
                     )}
-                    <Link to={`/admin/clients/${c.id}`} className="p-2 rounded-md bg-surface text-muted-foreground hover:text-primary transition-colors" title="Open profile">
+                    <Link to={clientProfilePath(accountType, c.id)} className="p-2 rounded-md bg-surface text-muted-foreground hover:text-primary transition-colors" title="Open profile">
                       <ArrowRight className="w-3.5 h-3.5" />
                     </Link>
                     {isAdmin && (
@@ -398,7 +399,7 @@ const AdminClientRecords = () => {
                   <FlaskConical className="w-3.5 h-3.5" />
                 </button>
               )}
-              <Link to={`/admin/clients/${c.id}`} className="flex-1 text-center px-3 py-2 rounded-md bg-primary/15 text-primary text-xs font-medium inline-flex items-center justify-center gap-1.5">
+              <Link to={clientProfilePath(accountType, c.id)} className="flex-1 text-center px-3 py-2 rounded-md bg-primary/15 text-primary text-xs font-medium inline-flex items-center justify-center gap-1.5">
                 Open profile <ArrowRight className="w-3.5 h-3.5" />
               </Link>
               {isAdmin && (
