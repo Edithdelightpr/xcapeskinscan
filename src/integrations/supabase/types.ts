@@ -12921,6 +12921,10 @@ export type Database = {
           id: string
         }[]
       }
+      has_client_touchpoint: {
+        Args: { _client: string; _user: string }
+        Returns: boolean
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -13493,6 +13497,18 @@ export type Database = {
       }
       verify_cron_secret: { Args: { candidate: string }; Returns: boolean }
       visit_finance_netting: { Args: { p_visit_id: string }; Returns: Json }
+      xcape_lookup_client_by_phone: {
+        Args: { _phone: string }
+        Returns: {
+          already_accessible: boolean
+          assessment_count: number
+          created_at: string
+          full_name: string
+          id: string
+          phone_masked: string
+        }[]
+      }
+      xcape_normalise_phone: { Args: { _raw: string }; Returns: string }
       xcape_resolved_price: {
         Args: { _org: string; _product: string }
         Returns: number
