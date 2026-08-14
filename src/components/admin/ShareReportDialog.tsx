@@ -427,6 +427,11 @@ const ShareReportDialog = ({
               <Button variant="outline" onClick={handleCopy} disabled={!canShareUrl}>
                 <Copy className="w-4 h-4 mr-1.5" /> Copy
               </Button>
+              {canNativeShare && (
+                <Button variant="outline" onClick={handleNativeShare} disabled={!canShareUrl}>
+                  <Share2 className="w-4 h-4 mr-1.5" /> Share
+                </Button>
+              )}
               <Button
                 variant="outline"
                 onClick={handleWhatsApp}
