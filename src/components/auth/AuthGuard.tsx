@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { ShieldAlert } from 'lucide-react';
 import { joinRoleName, readJoinRole } from '@/lib/xcapeMarketing';
 import { useJoinIntentClaim } from '@/hooks/useJoinIntentClaim';
+import XcapeAccountActivation from '@/components/auth/XcapeAccountActivation';
 
 interface Props {
   children: ReactNode;
@@ -39,6 +40,10 @@ const AuthGuard = ({ children, requireRole = true }: Props) => {
     return <Navigate to="/auth" replace />;
   }
 
+  // A Certified Distribution Partner waiting on XCAPE review — deliberate
+  // approval step, kept as-is but explained in partner language.
+  const isPendingPartner = roles.includes('cdp') && profile?.status !== 'active';
+
 
   // Block inactive / suspended accounts even if they hold a role
   if (profile && profile.status !== 'active') {
@@ -46,9 +51,13 @@ const AuthGuard = ({ children, requireRole = true }: Props) => {
       <div className="xcape-app min-h-screen gradient-primary flex items-center justify-center px-4">
         <div className="glass-strong rounded-2xl p-8 max-w-md text-center space-y-4">
           <ShieldAlert className="w-12 h-12 text-accent mx-auto" />
-          <h1 className="text-xl font-display font-bold text-foreground">Account {profile.status === 'invited' ? 'Pending Activation' : 'Inactive'}</h1>
+          <h1 className="text-xl font-display font-bold text-foreground">
+            {isPendingPartner ? 'Partner location under review' : `Account ${profile.status === 'invited' ? 'Pending Activation' : 'Inactive'}`}
+          </h1>
           <p className="text-sm text-muted-foreground">
-            Your account is currently <span className="text-foreground font-medium">{profile.status}</span>. An administrator must activate it before you can access the system.
+            {isPendingPartner
+              ? 'Thanks for applying. XCAPE is reviewing your partner location — you\u2019ll get access to the workspace as soon as it\u2019s approved.'
+              : 'Your account is currently inactive. An administrator must activate it before you can access the system.'}
           </p>
           {joinRole && (
             <p className="text-xs text-muted-foreground/80">
@@ -61,24 +70,11 @@ const AuthGuard = ({ children, requireRole = true }: Props) => {
     );
   }
 
+  // Self-serve XCAPE accounts: anyone signed in without a role picks their
+  // account type here. Affiliate activates instantly (no staff provisioning);
+  // CDP still goes through the existing review step.
   if (requireRole && roles.length === 0) {
-    return (
-      <div className="xcape-app min-h-screen gradient-primary flex items-center justify-center px-4">
-        <div className="glass-strong rounded-2xl p-8 max-w-md text-center space-y-4">
-          <ShieldAlert className="w-12 h-12 text-accent mx-auto" />
-          <h1 className="text-xl font-display font-bold text-foreground">Awaiting Admin Approval</h1>
-          <p className="text-sm text-muted-foreground">
-            Your account exists but no role has been assigned yet. Please contact an administrator to grant you access.
-          </p>
-          {joinRole && (
-            <p className="text-xs text-muted-foreground/80">
-              You joined as <span className="font-medium text-foreground">{joinRoleName(joinRole)}</span> — pending admin confirmation.
-            </p>
-          )}
-          <Button variant="outline" onClick={signOut}>Sign out</Button>
-        </div>
-      </div>
-    );
+    return <XcapeAccountActivation onClaimed={() => { void refresh(); }} onSignOut={() => { void signOut(); }} />;
   }
 
   return <>{children}</>;

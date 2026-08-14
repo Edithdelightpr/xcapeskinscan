@@ -15,6 +15,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
 // Single source of truth for deterministic report-link tokens.
 import { deriveToken, reportUrl, sha256Hex } from '../_shared/reportLinkToken.ts';
+import { resolveReportLinkAccess } from '../_shared/reportLinkAccess.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -23,9 +24,9 @@ const corsHeaders = {
 };
 
 const APP_URL = Deno.env.get('APP_PUBLIC_URL') || 'https://xcapeskinscan.lovable.app';
-// Every role that can manage a client's Reports tab is allowed to create /
-// recover its personal-report link. `outreach` is intentionally excluded.
-const ALLOWED_ROLES = new Set(['admin', 'front_desk', 'medical_aesthetician', 'outreach']);
+// Authorisation lives in ../_shared/reportLinkAccess.ts: clinic roles may
+// manage any client's link; XCAPE Affiliate / CDP accounts may only manage
+// clients they actually have a touchpoint on.
 
 interface Body {
   client_id: string;
@@ -62,13 +63,6 @@ Deno.serve(async (req) => {
 
     const admin = createClient(SUPABASE_URL, SERVICE_KEY);
 
-    const { data: roles } = await admin
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', caller.id);
-    const hasAccess = (roles ?? []).some((r: { role: string }) => ALLOWED_ROLES.has(r.role));
-    if (!hasAccess) return json({ error: 'Not authorized' }, 403);
-
     // ---- Input ----
     let body: Body;
     try { body = await req.json(); } catch { return json({ error: 'Invalid JSON body' }, 400); }
@@ -81,6 +75,10 @@ Deno.serve(async (req) => {
     const { data: clientRow } = await admin
       .from('clients').select('id').eq('id', body.client_id).maybeSingle();
     if (!clientRow) return json({ error: 'Not authorized' }, 403);
+
+    // Role + record-level authorisation (partners are scoped to their own people).
+    const access = await resolveReportLinkAccess(admin, caller.id, body.client_id);
+    if (!access.allowed) return json({ error: 'Not authorized' }, 403);
 
     const { data: assessment, error: aErr } = await admin
       .from('client_visit_assessments')

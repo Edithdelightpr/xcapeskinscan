@@ -123,7 +123,7 @@ const Auth = () => {
     <div className="xcape-app min-h-screen gradient-primary flex items-center justify-center px-4">
       <div className="glass-strong rounded-2xl p-8 w-full max-w-md space-y-6 glow-primary-soft">
         <div className="flex flex-col items-center">
-          <h1 className="sr-only">XCAPE — Staff Portal</h1>
+          <h1 className="sr-only">XCAPE — Account Portal</h1>
           <img src={xcapeLogo} alt="XCAPE" width={800} height={315} className="h-14 w-auto" />
         </div>
 
