@@ -105,6 +105,42 @@ export const findPotentialDuplicates = async (
     if (reasons.length > 0) matches.push({ client: c, reasons });
   });
 
+  // The rows above are limited to what RLS lets this operator read. A person
+  // may already exist in the permanent identity layer under another partner,
+  // so ask the secure lookup as well — it returns identity fields only.
+  if (phoneKey.length >= 7) {
+    const { data: shared, error: sharedErr } = await supabase.rpc(
+      'xcape_lookup_client_by_phone',
+      { _phone: phoneKey },
+    );
+    if (sharedErr) {
+      console.error('[clientDedupe] shared identity lookup failed', sharedErr);
+    } else {
+      (shared ?? []).forEach((row) => {
+        if (excludeIds.has(row.id)) return;
+        if (matches.some((m) => m.client.id === row.id)) return;
+        if (row.already_accessible) return; // would have surfaced above
+        matches.push({
+          crossOperator: true,
+          assessmentCount: row.assessment_count ?? 0,
+          reasons: ['exact_phone', 'existing_identity'],
+          client: {
+            id: row.id,
+            full_name: row.full_name,
+            phone: row.phone_masked,
+            email: null,
+            client_code: '—',
+            membership_type: 'none',
+            status: 'lead',
+            attributed_staff_id: null,
+            last_contact_date: null,
+            created_at: row.created_at,
+          } as DupeMatch['client'],
+        });
+      });
+    }
+  }
+
   // Strong matches (phone/email) first.
   matches.sort((a, b) => {
     const aStrong = a.reasons.some((r) => r !== 'name_match') ? 0 : 1;
@@ -119,8 +155,10 @@ export const reasonLabel = (r: DupeReason): string => {
     case 'exact_phone': return 'Same phone number';
     case 'exact_email': return 'Same email';
     case 'name_match':  return 'Same name';
+    case 'existing_identity': return 'Already in XCAPE';
   }
 };
+
 
 export const hasStrongMatch = (matches: DupeMatch[]): boolean =>
   matches.some((m) => m.reasons.some((r) => r !== 'name_match'));
