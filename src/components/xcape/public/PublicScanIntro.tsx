@@ -2,8 +2,8 @@ import { useState } from 'react';
 import { Camera, ImageUp, Loader2, Lock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { cn } from '@/lib/utils';
 import { SCAN_VIEWS } from '@/lib/scan/scanQuality';
+import scanIntroPortrait from '@/assets/xcape-scan-intro-portrait.png';
 
 interface Props {
   starting: boolean;
@@ -24,7 +24,8 @@ const PublicScanIntro = ({ starting, error, onStart }: Props) => {
   const [consent, setConsent] = useState(false);
 
   return (
-    <div className="grid w-full gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,26rem)] lg:items-center">
+    <div className="grid w-full gap-8 lg:grid-cols-[minmax(0,26rem)_minmax(0,1fr)] lg:items-start">
+      {/* Left column: eyebrow, heading, portrait, view chips */}
       <div className="space-y-6">
         <p className="text-xs font-medium uppercase tracking-[0.22em] text-muted-foreground">
           XCAPE quick analysis
@@ -32,6 +33,38 @@ const PublicScanIntro = ({ starting, error, onStart }: Props) => {
         <h1 className="text-3xl font-semibold tracking-tight text-foreground sm:text-5xl">
           Look at the camera. We&apos;ll do the rest.
         </h1>
+
+        <div className="space-y-3">
+          <div className="relative mx-auto aspect-[4/5] w-full max-w-[20rem] overflow-hidden rounded-3xl border border-border bg-muted/40 lg:mx-0 lg:max-w-none">
+            <img
+              src={scanIntroPortrait}
+              alt=""
+              aria-hidden
+              className="h-full w-full object-cover"
+            />
+            <span className="absolute left-1/2 top-4 -translate-x-1/2 rounded-full bg-background/90 px-3 py-1 text-[11px] font-medium text-muted-foreground">
+              Alignment guide · auto-capture
+            </span>
+            <span className="absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full bg-foreground px-4 py-1.5 text-xs font-medium text-background">
+              Hold still — no button to press
+            </span>
+          </div>
+
+          <ul className="grid grid-cols-3 gap-2">
+            {SCAN_VIEWS.map((v) => (
+              <li
+                key={v.id}
+                className="rounded-xl border border-border py-2 text-center text-xs font-medium text-muted-foreground"
+              >
+                {v.label}
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+
+      {/* Right column: explanatory copy, stepper, consent, actions, privacy, disclaimer */}
+      <div className="space-y-6">
         <p className="max-w-md text-base text-muted-foreground">
           We automatically capture your front, left and right views, then produce your four XCAPE
           skin-health scores in about two minutes. No account needed.
@@ -110,44 +143,6 @@ const PublicScanIntro = ({ starting, error, onStart }: Props) => {
           diagnose, treat or cure any condition. For any medical concern, consult a qualified
           healthcare professional.
         </p>
-      </div>
-
-      <div className="space-y-3">
-        <div className="relative aspect-[4/5] w-full overflow-hidden rounded-3xl border border-border bg-muted/40">
-          <svg viewBox="0 0 100 125" className="h-full w-full text-muted-foreground/35" aria-hidden>
-            <ellipse
-              cx="50"
-              cy="58"
-              rx="27"
-              ry="38"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="0.7"
-              strokeDasharray="3 3"
-            />
-            <path d="M16 125 Q50 90 84 125" fill="none" stroke="currentColor" strokeWidth="0.7" />
-            <path d="M50 24 L50 34 M50 82 L50 92 M18 58 L28 58 M72 58 L82 58" stroke="currentColor" strokeWidth="0.7" />
-          </svg>
-          <span className="absolute left-1/2 top-4 -translate-x-1/2 rounded-full bg-background/90 px-3 py-1 text-[11px] font-medium text-muted-foreground">
-            Alignment guide · auto-capture
-          </span>
-          <span className="absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full bg-foreground px-4 py-1.5 text-xs font-medium text-background">
-            Hold still — no button to press
-          </span>
-        </div>
-
-        <ul className="grid grid-cols-3 gap-2">
-          {SCAN_VIEWS.map((v) => (
-            <li
-              key={v.id}
-              className={cn(
-                'rounded-xl border border-border py-2 text-center text-xs font-medium text-muted-foreground',
-              )}
-            >
-              {v.label}
-            </li>
-          ))}
-        </ul>
       </div>
     </div>
   );
