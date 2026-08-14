@@ -147,11 +147,35 @@ const XcapeOrders = () => {
                     via {o.origin_role}
                   </Badge>
                 )}
-                <Badge className={`text-[10px] border-0 capitalize ${statusTone(o.status)}`}>{o.status}</Badge>
+                <Badge className={`text-[10px] border-0 capitalize ${statusTone(o.status)}`}>
+                  {statusLabel(o.status)}
+                </Badge>
                 <span className="text-sm font-semibold text-foreground tabular-nums">
                   {NGN.format(Number(o.unit_price ?? 0) * Number(o.quantity ?? 1))}
                 </span>
+                {canFulfil && o.status === 'pending' && (
+                  <div className="flex items-center gap-2 w-full sm:w-auto">
+                    <Button
+                      size="sm"
+                      className="flex-1 sm:flex-none min-h-10"
+                      disabled={mutate.isPending}
+                      onClick={() => mutate.mutate({ id: o.id, action: 'confirm' })}
+                    >
+                      <Check className="w-3.5 h-3.5 mr-1.5" /> Mark fulfilled
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="flex-1 sm:flex-none min-h-10"
+                      disabled={mutate.isPending}
+                      onClick={() => mutate.mutate({ id: o.id, action: 'cancel' })}
+                    >
+                      <X className="w-3.5 h-3.5 mr-1.5" /> Cancel
+                    </Button>
+                  </div>
+                )}
               </div>
+
             </div>
           ))}
         </div>
