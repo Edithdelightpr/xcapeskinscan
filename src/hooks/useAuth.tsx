@@ -50,6 +50,7 @@ interface AuthContextValue {
   roles: AppRole[];
   loading: boolean;
   isAdmin: boolean;
+  accountType: XcapeAccountType;
   hasRole: (role: AppRole) => boolean;
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
   signUp: (email: string, password: string, fullName: string) => Promise<{ error: string | null }>;
@@ -130,11 +131,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const isAdmin = roles.includes('admin');
+  const accountType = resolveAccountType(roles);
   const hasRole = (role: AppRole) => roles.includes(role);
 
   return (
     <AuthContext.Provider
-      value={{ user, session, profile, roles, loading, isAdmin, hasRole, signIn, signUp, signOut, refresh }}
+      value={{ user, session, profile, roles, loading, isAdmin, accountType, hasRole, signIn, signUp, signOut, refresh }}
     >
       {children}
     </AuthContext.Provider>
