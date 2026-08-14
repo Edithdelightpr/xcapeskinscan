@@ -1,7 +1,19 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import {
+  deriveCrmMetrics,
+  deriveNetworkPerformance,
+  buildClientTimeline,
+  summariseLifetime,
+  type CrmMetrics,
+  type NetworkPerformanceRow,
+  type CrmTimelineEntry,
+  type CrmLifetime,
+} from '@/lib/xcapeCrm';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
+
+export type { CrmMetrics, NetworkPerformanceRow, CrmTimelineEntry, CrmLifetime };
 
 export interface CrmScope {
   /** Restrict to a single origin account (affiliate self-view). */
@@ -10,19 +22,6 @@ export interface CrmScope {
   originOrgId?: string | null;
   /** ISO date lower bound. */
   since?: string;
-}
-
-export interface CrmMetrics {
-  newLeads: number;
-  newAnalyses: number;
-  repeatAnalyses: number;
-  reportsShared: number;
-  reportOpens: number;
-  conversions: number;
-  newCustomers: number;
-  repeatCustomers: number;
-  orders: number;
-  revenue: number;
 }
 
 const scoped = (q: any, scope: CrmScope, dateCol = 'created_at') => {
@@ -40,7 +39,12 @@ const scoped = (q: any, scope: CrmScope, dateCol = 'created_at') => {
  */
 export const useXcapeCrmMetrics = (scope: CrmScope = {}) =>
   useQuery({
-    queryKey: ['xcape-crm-metrics', scope.originUserId ?? null, scope.originOrgId ?? null, scope.since ?? null],
+    queryKey: [
+      'xcape-crm-metrics',
+      scope.originUserId ?? null,
+      scope.originOrgId ?? null,
+      scope.since ?? null,
+    ],
     queryFn: async (): Promise<CrmMetrics> => {
       const [clientsRes, assessRes, linksRes, ordersRes] = await Promise.all([
         scoped((supabase as any).from('clients').select('id, created_at'), scope),
@@ -57,56 +61,21 @@ export const useXcapeCrmMetrics = (scope: CrmScope = {}) =>
         scoped(
           (supabase as any)
             .from('pending_outreach_orders')
-            .select('id, customer_client_id, unit_price, quantity, status, report_link_id, created_at'),
+            .select(
+              'id, customer_client_id, unit_price, quantity, status, report_link_id, created_at',
+            ),
           scope,
         ),
       ]);
 
-      const clients = (clientsRes.data ?? []) as any[];
-      const assessments = (assessRes.data ?? []) as any[];
-      const links = (linksRes.data ?? []) as any[];
-      const orders = ((ordersRes.data ?? []) as any[]).filter((o) => o.status !== 'cancelled');
-
-      const perClient = new Map<string, number>();
-      for (const a of assessments) {
-        perClient.set(a.client_id, (perClient.get(a.client_id) ?? 0) + 1);
-      }
-      const repeatAnalyses = [...perClient.values()].reduce((n, c) => n + Math.max(0, c - 1), 0);
-
-      const ordersPerClient = new Map<string, number>();
-      for (const o of orders) {
-        if (!o.customer_client_id) continue;
-        ordersPerClient.set(o.customer_client_id, (ordersPerClient.get(o.customer_client_id) ?? 0) + 1);
-      }
-
-      const revenue = orders.reduce(
-        (sum, o) => sum + Number(o.unit_price ?? 0) * Number(o.quantity ?? 1),
-        0,
-      );
-
-      return {
-        newLeads: clients.length,
-        newAnalyses: assessments.length,
-        repeatAnalyses,
-        reportsShared: links.length,
-        reportOpens: links.reduce((n, l) => n + Number(l.open_count ?? 0), 0),
-        conversions: orders.filter((o) => !!o.report_link_id).length,
-        newCustomers: [...ordersPerClient.values()].filter((n) => n === 1).length,
-        repeatCustomers: [...ordersPerClient.values()].filter((n) => n > 1).length,
-        orders: orders.length,
-        revenue,
-      };
+      return deriveCrmMetrics({
+        clients: (clientsRes.data ?? []) as any[],
+        assessments: (assessRes.data ?? []) as any[],
+        links: (linksRes.data ?? []) as any[],
+        orders: (ordersRes.data ?? []) as any[],
+      });
     },
   });
-
-export interface NetworkPerformanceRow {
-  key: string;
-  label: string;
-  clients: number;
-  analyses: number;
-  orders: number;
-  revenue: number;
-}
 
 /** Per-operator (affiliate) and per-organisation (CDP) funnels for admins. */
 export const useXcapeNetworkPerformance = (since?: string) =>
@@ -119,65 +88,58 @@ export const useXcapeNetworkPerformance = (since?: string) =>
         (supabase as any).from('clients').select('id, origin_user_id, origin_org_id, origin_role, created_at'),
         (supabase as any)
           .from('client_visit_assessments')
-          .select('id, origin_user_id, origin_org_id, origin_role, created_at'),
+          .select('id, client_id, origin_user_id, origin_org_id, origin_role, created_at'),
         (supabase as any)
           .from('pending_outreach_orders')
           .select('id, origin_user_id, origin_org_id, unit_price, quantity, status, created_at'),
       ]);
 
       const inRange = (row: any) => !since || (row.created_at ?? '') >= since;
-      const names = new Map(
-        ((staffRes.data ?? []) as any[]).map((s) => [s.id, s.full_name || s.email || 'Account']),
-      );
-      const orgs = (orgRes.data ?? []) as any[];
-      const orgNames = new Map(orgs.map((o) => [o.id, o.name]));
 
-      const bucket = () => ({ clients: 0, analyses: 0, orders: 0, revenue: 0 });
-      const byUser = new Map<string, ReturnType<typeof bucket>>();
-      const byOrg = new Map<string, ReturnType<typeof bucket>>();
-      const ensure = (m: Map<string, any>, k: string) => {
-        if (!m.has(k)) m.set(k, bucket());
-        return m.get(k)!;
-      };
+      return deriveNetworkPerformance({
+        clients: ((clientsRes.data ?? []) as any[]).filter(inRange),
+        assessments: ((assessRes.data ?? []) as any[]).filter(inRange),
+        orders: ((ordersRes.data ?? []) as any[]).filter(inRange),
+        userLabels: new Map(
+          ((staffRes.data ?? []) as any[]).map((s) => [s.id, s.full_name || s.email || 'Account']),
+        ),
+        orgs: (orgRes.data ?? []) as any[],
+      });
+    },
+  });
 
-      for (const c of (clientsRes.data ?? []) as any[]) {
-        if (!inRange(c)) continue;
-        if (c.origin_role === 'affiliate' && c.origin_user_id) ensure(byUser, c.origin_user_id).clients += 1;
-        if (c.origin_org_id) ensure(byOrg, c.origin_org_id).clients += 1;
-      }
-      for (const a of (assessRes.data ?? []) as any[]) {
-        if (!inRange(a)) continue;
-        if (a.origin_role === 'affiliate' && a.origin_user_id) ensure(byUser, a.origin_user_id).analyses += 1;
-        if (a.origin_org_id) ensure(byOrg, a.origin_org_id).analyses += 1;
-      }
-      for (const o of (ordersRes.data ?? []) as any[]) {
-        if (!inRange(o) || o.status === 'cancelled') continue;
-        const value = Number(o.unit_price ?? 0) * Number(o.quantity ?? 1);
-        if (o.origin_user_id) {
-          const b = ensure(byUser, o.origin_user_id);
-          b.orders += 1;
-          b.revenue += value;
-        }
-        if (o.origin_org_id) {
-          const b = ensure(byOrg, o.origin_org_id);
-          b.orders += 1;
-          b.revenue += value;
-        }
-      }
+/**
+ * Permanent history for one master client — every analysis, shared report and
+ * order with its own origin, newest first. Nothing here is ever rewritten by a
+ * later touch from a different affiliate or partner location.
+ */
+export const useXcapeClientHistory = (clientId: string | null | undefined) =>
+  useQuery({
+    queryKey: ['xcape-client-history', clientId ?? null],
+    enabled: !!clientId,
+    queryFn: async (): Promise<{ timeline: CrmTimelineEntry[]; lifetime: CrmLifetime }> => {
+      const [assessRes, linksRes, ordersRes] = await Promise.all([
+        (supabase as any)
+          .from('client_visit_assessments')
+          .select('id, client_id, created_at, origin_role, origin_org_id')
+          .eq('client_id', clientId),
+        (supabase as any)
+          .from('client_report_links')
+          .select('id, client_id, created_at, open_count, revoked_at, expires_at, origin_org_id')
+          .eq('client_id', clientId),
+        (supabase as any)
+          .from('pending_outreach_orders')
+          .select(
+            'id, customer_client_id, created_at, unit_price, quantity, status, origin_role, origin_org_id, fulfilment_org_id',
+          )
+          .eq('customer_client_id', clientId),
+      ]);
 
-      const affiliates: NetworkPerformanceRow[] = [...byUser.entries()]
-        .map(([key, v]) => ({ key, label: names.get(key) ?? 'Account', ...v }))
-        .sort((a, b) => b.revenue - a.revenue || b.analyses - a.analyses);
-
-      const cdps: NetworkPerformanceRow[] = orgs
-        .filter((o) => o.kind === 'cdp')
-        .map((o) => ({
-          key: o.id,
-          label: orgNames.get(o.id) ?? 'Partner',
-          ...(byOrg.get(o.id) ?? bucket()),
-        }))
-        .sort((a, b) => b.revenue - a.revenue || b.analyses - a.analyses);
-
-      return { affiliates, cdps };
+      const timeline = buildClientTimeline({
+        assessments: (assessRes.data ?? []) as any[],
+        links: (linksRes.data ?? []) as any[],
+        orders: (ordersRes.data ?? []) as any[],
+      });
+      return { timeline, lifetime: summariseLifetime(timeline) };
     },
   });

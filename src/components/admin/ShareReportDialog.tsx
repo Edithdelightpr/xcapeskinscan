@@ -15,6 +15,7 @@ import {
   ChevronUp,
   CalendarCheck,
   Sparkles,
+  Share2,
 } from 'lucide-react';
 import {
   Dialog,
@@ -222,6 +223,30 @@ const ShareReportDialog = ({
     }
   };
 
+  // Native share sheet on mobile (Web Share API); desktop falls back to the
+  // existing Copy / WhatsApp / Email actions.
+  const canNativeShare =
+    typeof navigator !== 'undefined' && typeof navigator.share === 'function';
+
+  const handleNativeShare = async () => {
+    if (!displayUrl) return;
+    const first =
+      resolveClientFirstName(
+        // deno-lint-ignore no-explicit-any
+        (client as any).first_name ?? null,
+        client.full_name ?? null,
+      ) ?? 'there';
+    try {
+      await navigator.share({
+        title: `${BRAND.name} personal report`,
+        text: buildShareMessage({ first, reportUrl: displayUrl, promoCode, promoPct, referralLink }),
+        url: displayUrl,
+      });
+    } catch {
+      /* user dismissed the share sheet — nothing to report */
+    }
+  };
+
   const handleCopy = async () => {
     if (!displayUrl) return;
     try {
@@ -354,6 +379,15 @@ const ShareReportDialog = ({
                       ? `expires ${new Date(active.expires_at).toLocaleDateString()}`
                       : 'persistent — expires only when revoked'}
                   </p>
+                  {/* Persisted open counters — recorded server-side on every
+                      report fetch, so they survive refreshes and devices. */}
+                  <p className="text-muted-foreground">
+                    Opened {Number(active.open_count ?? 0)}{' '}
+                    {Number(active.open_count ?? 0) === 1 ? 'time' : 'times'}
+                    {active.last_opened_at
+                      ? ` · last ${new Date(active.last_opened_at).toLocaleString()}`
+                      : ' · not opened yet'}
+                  </p>
                   {legacyUnrecoverable && (
                     <p className="text-amber-600 dark:text-amber-400">
                       This link was minted before secure recovery was added.
@@ -418,6 +452,11 @@ const ShareReportDialog = ({
               <Button variant="outline" onClick={handleCopy} disabled={!canShareUrl}>
                 <Copy className="w-4 h-4 mr-1.5" /> Copy
               </Button>
+              {canNativeShare && (
+                <Button variant="outline" onClick={handleNativeShare} disabled={!canShareUrl}>
+                  <Share2 className="w-4 h-4 mr-1.5" /> Share
+                </Button>
+              )}
               <Button
                 variant="outline"
                 onClick={handleWhatsApp}

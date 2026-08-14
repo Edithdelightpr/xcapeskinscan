@@ -16,6 +16,7 @@ import ClientQuickActions from '@/components/client/ClientQuickActions';
 import ClientVisitsTab from '@/components/client/ClientVisitsTab';
 import ClientPurchasesTab from '@/components/client/ClientPurchasesTab';
 import ClientCrmTab from '@/components/client/ClientCrmTab';
+import ClientAttributionSummary from '@/components/client/ClientAttributionSummary';
 import { useEffectivePermissions } from '@/hooks/useEffectivePermissions';
 import { AGE_GROUPS, AGE_GROUP_LABELS } from '@/lib/ageGroups';
 import ClientAssessmentsTab from '@/components/client/ClientAssessmentsTab';
@@ -119,7 +120,19 @@ const ClientProfile = () => {
             saving={updateMut.isPending}
           />
         )}
-        {tab === 'crm' && <ClientCrmTab clientId={client.id} />}
+        {tab === 'crm' && (
+          <div className="space-y-4">
+            <ClientAttributionSummary
+              clientId={client.id}
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              originRole={(client as any).origin_role ?? null}
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              originOrgId={(client as any).origin_org_id ?? null}
+              createdAt={client.created_at ?? null}
+            />
+            <ClientCrmTab clientId={client.id} />
+          </div>
+        )}
         {tab === 'notes' && (
           <NotesTab
             initial={client.notes ?? ''}
