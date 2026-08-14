@@ -4,6 +4,8 @@ import { clearJoinRole, readJoinRole, type XcapeJoinRole } from '@/lib/xcapeMark
 
 /** Join intents that map onto the internal XCAPE field-Team job role. */
 const TEAM_INTENTS: XcapeJoinRole[] = ['team', 'ambassador'];
+/** Join intents redeemed through the account-role RPC (affiliate / CDP). */
+const ACCOUNT_INTENTS: XcapeJoinRole[] = ['affiliate', 'cdp'];
 
 /**
  * Redeems a pending join intent once, after the user is authenticated.
@@ -28,14 +30,21 @@ export const useJoinIntentClaim = (opts: {
     if (attempted.current === userId) return;
 
     const intent = readJoinRole();
-    if (!intent || !TEAM_INTENTS.includes(intent)) return;
+    const isTeamIntent = TEAM_INTENTS.includes(intent as XcapeJoinRole);
+    const isAccountIntent = ACCOUNT_INTENTS.includes(intent as XcapeJoinRole);
+    if (!intent || (!isTeamIntent && !isAccountIntent)) return;
 
     attempted.current = userId;
     let cancelled = false;
     setClaiming(true);
 
     void (async () => {
-      const { error } = await supabase.rpc('claim_team_intent');
+      // Affiliates activate immediately; CDP applications register a PENDING
+      // organisation that an administrator must approve.
+      const { error } = isAccountIntent
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        ? await (supabase.rpc as any)('claim_xcape_account_role', { _role: intent })
+        : await supabase.rpc('claim_team_intent');
       if (cancelled) return;
       if (error) {
         // Keep the intent so a later attempt can still redeem it.
