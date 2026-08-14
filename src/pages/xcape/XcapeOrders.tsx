@@ -1,5 +1,4 @@
 import { Helmet } from 'react-helmet-async';
-import { Helmet as _H } from 'react-helmet-async';
 import { useQuery } from '@tanstack/react-query';
 import { PackageSearch } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
