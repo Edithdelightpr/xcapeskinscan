@@ -243,6 +243,9 @@ export interface ReportPayload {
   care_journey?: ReportCareJourney;
   formulas?: ReportFormula[];
   protocol_recommendation?: ReportProtocolRecommendation | null;
+  /** Who sells and fulfils purchases made from this report. Resolved
+   *  server-side from the share link's originating organisation. */
+  merchant?: { org_id: string | null; name: string; kind: string } | null;
   link: { prefix: string; expires_at: string };
 }
 

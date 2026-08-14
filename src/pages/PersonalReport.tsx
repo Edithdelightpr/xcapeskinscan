@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import Seo from '@/components/Seo';
 import PublicFooter from '@/components/public/PublicFooter';
@@ -6,6 +6,7 @@ import { useReportPayload, logReportEvent } from '@/hooks/useReportPayload';
 import PersonalReportView from '@/components/report/PersonalReportView';
 import { whatsAppLink } from '@/lib/brand';
 import { MessageCircle } from 'lucide-react';
+import { useCartStore } from '@/store/cartStore';
 import { toast } from 'sonner';
 
 const seoTitle = 'Your Personal Report';
@@ -51,6 +52,13 @@ const PersonalReport = () => {
   const { token } = useParams<{ token: string }>();
   const status = useReportPayload(token);
   const [downloading, setDownloading] = useState(false);
+  const setCartAttribution = useCartStore((s) => s.setAttribution);
+
+  // Purchases started from this report must stay attributed to the operator who
+  // shared it — anonymous checkout has no session to derive that from.
+  useEffect(() => {
+    if (token && token !== 'preview') setCartAttribution({ report_token: token });
+  }, [token, setCartAttribution]);
 
   const handleDownloadPdf = async () => {
     if (!token || downloading) return;
