@@ -1,9 +1,11 @@
 import { Helmet } from 'react-helmet-async';
-import { useQuery } from '@tanstack/react-query';
-import { PackageSearch } from 'lucide-react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { PackageSearch, Check, X } from 'lucide-react';
+import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import XcapePageHeader from '@/components/xcape/XcapePageHeader';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 import { useMyOrganization } from '@/hooks/useXcapeOrg';
 
@@ -56,21 +58,47 @@ const useFulfilmentQueue = (orgId: string | null | undefined) =>
     },
   });
 
+/** The schema's own lifecycle: pending -> paid | cancelled. No new statuses. */
 const statusTone = (s: string) =>
-  s === 'confirmed' ? 'bg-primary/15 text-primary' :
+  s === 'paid' ? 'bg-primary/15 text-primary' :
   s === 'cancelled' ? 'bg-destructive/15 text-destructive' :
   'bg-amber-500/15 text-amber-500';
+
+const statusLabel = (s: string) => (s === 'paid' ? 'fulfilled' : s);
 
 /**
  * Fulfilment queue. CDPs see only orders their organisation fulfils;
  * XCAPE admins see the whole network (RLS enforces both).
+ *
+ * Affiliates never reach this screen — they originate sales but XCAPE
+ * fulfils them, so they get no fulfilment controls.
  */
 const XcapeOrders = () => {
-  const { isAdmin } = useAuth();
+  const { isAdmin, accountType } = useAuth();
+  const qc = useQueryClient();
   const { data: org } = useMyOrganization();
   const scopeOrgId = isAdmin ? null : org?.id ?? null;
   const { data, isLoading } = useFulfilmentQueue(scopeOrgId);
   const orders = data?.orders ?? [];
+  const canFulfil = isAdmin || accountType === 'cdp';
+
+  const mutate = useMutation({
+    mutationFn: async (input: { id: string; action: 'confirm' | 'cancel' }) => {
+      // Reuse the existing order RPCs rather than writing status directly, so
+      // stock, finance and attribution side effects stay intact.
+      const { error } =
+        input.action === 'confirm'
+          ? await (supabase as any).rpc('confirm_pending_outreach_order', { _id: input.id })
+          : await (supabase as any).rpc('cancel_pending_outreach_order', { _id: input.id });
+      if (error) throw error;
+    },
+    onSuccess: (_d, v) => {
+      toast.success(v.action === 'confirm' ? 'Order marked fulfilled' : 'Order cancelled');
+      qc.invalidateQueries({ queryKey: ['xcape-fulfilment-orders'] });
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : 'Could not update order'),
+  });
+
 
   return (
     <div className="px-4 sm:px-6 py-8 max-w-6xl mx-auto space-y-5">
@@ -119,11 +147,35 @@ const XcapeOrders = () => {
                     via {o.origin_role}
                   </Badge>
                 )}
-                <Badge className={`text-[10px] border-0 capitalize ${statusTone(o.status)}`}>{o.status}</Badge>
+                <Badge className={`text-[10px] border-0 capitalize ${statusTone(o.status)}`}>
+                  {statusLabel(o.status)}
+                </Badge>
                 <span className="text-sm font-semibold text-foreground tabular-nums">
                   {NGN.format(Number(o.unit_price ?? 0) * Number(o.quantity ?? 1))}
                 </span>
+                {canFulfil && o.status === 'pending' && (
+                  <div className="flex items-center gap-2 w-full sm:w-auto">
+                    <Button
+                      size="sm"
+                      className="flex-1 sm:flex-none min-h-10"
+                      disabled={mutate.isPending}
+                      onClick={() => mutate.mutate({ id: o.id, action: 'confirm' })}
+                    >
+                      <Check className="w-3.5 h-3.5 mr-1.5" /> Mark fulfilled
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="flex-1 sm:flex-none min-h-10"
+                      disabled={mutate.isPending}
+                      onClick={() => mutate.mutate({ id: o.id, action: 'cancel' })}
+                    >
+                      <X className="w-3.5 h-3.5 mr-1.5" /> Cancel
+                    </Button>
+                  </div>
+                )}
               </div>
+
             </div>
           ))}
         </div>

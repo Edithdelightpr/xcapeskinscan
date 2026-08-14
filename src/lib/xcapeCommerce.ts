@@ -83,15 +83,24 @@ export const resolveCommercialContext = (
  * `null` means the merchant has no usable price — callers must show a
  * "pricing not configured" state and block purchase rather than invent one.
  */
+/**
+ * A price of 0 is an unconfigured catalogue row, not a free product. Returning
+ * null keeps the report showing "Price not configured" and blocks purchase
+ * rather than presenting a guessed ₦0 to a client.
+ */
+const usablePrice = (v: number | null | undefined): number | null =>
+  v != null && Number.isFinite(v) && Number(v) > 0 ? Number(v) : null;
+
 export const resolveProductPrice = (
   systemPrice: number | null | undefined,
   orgOverride: number | null | undefined,
   source: PricingSource,
 ): number | null => {
-  if (source === 'cdp' && orgOverride != null && Number.isFinite(orgOverride)) {
-    return Number(orgOverride);
+  if (source === 'cdp') {
+    const override = usablePrice(orgOverride);
+    if (override != null) return override;
   }
-  return systemPrice != null && Number.isFinite(systemPrice) ? Number(systemPrice) : null;
+  return usablePrice(systemPrice);
 };
 
 export interface PricedProduct {

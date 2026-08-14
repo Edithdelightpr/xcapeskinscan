@@ -5,6 +5,7 @@ import {
   AlertCircle, CheckCircle2, Eye, FileText, Loader2, Save, Share2,
 } from 'lucide-react';
 import ShareReportDialog from '@/components/admin/ShareReportDialog';
+import ShareReportPanel from '@/components/report/ShareReportPanel';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -167,6 +168,18 @@ const StepReport = ({ client, readiness, ensureSaved, savePending, assessments, 
           </Button>
         </div>
       </section>
+
+      {/* Secure share management for the saved assessment — the same panel
+          used on the Reports index, so link lifecycle behaves identically. */}
+      {assessmentId && (
+        <ShareReportPanel
+          clientId={client.id}
+          assessmentId={assessmentId}
+          clientName={client.full_name}
+        />
+      )}
+
+
 
       {/* Report history for this client */}
       <section className="glass rounded-xl p-5 space-y-3">

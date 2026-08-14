@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { toast } from 'sonner';
-import { AlertTriangle, CheckCircle2, ShieldAlert, UserPlus } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, ShieldAlert, UserPlus, Users } from 'lucide-react';
 import ClientSearchPicker from '@/components/admin/ClientSearchPicker';
 import SafetyIntakeModal from '@/components/intake/SafetyIntakeModal';
 import { useClientSafetyIntakes } from '@/hooks/useSafetyIntakes';
@@ -10,7 +10,12 @@ import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import PhoneInput from '@/components/ui/PhoneInput';
-import { isValidE164 } from '@/lib/phone';
+import { isValidE164, normalizePhoneKey } from '@/lib/phone';
+import {
+  findMasterClientByPhone,
+  openMasterClient,
+  type MasterClientMatch,
+} from '@/lib/masterClient';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 
@@ -40,6 +45,9 @@ const StepClientIntake = ({ client, onPick }: Props) => {
   const [form, setForm] = useState({ full_name: '', phone: '', email: '', location: '' });
   const createMut = useCreateRealClient();
   const [intakeOpen, setIntakeOpen] = useState(false);
+  const [masterMatch, setMasterMatch] = useState<MasterClientMatch | null>(null);
+  const [checking, setChecking] = useState(false);
+  const [reusing, setReusing] = useState(false);
   const { data: intakes = [] } = useClientSafetyIntakes(client?.id);
   const latest = intakes[0] ?? null;
 
@@ -63,10 +71,28 @@ const StepClientIntake = ({ client, onPick }: Props) => {
       });
       return;
     }
+    // MASTER CLIENT: the same phone is the same person. Look them up before
+    // inserting so a repeat visit appends a new assessment to the existing
+    // record instead of forking a duplicate identity.
+    if (phone && !masterMatch) {
+      setChecking(true);
+      try {
+        const match = await findMasterClientByPhone({ full_name: fullName, phone, email });
+        if (match) {
+          setMasterMatch(match);
+          return;
+        }
+      } catch {
+        /* lookup is best-effort — never block capture on it */
+      } finally {
+        setChecking(false);
+      }
+    }
+
     try {
       const created = await createMut.mutateAsync({
         full_name: fullName,
-        phone: phone || null,
+        phone: normalizePhoneKey(phone) || phone || null,
         email: email || null,
         location: form.location.trim() || null,
         // Attribution: mark wizard capture and preserve any referral context
@@ -82,9 +108,30 @@ const StepClientIntake = ({ client, onPick }: Props) => {
       toast.success(`Client ${created.full_name} created`);
       onPick(created.id);
       setCreateMode(false);
+      setMasterMatch(null);
       setForm({ full_name: '', phone: '', email: '', location: '' });
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Failed to create client');
+    }
+  };
+
+  /** Continue on the existing person — new assessment, untouched first touch. */
+  const handleReuse = async () => {
+    if (!masterMatch) return;
+    setReusing(true);
+    try {
+      const existing = await openMasterClient(masterMatch, form.phone.trim());
+      toast.success(`Continuing with ${existing.full_name}`, {
+        description: 'This analysis is added to their existing record.',
+      });
+      onPick(existing.id);
+      setCreateMode(false);
+      setMasterMatch(null);
+      setForm({ full_name: '', phone: '', email: '', location: '' });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Could not open that client');
+    } finally {
+      setReusing(false);
     }
   };
 
@@ -165,9 +212,47 @@ const StepClientIntake = ({ client, onPick }: Props) => {
                 />
               </div>
             </div>
-            <Button onClick={handleCreate} disabled={createMut.isPending} className="bg-primary text-primary-foreground">
-              {createMut.isPending ? 'Creating…' : 'Create & select client'}
-            </Button>
+            {masterMatch && (
+              <div className="rounded-xl border border-primary/40 bg-primary/5 p-4 space-y-3">
+                <p className="text-xs font-semibold text-foreground flex items-center gap-2">
+                  <Users className="w-4 h-4 text-primary shrink-0" />
+                  {masterMatch.fullName} already uses this number
+                </p>
+                <p className="text-[11px] text-muted-foreground">
+                  {masterMatch.assessmentCount > 0
+                    ? `${masterMatch.assessmentCount} analysis${masterMatch.assessmentCount === 1 ? '' : 'es'} already on file. `
+                    : ''}
+                  Continue on their record so this analysis joins their history. Their original
+                  capture details stay exactly as they are.
+                </p>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <Button
+                    onClick={handleReuse}
+                    disabled={reusing}
+                    className="bg-primary text-primary-foreground"
+                  >
+                    {reusing ? 'Opening…' : 'Continue with this client'}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => setMasterMatch(null)}
+                    disabled={reusing}
+                    className="text-xs"
+                  >
+                    Not them — create a new client
+                  </Button>
+                </div>
+              </div>
+            )}
+            {!masterMatch && (
+              <Button
+                onClick={handleCreate}
+                disabled={createMut.isPending || checking}
+                className="bg-primary text-primary-foreground"
+              >
+                {checking ? 'Checking…' : createMut.isPending ? 'Creating…' : 'Create & select client'}
+              </Button>
+            )}
           </div>
         ) : (
           <ClientSearchPicker value={client?.id ?? null} onChange={(id) => onPick(id)} />

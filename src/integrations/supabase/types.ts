@@ -2072,6 +2072,7 @@ export type Database = {
           location: string | null
           marketing_consent: boolean
           membership_type: Database["public"]["Enums"]["membership_type"]
+          normalized_phone: string | null
           notes: string | null
           origin_org_id: string | null
           origin_role: string | null
@@ -2117,6 +2118,7 @@ export type Database = {
           location?: string | null
           marketing_consent?: boolean
           membership_type?: Database["public"]["Enums"]["membership_type"]
+          normalized_phone?: string | null
           notes?: string | null
           origin_org_id?: string | null
           origin_role?: string | null
@@ -2162,6 +2164,7 @@ export type Database = {
           location?: string | null
           marketing_consent?: boolean
           membership_type?: Database["public"]["Enums"]["membership_type"]
+          normalized_phone?: string | null
           notes?: string | null
           origin_org_id?: string | null
           origin_role?: string | null
@@ -13527,6 +13530,10 @@ export type Database = {
         }[]
       }
       xcape_normalise_phone: { Args: { _raw: string }; Returns: string }
+      xcape_phone_key: {
+        Args: { _default_dial?: string; _raw: string }
+        Returns: string
+      }
       xcape_resolved_price: {
         Args: { _org: string; _product: string }
         Returns: number
@@ -13561,6 +13568,7 @@ export type Database = {
           location: string | null
           marketing_consent: boolean
           membership_type: Database["public"]["Enums"]["membership_type"]
+          normalized_phone: string | null
           notes: string | null
           origin_org_id: string | null
           origin_role: string | null

@@ -94,3 +94,76 @@ export const isValidE164 = (value: string | null | undefined): boolean => {
   if (!value) return false;
   return /^\+\d{8,15}$/.test(value.trim());
 };
+
+/* ------------------------------------------------------------------ *
+ * Canonical identity key
+ * ------------------------------------------------------------------ */
+
+/** Dial codes we recognise, longest first — used for bare-international input. */
+const KNOWN_DIALS_DIGITS = Array.from(new Set(COUNTRIES.map((c) => c.dial.slice(1))))
+  .sort((a, b) => b.length - a.length);
+
+/**
+ * Canonical, country-aware phone key used as the MASTER CLIENT identity.
+ *
+ * Returns an E.164 string (`+<country><national>`) or `''` when the input has
+ * too few digits to identify a person. The same human number typed as
+ * `0803 123 4567`, `+2348031234567`, `002348031234567` or `234-803-123-4567`
+ * all collapse to `+2348031234567`.
+ *
+ * Rules — deliberately conservative, we never *invent* a country when the
+ * caller gave an explicit one:
+ *  - a leading `+` (or `00`) means the country code is explicit → keep it;
+ *  - a leading `0` is a national trunk prefix → replace with `defaultDial`;
+ *  - a bare number already starting with a known dial code, long enough to
+ *    carry a national part, keeps that dial code;
+ *  - anything else gets `defaultDial`.
+ */
+export const normalizePhoneKey = (
+  raw: string | null | undefined,
+  defaultDial: string = DEFAULT_DIAL_CODE,
+): string => {
+  if (raw == null) return '';
+  const trimmed = String(raw).trim();
+  if (!trimmed) return '';
+  const fallback = digits(defaultDial) || digits(DEFAULT_DIAL_CODE);
+
+  const explicitPlus = trimmed.startsWith('+');
+  let d = digits(trimmed);
+  if (!d) return '';
+
+  // `00` international access prefix behaves exactly like `+`.
+  let explicit = explicitPlus;
+  if (!explicit && d.startsWith('00')) {
+    d = d.slice(2);
+    explicit = true;
+  }
+
+  if (!explicit) {
+    // Too few digits to be a real national number — refuse rather than
+    // manufacture an identity by bolting on a country code.
+    if (d.replace(/^0+/, '').length < 7) return '';
+    if (d.startsWith('0')) {
+      // National trunk prefix — the country is implied by the caller's default.
+      d = fallback + d.replace(/^0+/, '');
+    } else {
+      const dial = KNOWN_DIALS_DIGITS.find(
+        (code) => d.startsWith(code) && d.length - code.length >= 6,
+      );
+      if (!dial) d = fallback + d;
+    }
+  }
+
+  if (d.length < 8 || d.length > 15) return '';
+  return '+' + d;
+};
+
+/** True when two raw phone inputs identify the same person. */
+export const samePhoneIdentity = (
+  a: string | null | undefined,
+  b: string | null | undefined,
+  defaultDial: string = DEFAULT_DIAL_CODE,
+): boolean => {
+  const ka = normalizePhoneKey(a, defaultDial);
+  return !!ka && ka === normalizePhoneKey(b, defaultDial);
+};

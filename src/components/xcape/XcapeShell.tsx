@@ -2,7 +2,8 @@ import { Link, Outlet, useLocation } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import {
   History, ShieldCheck, Stethoscope, Gauge, LibraryBig, Package, AlertTriangle,
-  LayoutTemplate, Activity, LogOut, ExternalLink, SlidersHorizontal, Building2, TrendingUp, ShoppingCart,
+  LayoutTemplate, Activity, LogOut, ExternalLink, SlidersHorizontal, Building2, TrendingUp,
+  ShoppingCart, Tags,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useAuth, APP_ROLE_LABELS } from '@/hooks/useAuth';
@@ -23,6 +24,7 @@ const ADMIN_NAV: XcapeNavItem[] = [
   { title: 'Affiliates & Access', url: '/xcape/admin/access', icon: ShieldCheck },
   { title: 'Partner Locations (CDPs)', url: '/xcape/admin/organizations', icon: Building2 },
   { title: 'Orders', url: '/xcape/orders', icon: ShoppingCart },
+  { title: 'System Pricing', url: '/xcape/pricing', icon: Tags },
   { title: 'Attribution & Performance', url: '/xcape/performance', icon: TrendingUp },
   { title: 'Practitioners', url: '/xcape/admin/practitioners', icon: Stethoscope },
   { title: 'XCAPE Scoring Standard', url: '/xcape/admin/scoring-standard', icon: Gauge },
