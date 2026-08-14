@@ -231,7 +231,14 @@ const Checkout = () => {
         _delivery_address: fullDeliveryAddress,
         _promo_code: appliedPromo?.code ?? null,
       };
-      const { data, error } = await supabase.rpc('submit_public_cart_order', rpcArgs);
+      // A cart built from a secure report routes through the report-aware RPC so
+      // the sale keeps the sharing operator's attribution and fulfilment org.
+      const { data, error } = attribution.report_token
+        ? await supabase.rpc('submit_public_cart_order_from_report', {
+            ...rpcArgs,
+            _report_token: attribution.report_token,
+          })
+        : await supabase.rpc('submit_public_cart_order', rpcArgs);
       if (error) throw error;
       const result = data as {
         order_ref: string;
