@@ -50,3 +50,24 @@ describe('xcapeNav', () => {
     expect(nav.some((i) => i.section === 'xcape-protocols')).toBe(false);
   });
 });
+
+describe('partner workspace navigation', () => {
+  it('gives affiliates a referral-focused workspace without partner-only tools', () => {
+    const nav = buildXcapeNav(null, false, 'affiliate');
+    const urls = nav.map((n) => n.url);
+    expect(urls).toContain('/xcape/analysis');
+    expect(urls).toContain('/xcape/performance');
+    expect(urls).not.toContain('/xcape/pricing');
+    expect(urls).not.toContain('/xcape/orders');
+  });
+
+  it('gives CDPs fulfilment and pricing control', () => {
+    const urls = buildXcapeNav(null, false, 'cdp').map((n) => n.url);
+    expect(urls).toEqual(expect.arrayContaining(['/xcape/orders', '/xcape/pricing', '/xcape/performance']));
+  });
+
+  it('leaves staff and team navigation untouched', () => {
+    expect(buildXcapeNav(null, false, 'staff')).toEqual(buildXcapeNav(null, false));
+    expect(buildXcapeNav(null, true, 'team')).toEqual(buildXcapeNav(null, true));
+  });
+});

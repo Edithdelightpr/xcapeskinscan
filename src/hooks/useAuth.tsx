@@ -2,7 +2,15 @@ import { createContext, useContext, useEffect, useState, ReactNode, useCallback 
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 
-export type AppRole = 'admin' | 'front_desk' | 'medical_aesthetician' | 'cleaner' | 'outreach' | 'team';
+export type AppRole =
+  | 'admin'
+  | 'front_desk'
+  | 'medical_aesthetician'
+  | 'cleaner'
+  | 'outreach'
+  | 'team'
+  | 'affiliate'
+  | 'cdp';
 
 export const APP_ROLE_LABELS: Record<AppRole, string> = {
   admin: 'Administrator',
@@ -11,7 +19,21 @@ export const APP_ROLE_LABELS: Record<AppRole, string> = {
   cleaner: 'Cleaner',
   outreach: 'Outreach',
   team: 'Team',
+  affiliate: 'Affiliate',
+  cdp: 'Certified Distribution Partner',
 };
+
+/** The XCAPE account type that drives workspace navigation and commerce. */
+export type XcapeAccountType = 'admin' | 'cdp' | 'affiliate' | 'team' | 'staff';
+
+export const resolveAccountType = (roles: AppRole[]): XcapeAccountType => {
+  if (roles.includes('admin')) return 'admin';
+  if (roles.includes('cdp')) return 'cdp';
+  if (roles.includes('affiliate')) return 'affiliate';
+  if (roles.includes('team')) return 'team';
+  return 'staff';
+};
+
 
 interface StaffProfile {
   id: string;
@@ -28,6 +50,7 @@ interface AuthContextValue {
   roles: AppRole[];
   loading: boolean;
   isAdmin: boolean;
+  accountType: XcapeAccountType;
   hasRole: (role: AppRole) => boolean;
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
   signUp: (email: string, password: string, fullName: string) => Promise<{ error: string | null }>;
@@ -108,11 +131,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const isAdmin = roles.includes('admin');
+  const accountType = resolveAccountType(roles);
   const hasRole = (role: AppRole) => roles.includes(role);
 
   return (
     <AuthContext.Provider
-      value={{ user, session, profile, roles, loading, isAdmin, hasRole, signIn, signUp, signOut, refresh }}
+      value={{ user, session, profile, roles, loading, isAdmin, accountType, hasRole, signIn, signUp, signOut, refresh }}
     >
       {children}
     </AuthContext.Provider>
