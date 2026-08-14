@@ -2,7 +2,8 @@ import { Link, Outlet, useLocation } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import {
   History, ShieldCheck, Stethoscope, Gauge, LibraryBig, Package, AlertTriangle,
-  LayoutTemplate, Activity, LogOut, ExternalLink, SlidersHorizontal, Building2, TrendingUp, ShoppingCart,
+  LayoutTemplate, Activity, LogOut, ExternalLink, SlidersHorizontal, Building2, TrendingUp,
+  ShoppingCart, Tags,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useAuth, APP_ROLE_LABELS } from '@/hooks/useAuth';
