@@ -13245,6 +13245,8 @@ export type Database = {
         | "cleaner"
         | "outreach"
         | "team"
+        | "affiliate"
+        | "cdp"
       appointment_status:
         | "scheduled"
         | "arrived"
@@ -13504,6 +13506,8 @@ export const Constants = {
         "cleaner",
         "outreach",
         "team",
+        "affiliate",
+        "cdp",
       ],
       appointment_status: [
         "scheduled",
