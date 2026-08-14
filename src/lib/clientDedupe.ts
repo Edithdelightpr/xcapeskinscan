@@ -1,7 +1,7 @@
 import { supabase } from '@/integrations/supabase/client';
 import type { RealClient } from '@/hooks/useRealClients';
 
-export type DupeReason = 'exact_phone' | 'exact_email' | 'name_match';
+export type DupeReason = 'exact_phone' | 'exact_email' | 'name_match' | 'existing_identity';
 
 export interface DupeMatch {
   client: Pick<
@@ -11,7 +11,17 @@ export interface DupeMatch {
     'last_contact_date' | 'created_at'
   >;
   reasons: DupeReason[];
+  /**
+   * True when the person already exists in the permanent XCAPE identity
+   * layer but was first registered by a different operator, so the current
+   * user cannot read the full record yet. Reuse goes through the
+   * `xcape_reuse_client` RPC instead of a direct field merge.
+   */
+  crossOperator?: boolean;
+  /** Number of analyses already on file for this person (identity layer only). */
+  assessmentCount?: number;
 }
+
 
 /** Strip everything except digits, then keep the last 10 (matches DB index). */
 export const normalisePhone = (raw: string | null | undefined): string => {
