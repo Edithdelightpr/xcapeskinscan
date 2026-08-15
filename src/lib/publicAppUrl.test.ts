@@ -24,8 +24,8 @@ describe('publicAppUrl', () => {
   });
 
   it('sanitizes only public https origins', () => {
-    expect(sanitizePublicBase('https://xcape-skin-scanner.lovable.app/')).toBe(
-      'https://xcape-skin-scanner.lovable.app',
+    expect(sanitizePublicBase('https://xcapeskinscan.lovable.app/')).toBe(
+      'https://xcapeskinscan.lovable.app',
     );
     expect(sanitizePublicBase('http://xcapeskinscan.lovable.app')).toBeNull();
     expect(sanitizePublicBase('https://id-preview--x.lovable.app')).toBeNull();
@@ -39,13 +39,13 @@ describe('publicAppUrl', () => {
 
   it('rewrites preview-origin report URLs onto the live domain, keeping the token', () => {
     expect(toPublicReportUrl('https://id-preview--abc.lovable.app/report/tok_123')).toBe(
-      'https://xcape-skin-scanner.lovable.app/report/tok_123',
+      'https://xcapeskinscan.lovable.app/report/tok_123',
     );
     expect(toPublicReportUrl('http://localhost:8080/report/tok_123')).toBe(
-      'https://xcape-skin-scanner.lovable.app/report/tok_123',
+      'https://xcapeskinscan.lovable.app/report/tok_123',
     );
     expect(toPublicReportUrl('/report/tok_123')).toBe(
-      'https://xcape-skin-scanner.lovable.app/report/tok_123',
+      'https://xcapeskinscan.lovable.app/report/tok_123',
     );
   });
 
@@ -67,7 +67,19 @@ describe('publicAppUrl', () => {
   });
 
   it('regeneration keeps the same public domain for a new token', () => {
-    expect(reportPublicUrl('tok_a')).toBe('https://xcape-skin-scanner.lovable.app/report/tok_a');
-    expect(reportPublicUrl('tok_b')).toBe('https://xcape-skin-scanner.lovable.app/report/tok_b');
+    expect(reportPublicUrl('tok_a')).toBe('https://xcapeskinscan.lovable.app/report/tok_a');
+    expect(reportPublicUrl('tok_b')).toBe('https://xcapeskinscan.lovable.app/report/tok_b');
+  });
+});
+
+describe('canonical origin stability (PWA identity lock)', () => {
+  // Installed PWAs are origin-scoped. Renaming the Lovable slug once already
+  // orphaned every Android home-screen install; this test exists so the
+  // production origin cannot be changed without an explicit, planned migration.
+  it('is pinned to the original production origin', () => {
+    expect(CANONICAL_PUBLIC_APP_URL).toBe('https://xcapeskinscan.lovable.app');
+    expect(CANONICAL_PUBLIC_APP_URL).not.toContain('xcape-skin-scanner');
+    expect(new URL(CANONICAL_PUBLIC_APP_URL).protocol).toBe('https:');
+    expect(CANONICAL_PUBLIC_APP_URL.endsWith('/')).toBe(false);
   });
 });
