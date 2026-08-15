@@ -1379,6 +1379,7 @@ export type Database = {
         Row: {
           assessment_id: string
           client_id: string
+          commercial_snapshot: Json | null
           created_at: string
           created_by: string | null
           expires_at: string | null
@@ -1396,6 +1397,7 @@ export type Database = {
         Insert: {
           assessment_id: string
           client_id: string
+          commercial_snapshot?: Json | null
           created_at?: string
           created_by?: string | null
           expires_at?: string | null
@@ -1413,6 +1415,7 @@ export type Database = {
         Update: {
           assessment_id?: string
           client_id?: string
+          commercial_snapshot?: Json | null
           created_at?: string
           created_by?: string | null
           expires_at?: string | null
@@ -5344,6 +5347,10 @@ export type Database = {
       }
       organizations: {
         Row: {
+          cdp_fee_amount_paid: number | null
+          cdp_fee_paid_at: string | null
+          cdp_fee_reference: string | null
+          cdp_fee_status: string
           contact_email: string | null
           contact_phone: string | null
           created_at: string
@@ -5357,6 +5364,10 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          cdp_fee_amount_paid?: number | null
+          cdp_fee_paid_at?: string | null
+          cdp_fee_reference?: string | null
+          cdp_fee_status?: string
           contact_email?: string | null
           contact_phone?: string | null
           created_at?: string
@@ -5370,6 +5381,10 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          cdp_fee_amount_paid?: number | null
+          cdp_fee_paid_at?: string | null
+          cdp_fee_reference?: string | null
+          cdp_fee_status?: string
           contact_email?: string | null
           contact_phone?: string | null
           created_at?: string
@@ -6139,6 +6154,11 @@ export type Database = {
       }
       pending_outreach_orders: {
         Row: {
+          affiliate_payout_amount: number | null
+          affiliate_payout_base: number | null
+          affiliate_payout_status: string | null
+          affiliate_split_percentage: number | null
+          affiliate_user_id: string | null
           attributed_staff_id: string | null
           cancellation_reason: string | null
           cancelled_at: string | null
@@ -6180,6 +6200,11 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          affiliate_payout_amount?: number | null
+          affiliate_payout_base?: number | null
+          affiliate_payout_status?: string | null
+          affiliate_split_percentage?: number | null
+          affiliate_user_id?: string | null
           attributed_staff_id?: string | null
           cancellation_reason?: string | null
           cancelled_at?: string | null
@@ -6221,6 +6246,11 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          affiliate_payout_amount?: number | null
+          affiliate_payout_base?: number | null
+          affiliate_payout_status?: string | null
+          affiliate_split_percentage?: number | null
+          affiliate_user_id?: string | null
           attributed_staff_id?: string | null
           cancellation_reason?: string | null
           cancelled_at?: string | null
@@ -13349,6 +13379,22 @@ export type Database = {
         Args: { p_items: Json; p_plan_id: string }
         Returns: Json
       }
+      set_cdp_fee_status: {
+        Args: {
+          _amount?: number
+          _org_id: string
+          _reference?: string
+          _status: string
+        }
+        Returns: Json
+      }
+      set_xcape_admin_settings: {
+        Args: {
+          _affiliate_split_percentage?: number
+          _cdp_required_fee?: number
+        }
+        Returns: Json
+      }
       set_xcape_partner_status: {
         Args: { _org_id: string; _status: string }
         Returns: Json
@@ -13525,6 +13571,13 @@ export type Database = {
       }
       verify_cron_secret: { Args: { candidate: string }; Returns: boolean }
       visit_finance_netting: { Args: { p_visit_id: string }; Returns: Json }
+      xcape_affiliate_split_pct: { Args: never; Returns: number }
+      xcape_authorization_state: { Args: { _user?: string }; Returns: Json }
+      xcape_build_report_commercial_snapshot: {
+        Args: { _link_id: string }
+        Returns: Json
+      }
+      xcape_is_authorized: { Args: { _user?: string }; Returns: boolean }
       xcape_lookup_client_by_phone: {
         Args: { _phone: string }
         Returns: {
@@ -13542,6 +13595,7 @@ export type Database = {
         Returns: string
       }
       xcape_report_merchant_org: { Args: { _token: string }; Returns: string }
+      xcape_required_cdp_fee: { Args: never; Returns: number }
       xcape_resolved_price: {
         Args: { _org: string; _product: string }
         Returns: number
@@ -13602,6 +13656,10 @@ export type Database = {
         }
       }
       xcape_root_org_id: { Args: never; Returns: string }
+      xcape_setting_num: {
+        Args: { _default: number; _field: string; _key: string }
+        Returns: number
+      }
       xcape_unit_price: {
         Args: { _merchant_org: string; _product_id: string }
         Returns: number

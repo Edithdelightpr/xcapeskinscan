@@ -10,9 +10,10 @@ import {
 } from './xcapeMarketing';
 
 describe('xcapeMarketing', () => {
-  it('advertises exactly three distinct public join roles', () => {
-    expect(XCAPE_PUBLIC_ROLES.map((r) => r.role)).toEqual(['affiliate', 'cdp', 'ambassador']);
+  it('advertises Affiliate and CDP only — never Team — on the standard join UI', () => {
+    expect(XCAPE_PUBLIC_ROLES.map((r) => r.role)).toEqual(['affiliate', 'cdp']);
     expect(XCAPE_PUBLIC_ROLES.some((r) => r.role === 'team')).toBe(false);
+    expect(XCAPE_PUBLIC_ROLES.some((r) => r.role === 'ambassador')).toBe(false);
     for (const role of XCAPE_ROLES) {
       expect(role.name.length).toBeGreaterThan(0);
       expect(role.description.length).toBeGreaterThan(0);
@@ -35,6 +36,14 @@ describe('xcapeMarketing', () => {
 
   it('carries a non-diagnostic disclaimer', () => {
     expect(XCAPE_DISCLAIMER).toMatch(/does not provide medical diagnosis/i);
+  });
+
+  it('keeps the dedicated Team join intent working outside the standard UI', () => {
+    // The card is hidden, but the invite URL and its join intent must survive.
+    expect(XCAPE_ROLES.some((r) => r.role === 'ambassador')).toBe(true);
+    expect(XCAPE_ROLES.some((r) => r.role === 'team')).toBe(true);
+    expect(roleAuthHref('team')).toBe('/auth?role=team');
+    expect(parseJoinRole('team')).toBe('team');
   });
 
   it('parses only known join roles from ?role=', () => {

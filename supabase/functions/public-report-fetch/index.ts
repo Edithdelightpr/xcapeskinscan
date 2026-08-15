@@ -27,6 +27,11 @@ async function sha256Hex(input: string): Promise<string> {
   return Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, '0')).join('');
 }
 
+// deno-lint-ignore no-explicit-any
+function snapshot_captured(s: any): string | null {
+  return typeof s?.captured_at === 'string' ? s.captured_at : null;
+}
+
 function initials(name?: string | null): string {
   if (!name) return '';
   return name.split(/\s+/).filter(Boolean).map((p) => p[0]?.toUpperCase() ?? '').slice(0, 2).join('');
@@ -50,7 +55,7 @@ Deno.serve(async (req) => {
 
     const { data: link, error: linkErr } = await admin
       .from('client_report_links')
-      .select('id, client_id, assessment_id, expires_at, revoked_at, token_prefix, origin_org_id, open_count, first_opened_at')
+      .select('id, client_id, assessment_id, expires_at, revoked_at, token_prefix, origin_org_id, open_count, first_opened_at, commercial_snapshot')
       .eq('token_hash', token_hash)
       .maybeSingle();
     if (linkErr) throw linkErr;
@@ -253,10 +258,35 @@ Deno.serve(async (req) => {
         }
       }
     }
+    // ---- Report-time commercial snapshot (authoritative) ----
+    // Prices were captured when the link was created and never move again. The
+    // live price book is only a fallback for legacy links without a snapshot.
     // deno-lint-ignore no-explicit-any
-    const pricedProducts = ((products ?? []) as any[]).map((p) => (
-      priceOverrides[p.id] != null ? { ...p, selling_price: priceOverrides[p.id] } : p
-    ));
+    const snapshot = (link as any).commercial_snapshot as
+      | { merchant?: { org_id: string | null; name: string; kind: string }; items?: any[] }
+      | null;
+    const snapshotPrices: Record<string, number> = {};
+    if (snapshot && Array.isArray(snapshot.items)) {
+      for (const item of snapshot.items) {
+        const pid = item?.product_id;
+        const price = Number(item?.unit_price);
+        if (pid && Number.isFinite(price) && price > 0) snapshotPrices[pid] = price;
+      }
+      if (snapshot.merchant?.name) {
+        merchant = {
+          org_id: snapshot.merchant.org_id ?? null,
+          name: snapshot.merchant.name,
+          kind: snapshot.merchant.kind ?? 'xcape_root',
+        };
+      }
+    }
+
+    // deno-lint-ignore no-explicit-any
+    const pricedProducts = ((products ?? []) as any[]).map((p) => {
+      // A 0/absent snapshot price is "not configured" — never guessed.
+      const resolved = snapshotPrices[p.id] ?? priceOverrides[p.id];
+      return resolved != null ? { ...p, selling_price: resolved } : p;
+    });
 
     // ---- Engagement: persistent open counters on the link itself ----
     const nowIso = new Date().toISOString();
@@ -316,6 +346,9 @@ Deno.serve(async (req) => {
       recommended_services: services ?? [],
       recommended_products: pricedProducts,
       merchant,
+      commercial_snapshot: snapshot
+        ? { captured_at: snapshot_captured(snapshot), currency: 'NGN', item_count: (snapshot.items ?? []).length }
+        : null,
       recommended_sessions_by_service_id,
       treatment_plan,
       payment_settings,

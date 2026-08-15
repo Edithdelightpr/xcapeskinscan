@@ -34,7 +34,7 @@ export interface XcapeRole {
   publicPath: boolean;
 }
 
-/** The three public join paths. Distinction must stay unmistakable. */
+/** The public join paths. Distinction must stay unmistakable. */
 export const XCAPE_ROLES: XcapeRole[] = [
   {
     role: 'affiliate',
@@ -55,13 +55,17 @@ export const XCAPE_ROLES: XcapeRole[] = [
     publicPath: true,
   },
   {
+    // Team / Ambassador keeps its dedicated join URL (/auth?role=ambassador)
+    // and its admin-approval workflow, but it is deliberately NOT offered on
+    // the standard Affiliate/CDP signup choice — field recruits arrive through
+    // their own invite link.
     role: 'ambassador',
     name: 'Team / Ambassador',
     tagline: 'Represent XCAPE',
     description:
       'Introduce XCAPE to prospective partners and support field activations.',
     cta: 'Join the Team',
-    publicPath: true,
+    publicPath: false,
   },
   {
     // Internal field-team invite path (/auth?role=team). Not a landing card —

@@ -13,6 +13,11 @@ export interface Organization {
   contact_phone: string | null;
   location: string | null;
   created_at: string;
+  /** Durable partner activation-fee state (admin recorded). */
+  cdp_fee_status?: 'unpaid' | 'pending' | 'paid' | 'waived' | null;
+  cdp_fee_amount_paid?: number | null;
+  cdp_fee_paid_at?: string | null;
+  cdp_fee_reference?: string | null;
 }
 
 /* eslint-disable @typescript-eslint/no-explicit-any */

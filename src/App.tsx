@@ -59,6 +59,7 @@ import XcapePerformance from "./pages/xcape/XcapePerformance";
 import XcapeOrders from "./pages/xcape/XcapeOrders";
 import XcapePricing from "./pages/xcape/XcapePricing";
 import XcapeSectionGate from "./components/xcape/XcapeSectionGate";
+import XcapeAuthorizationGate from "./components/xcape/XcapeAuthorizationGate";
 import EventInvite from "./pages/EventInvite";
 import XcapeAdminAccess from "./pages/xcape/admin/XcapeAdminAccess";
 import XcapeAdminPractitioners from "./pages/xcape/admin/XcapeAdminPractitioners";
@@ -154,7 +155,7 @@ const App = () => (
                 routes above remain intact at their original paths. */}
             <Route path="/xcape" element={<AuthGuard><XcapeShell /></AuthGuard>}>
               <Route index element={<Navigate to="/xcape/analysis" replace />} />
-              <Route path="analysis" element={<XcapeSectionGate section="xcape-analysis"><XcapeNewAnalysis /></XcapeSectionGate>} />
+              <Route path="analysis" element={<XcapeSectionGate section="xcape-analysis"><XcapeAuthorizationGate><XcapeNewAnalysis /></XcapeAuthorizationGate></XcapeSectionGate>} />
               <Route path="clients" element={<XcapeSectionGate section="xcape-clients"><XcapeClients /></XcapeSectionGate>} />
               {/* Same profile component as the MedSpa console, inside the XCAPE
                   shell so partner accounts never cross into MedSpa. */}
