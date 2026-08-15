@@ -118,12 +118,23 @@ export class PublicAnalysisError extends Error {
   }
 }
 
-export function kindForStatus(status?: number): PublicAnalysisErrorKind {
+/** Server codes that always end the session, whatever HTTP status arrives. */
+const INVALID_CODES = new Set([
+  'session_expired',
+  'session_invalid',
+  'invalid_token',
+  'token_revoked',
+  'not_found',
+]);
+
+export function kindForStatus(status?: number, code?: string): PublicAnalysisErrorKind {
+  if (code && INVALID_CODES.has(code)) return 'invalid';
   if (status === 401 || status === 410) return 'invalid';
   if (status === 429) return 'rate_limited';
   if (status === 422 || status === 413 || status === 409) return 'rejected';
   return 'recoverable';
 }
+
 
 async function callFn<T>(name: string, body: unknown): Promise<T> {
   const { data, error } = await supabase.functions.invoke(name, { body });
@@ -158,14 +169,10 @@ async function callFn<T>(name: string, body: unknown): Promise<T> {
     }
     if (payload && typeof payload.error === 'string') message = payload.error;
     if (payload && typeof payload.guidance === 'string') message = payload.guidance;
-    const kind = kindForStatus(status);
-    const err = new PublicAnalysisError(
-      message,
-      status,
-      kind === 'invalid',
-      kind,
-      typeof payload?.code === 'string' ? payload.code : undefined,
-    );
+    const code = typeof payload?.code === 'string' ? payload.code : undefined;
+    const kind = kindForStatus(status, code);
+    const err = new PublicAnalysisError(message, status, kind === 'invalid', kind, code);
+
     Object.assign(err, { payload });
     throw err;
   }
