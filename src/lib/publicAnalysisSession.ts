@@ -1,3 +1,4 @@
+import { toPublicReportUrl } from '@/lib/publicAppUrl';
 import {
   isPublicScoreKey,
   priorityFromScores,
