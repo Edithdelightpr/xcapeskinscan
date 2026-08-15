@@ -49,6 +49,53 @@ describe('PublicScanIntro progressive consent', () => {
     expect(screen.getByRole('button', { name: /agree and continue/i })).toBeDisabled();
   });
 
+  it('collapses the privacy disclosure each time the consent surface reopens', async () => {
+    const { user } = setup();
+    await user.click(screen.getByRole('button', { name: /start analysis here/i }));
+    const toggle = await screen.findByRole('button', { name: /privacy details/i });
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    await user.click(toggle);
+    expect(toggle).toHaveAttribute('aria-expanded', 'true');
+
+    await user.keyboard('{Escape}');
+    await waitFor(() => expect(screen.queryByText('Before we begin')).not.toBeInTheDocument());
+
+    await user.click(screen.getByRole('button', { name: /upload photos instead/i }));
+    expect(await screen.findByRole('button', { name: /privacy details/i })).toHaveAttribute(
+      'aria-expanded',
+      'false',
+    );
+  });
+
+  it('shows the alignment guide pill over the portrait', () => {
+    setup();
+    expect(screen.getByText(/alignment guide · auto-capture/i)).toBeInTheDocument();
+  });
+
+  it('uses instant scrolling for How it works when reduced motion is requested', async () => {
+    const scrollIntoView = vi.fn();
+    Element.prototype.scrollIntoView = scrollIntoView;
+    const original = window.matchMedia;
+    window.matchMedia = ((q: string) =>
+      ({
+        matches: q.includes('prefers-reduced-motion'),
+        media: q,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        onchange: null,
+        dispatchEvent: vi.fn(),
+      }) as unknown as MediaQueryList) as typeof window.matchMedia;
+
+    const { user } = setup();
+    await user.click(screen.getByRole('button', { name: /how it works/i }));
+    await waitFor(() => expect(scrollIntoView).toHaveBeenCalled());
+    expect(scrollIntoView.mock.calls[0][0]).toMatchObject({ behavior: 'auto' });
+
+    window.matchMedia = original;
+  });
+
   it('shows the error near the primary action and no upfront consent checkbox', () => {
     setup(false, 'Camera unavailable');
     expect(screen.getByRole('alert')).toHaveTextContent('Camera unavailable');

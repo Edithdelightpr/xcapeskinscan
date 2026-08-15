@@ -47,14 +47,16 @@ const ConsentBody = ({
   setConsent,
   starting,
   onContinue,
+  showPrivacy,
+  setShowPrivacy,
 }: {
   consent: boolean;
   setConsent: (v: boolean) => void;
   starting: boolean;
   onContinue: () => void;
+  showPrivacy: boolean;
+  setShowPrivacy: (v: boolean) => void;
 }) => {
-  const [showPrivacy, setShowPrivacy] = useState(false);
-
   return (
     <div className="space-y-4 px-4 pb-6 sm:px-0 sm:pb-0">
       <label className="flex cursor-pointer gap-3 rounded-2xl border border-border p-3.5">
@@ -73,7 +75,7 @@ const ConsentBody = ({
       <div className="rounded-2xl border border-border">
         <button
           type="button"
-          onClick={() => setShowPrivacy((v) => !v)}
+          onClick={() => setShowPrivacy(!showPrivacy)}
           aria-expanded={showPrivacy}
           className="flex min-h-[44px] w-full items-center justify-between gap-2 px-3.5 text-left text-sm font-medium text-foreground"
         >
@@ -112,17 +114,33 @@ const ConsentBody = ({
 const PublicScanIntro = ({ starting, error, onStart }: Props) => {
   const [pendingMethod, setPendingMethod] = useState<Method | null>(null);
   const [consent, setConsent] = useState(false);
+  const [showPrivacy, setShowPrivacy] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
   const isMobile = useIsMobile();
   const detailsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (showDetails) detailsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    if (!showDetails) return;
+    const prefersReduced =
+      typeof window !== 'undefined' &&
+      typeof window.matchMedia === 'function' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    detailsRef.current?.scrollIntoView({
+      behavior: prefersReduced ? 'auto' : 'smooth',
+      block: 'start',
+    });
   }, [showDetails]);
+
+  const openConsent = (method: Method) => {
+    setShowPrivacy(false);
+    setConsent(false);
+    setPendingMethod(method);
+  };
 
   const closeConsent = () => {
     setPendingMethod(null);
     setConsent(false);
+    setShowPrivacy(false);
   };
 
   const handleContinue = () => {
@@ -136,6 +154,8 @@ const PublicScanIntro = ({ starting, error, onStart }: Props) => {
       setConsent={setConsent}
       starting={starting}
       onContinue={handleContinue}
+      showPrivacy={showPrivacy}
+      setShowPrivacy={setShowPrivacy}
     />
   );
 
@@ -158,7 +178,10 @@ const PublicScanIntro = ({ starting, error, onStart }: Props) => {
               aria-hidden
               className="h-full w-full object-cover object-center"
             />
-            <span className="absolute bottom-3 left-1/2 -translate-x-1/2 rounded-full bg-foreground px-4 py-1.5 text-xs font-medium text-background">
+            <span className="pointer-events-none absolute top-3 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-background/90 px-3 py-1 text-[11px] font-medium text-foreground shadow-sm backdrop-blur-sm">
+              Alignment guide · auto-capture
+            </span>
+            <span className="pointer-events-none absolute bottom-3 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-foreground px-4 py-1.5 text-xs font-medium text-background">
               Hold still — no button to press
             </span>
           </div>
@@ -177,7 +200,7 @@ const PublicScanIntro = ({ starting, error, onStart }: Props) => {
               size="lg"
               className="min-h-[48px] w-full"
               disabled={starting}
-              onClick={() => setPendingMethod('camera')}
+              onClick={() => openConsent('camera')}
             >
               {starting && <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />}
               Start analysis here
@@ -187,7 +210,7 @@ const PublicScanIntro = ({ starting, error, onStart }: Props) => {
               <button
                 type="button"
                 disabled={starting}
-                onClick={() => setPendingMethod('upload')}
+                onClick={() => openConsent('upload')}
                 className="inline-flex min-h-[44px] items-center gap-2 text-sm font-medium text-foreground underline underline-offset-4 disabled:opacity-50"
               >
                 <ImageUp className="h-4 w-4" aria-hidden />
