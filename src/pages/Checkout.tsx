@@ -295,11 +295,20 @@ const Checkout = () => {
       // the buyer gets a next step instead of a raw database error.
       const msg = e instanceof Error ? e.message : 'Could not place order';
       const deadLink = /revoked|expired|not valid|report link/i.test(msg);
+      // A product that is not in the report's frozen commercial snapshot can
+      // never be bought from that report — say so plainly.
+      const notInReport = /not (?:in|part of).*(?:snapshot|report)|not eligible/i.test(msg);
       toast({
-        title: deadLink ? 'This report link is no longer active' : 'Order failed',
-        description: deadLink
-          ? 'Ask your XCAPE consultant for a fresh report link, then try again.'
-          : msg,
+        title: notInReport
+          ? 'Item not available on this report'
+          : deadLink
+            ? 'This report link is no longer active'
+            : 'Order failed',
+        description: notInReport
+          ? 'Only the products recommended on your report can be ordered from it. Remove the extra item and try again.'
+          : deadLink
+            ? 'Ask your XCAPE consultant for a fresh report link, then try again.'
+            : msg,
         variant: 'destructive',
       });
     } finally {
