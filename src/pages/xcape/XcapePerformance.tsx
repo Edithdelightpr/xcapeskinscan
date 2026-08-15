@@ -1,4 +1,5 @@
 import { Helmet } from 'react-helmet-async';
+import { homeCtaPath } from '@/lib/xcapeExperience';
 import { Link } from 'react-router-dom';
 import { ScanFace, TrendingUp } from 'lucide-react';
 import XcapePageHeader from '@/components/xcape/XcapePageHeader';
@@ -43,7 +44,7 @@ const XcapePerformance = () => {
             Nothing to report yet. Run your first skin analysis and your funnel starts filling in.
           </p>
           <Button asChild size="sm">
-            <Link to="/xcape/analysis">
+            <Link to={homeCtaPath(true)}>
               <ScanFace className="w-4 h-4 mr-1.5" /> Start New Analysis
             </Link>
           </Button>

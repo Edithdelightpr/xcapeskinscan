@@ -13,14 +13,16 @@ import { joinRoleName, parseJoinRole, persistJoinRole } from '@/lib/xcapeMarketi
 
 
 const Auth = () => {
-  const { user, signIn, signUp, loading } = useAuth();
+  const { user, signIn, signUp, loading, isAdmin } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   // Preserve the intended destination (e.g. /.lovable/oauth/consent?...) so
   // MCP OAuth flows return to consent instead of dropping the user on /admin.
   const rawNext = searchParams.get('next');
   const nextPath = rawNext && rawNext.startsWith('/') && !rawNext.startsWith('//') ? rawNext : null;
-  const redirectAfterAuth = nextPath ?? '/xcape';
+  // Partners return to the SAME XCAPE front page they signed up from — only
+  // administrators land in the operational console.
+  const redirectAfterAuth = nextPath ?? (isAdmin ? '/xcape' : '/');
   // Preserve the visitor's chosen public join path (affiliate / cdp / ambassador).
   const joinRole = parseJoinRole(searchParams.get('role'));
   useEffect(() => {
@@ -110,7 +112,7 @@ const Auth = () => {
     // is set, staff always land in the XCAPE workspace — never the public
     // marketing landing page.
     const redirectBase =
-      window.location.origin + '/auth?next=' + encodeURIComponent(nextPath ?? '/xcape');
+      window.location.origin + '/auth?next=' + encodeURIComponent(nextPath ?? '/');
     const result = await lovable.auth.signInWithOAuth('google', {
       redirect_uri: redirectBase || window.location.origin,
     });

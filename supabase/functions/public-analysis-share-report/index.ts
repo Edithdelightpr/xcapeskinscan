@@ -54,6 +54,57 @@ function cleanEmail(v: unknown): string | null {
   return t.length <= 160 && EMAIL_RE.test(t) ? t : null;
 }
 
+interface Operator {
+  userId: string;
+  role: 'admin' | 'affiliate' | 'cdp' | 'team';
+  orgId: string | null;
+}
+
+const OPERATOR_ROLES = ['admin', 'affiliate', 'cdp', 'team'] as const;
+
+/**
+ * Resolves the signed-in operator behind this request, if any. Role and
+ * organization are read from the database with the service key — the client
+ * can only ever supply a bearer token, never its own role or org.
+ */
+async function resolveOperator(
+  admin: ReturnType<typeof createClient>,
+  req: Request,
+): Promise<Operator | null> {
+  const header = req.headers.get('Authorization') ?? '';
+  const jwt = header.toLowerCase().startsWith('bearer ') ? header.slice(7).trim() : '';
+  // The anon/publishable key is sent on every call and is not a user session.
+  if (!jwt || jwt === Deno.env.get('SUPABASE_ANON_KEY')) return null;
+  try {
+    const { data, error } = await admin.auth.getUser(jwt);
+    const userId = data?.user?.id;
+    if (error || !userId) return null;
+
+    const { data: roleRows } = await admin
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', userId);
+    const roles = (roleRows ?? []).map((r) => String((r as { role: string }).role));
+    const role = OPERATOR_ROLES.find((r) => roles.includes(r));
+    if (!role) return null;
+
+    const { data: member } = await admin
+      .from('organization_members')
+      .select('organization_id')
+      .eq('user_id', userId)
+      .limit(1)
+      .maybeSingle();
+
+    return {
+      userId,
+      role,
+      orgId: (member as { organization_id?: string } | null)?.organization_id ?? null,
+    };
+  } catch (_e) {
+    return null;
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
   if (req.method !== 'POST') return json({ ok: false, error: 'Method not allowed' }, 405);
@@ -122,6 +173,27 @@ Deno.serve(async (req) => {
 
     const client_id = result.client_id!;
     const assessment_id = result.assessment_id!;
+
+    // ---- Silent ownership attribution -------------------------------------
+    // Guests and signed-in operators run the SAME public analysis. When the
+    // caller happens to carry a valid user session we resolve their role and
+    // organization SERVER-SIDE (never from the request body) and stamp the
+    // lead, the assessment and the report link with it. Guests stay anonymous.
+    const operator = await resolveOperator(admin, req);
+    if (operator) {
+      const origin = {
+        origin_user_id: operator.userId,
+        origin_role: operator.role,
+        origin_org_id: operator.orgId,
+      };
+      await admin.from('clients').update(origin).eq('id', client_id).is('origin_user_id', null);
+      await admin
+        .from('client_visit_assessments')
+        .update(origin)
+        .eq('id', assessment_id)
+        .is('origin_user_id', null);
+    }
+
 
     // ---- Persist the XCAPE protocol recommendation ONCE, write-once ----
     // A completed public scan always carries all four engine scores, so a
@@ -211,6 +283,13 @@ Deno.serve(async (req) => {
           token_hash: 'pending',
           token_prefix: 'pending',
           expires_at: null,
+          ...(operator
+            ? {
+                created_by: operator.userId,
+                origin_role: operator.role,
+                origin_org_id: operator.orgId,
+              }
+            : {}),
         })
         .select('id')
         .single();
