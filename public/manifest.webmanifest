@@ -17,7 +17,6 @@
     { "src": "/icons-xcape-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ],
   "shortcuts": [
-    { "name": "Skin analysis", "url": "/skin-analysis" },
-    { "name": "Practitioner workspace", "url": "/xcape/analysis" }
+    { "name": "Skin analysis", "short_name": "Analysis", "url": "/skin-analysis" }
   ]
 }
