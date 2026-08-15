@@ -3,6 +3,9 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import xcapeLogo from '@/assets/xcape-logo-black.png';
 import { XCAPE_DEMO_CTA_SHORT, XCAPE_DEMO_PATH } from '@/lib/xcapeMarketing';
+import { homeCtaPath, XCAPE_CTA_OPERATOR } from '@/lib/xcapeExperience';
+import XcapeProfileMenu from '@/components/xcape/XcapeProfileMenu';
+
 
 const NAV_LINKS = [
   { label: 'How it works', href: '#how-it-works' },
