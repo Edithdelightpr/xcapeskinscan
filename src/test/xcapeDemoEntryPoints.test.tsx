@@ -22,7 +22,7 @@ const renderWith = (ui: React.ReactElement) =>
 describe('public skin-analysis entry points', () => {
   it('hero exposes a primary free-analysis CTA to /skin-analysis', () => {
     renderWith(<XcapeHero />);
-    const cta = screen.getByRole('link', { name: /try free skin analysis/i });
+    const cta = screen.getByRole('link', { name: /try skin analysis/i });
     expect(cta).toHaveAttribute('href', XCAPE_DEMO_PATH);
     expect(screen.getByText(/no signup required/i)).toBeInTheDocument();
   });
@@ -51,7 +51,7 @@ describe('public skin-analysis entry points', () => {
 
   it('demo CTAs meet the minimum touch target height', () => {
     renderWith(<XcapeHero />);
-    const cta = screen.getByRole('link', { name: /try free skin analysis/i });
+    const cta = screen.getByRole('link', { name: /try skin analysis/i });
     expect(cta.className).toMatch(/min-h-\[4[48]px\]/);
   });
 });
