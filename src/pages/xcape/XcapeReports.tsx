@@ -93,8 +93,8 @@ const XcapeReports = () => {
         <div className="glass rounded-xl p-12 text-center">
           <p className="text-sm text-muted-foreground">No report links generated yet. Reports appear here once created from an assessment.</p>
         </div>
-      ) : (
       ) : productChrome ? (
+
         <ul className="grid gap-4 sm:grid-cols-2">
           {rows.map((row) => {
             const revoked = !!row.revoked_at;
