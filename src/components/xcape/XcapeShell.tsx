@@ -128,33 +128,74 @@ const XcapeSidebar = () => {
 };
 
 /**
- * XCAPE application shell — the reversible authenticated wrapper for the
- * standalone tropical-skin analysis product. Renders practitioner and
- * administrator navigation around the existing, untouched workflows.
+ * Product chrome for Affiliate / CDP operators: the XCAPE landing-page visual
+ * language (light, spacious, mobile-first) with a single header — wordmark,
+ * "+ Start New Analysis", notifications and the profile menu. No sidebar, no
+ * staff-panel atmosphere; CRM lives behind the menu.
  */
-const XcapeShell = () => (
-  <SidebarProvider>
+const XcapePartnerLayout = () => (
+  <div className="xcape-public min-h-screen bg-background text-foreground antialiased">
     <Helmet>
       <title>XCAPE</title>
     </Helmet>
-    <div className="xcape-app min-h-screen flex w-full gradient-primary">
-      <XcapeSidebar />
-      <div className="flex-1 flex flex-col min-w-0">
-        <header className="h-12 flex items-center gap-3 border-b border-border/40 bg-card/60 backdrop-blur-xl sticky top-0 z-30">
-          <SidebarTrigger className="ml-2" />
-          <span className="text-[11px] uppercase tracking-[0.25em] text-muted-foreground font-semibold">
-            {XCAPE.name}
-          </span>
-          <div className="ml-auto mr-3">
-            <NotificationBell />
-          </div>
-        </header>
-        <main className="flex-1 overflow-auto">
-          <Outlet />
-        </main>
+    <header className="sticky top-0 z-40 border-b border-border bg-background/85 backdrop-blur-md">
+      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-3 pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))]">
+        <Link to="/" className="flex min-h-[44px] items-center" aria-label="XCAPE home">
+          <img src={xcapeLogoLight} alt="XCAPE" width={1241} height={488} className="h-6 w-auto" />
+        </Link>
+        <div className="flex items-center gap-2">
+          <Link
+            to={homeCtaPath(true)}
+            className="inline-flex min-h-[44px] items-center rounded-full bg-foreground px-4 text-sm font-medium text-background transition-opacity hover:opacity-85"
+          >
+            <span className="sm:hidden">+ Analysis</span>
+            <span className="hidden sm:inline">{XCAPE_CTA_OPERATOR}</span>
+          </Link>
+          <NotificationBell />
+          <XcapeProfileMenu />
+        </div>
       </div>
-    </div>
-  </SidebarProvider>
+    </header>
+    <main className="mx-auto max-w-6xl">
+      <Outlet />
+    </main>
+  </div>
 );
 
+/**
+ * XCAPE application shell. Administrators keep the dense operational sidebar;
+ * every partner account gets the consumer-grade product chrome above.
+ */
+const XcapeShell = () => {
+  const { isAdmin, accountType, roles } = useAuth();
+  const isTeam = !isAdmin && roles.includes('team');
+  if (usesProductChrome(accountType, isAdmin) && !isTeam) return <XcapePartnerLayout />;
+
+  return (
+    <SidebarProvider>
+      <Helmet>
+        <title>XCAPE</title>
+      </Helmet>
+      <div className="xcape-app min-h-screen flex w-full gradient-primary">
+        <XcapeSidebar />
+        <div className="flex-1 flex flex-col min-w-0">
+          <header className="h-12 flex items-center gap-3 border-b border-border/40 bg-card/60 backdrop-blur-xl sticky top-0 z-30">
+            <SidebarTrigger className="ml-2" />
+            <span className="text-[11px] uppercase tracking-[0.25em] text-muted-foreground font-semibold">
+              {XCAPE.name}
+            </span>
+            <div className="ml-auto mr-3">
+              <NotificationBell />
+            </div>
+          </header>
+          <main className="flex-1 overflow-auto">
+            <Outlet />
+          </main>
+        </div>
+      </div>
+    </SidebarProvider>
+  );
+};
+
 export default XcapeShell;
+
