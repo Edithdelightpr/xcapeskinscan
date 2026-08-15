@@ -1,4 +1,7 @@
 import { Check, ShieldCheck } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { useAuth } from '@/hooks/useAuth';
+import { guestClaimAuthPath } from '@/lib/xcapeExperience';
 import PublicShareReportForm from '@/components/xcape/public/PublicShareReportForm';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -47,6 +50,7 @@ const PublicReportStage = ({
   sessionToken = null,
   onRestart,
 }: Props) => {
+  const { user } = useAuth();
   const key = priority ?? priorityFromScores(scores);
   const concerns = concernsFromReport(report);
 
@@ -174,6 +178,30 @@ const PublicReportStage = ({
           )}
 
           <PublicShareReportForm token={sessionToken ?? null} />
+
+          {!user && (
+            <div className="rounded-2xl border border-slate-700 bg-slate-900/40 p-4">
+              <p className="text-sm font-semibold text-slate-100">Keep this analysis permanently</p>
+              <p className="mt-1 text-sm text-slate-300">
+                Create a free XCAPE Affiliate account to save this scan, its images and report under
+                your own clients — you come straight back to this analysis.
+              </p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <Link
+                  to={guestClaimAuthPath('affiliate')}
+                  className="inline-flex min-h-[44px] items-center rounded-full bg-slate-100 px-5 text-sm font-medium text-slate-900 transition-opacity hover:opacity-85"
+                >
+                  Save &amp; share as Affiliate
+                </Link>
+                <Link
+                  to={guestClaimAuthPath('cdp')}
+                  className="inline-flex min-h-[44px] items-center rounded-full border border-slate-600 px-5 text-sm font-medium text-slate-200 transition-colors hover:bg-slate-800"
+                >
+                  Apply as a partner location
+                </Link>
+              </div>
+            </div>
+          )}
 
           <div className="flex flex-col gap-3 sm:flex-row">
             <Button
