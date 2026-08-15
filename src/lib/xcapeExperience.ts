@@ -18,8 +18,12 @@ export interface XcapeMenuItem {
 export const XCAPE_CTA_GUEST = 'Try Skin Analysis';
 export const XCAPE_CTA_OPERATOR = '+ Start New Analysis';
 
-/** Guests scan on the public flow; operators scan inside the attributed flow. */
-export const homeCtaPath = (signedIn: boolean) => (signedIn ? '/xcape/analysis' : XCAPE_DEMO_PATH);
+/**
+ * ONE scanner for everyone. Guests and signed-in operators open the exact
+ * same canonical analysis workflow — authentication only changes what the
+ * backend records (owner, role, organization), never the experience.
+ */
+export const homeCtaPath = (_signedIn?: boolean) => XCAPE_DEMO_PATH;
 export const homeCtaLabel = (signedIn: boolean) => (signedIn ? XCAPE_CTA_OPERATOR : XCAPE_CTA_GUEST);
 
 /**
