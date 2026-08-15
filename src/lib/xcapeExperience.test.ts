@@ -14,7 +14,7 @@ describe('one XCAPE experience', () => {
     expect(homeCtaLabel(false)).toBe(XCAPE_CTA_GUEST);
     expect(homeCtaLabel(true)).toBe(XCAPE_CTA_OPERATOR);
     expect(homeCtaPath(false)).toBe('/skin-analysis');
-    expect(homeCtaPath(true)).toBe('/xcape/analysis');
+    expect(homeCtaPath(true)).toBe('/skin-analysis');
   });
 
   it('keeps the partner menu to the four product destinations', () => {

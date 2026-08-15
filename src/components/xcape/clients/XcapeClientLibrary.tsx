@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { homeCtaPath } from '@/lib/xcapeExperience';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Search, ImageIcon, ArrowRight } from 'lucide-react';
@@ -111,7 +112,7 @@ const XcapeClientLibrary = () => {
             No clients yet. Start a new analysis and the person you scan appears here.
           </p>
           <Link
-            to="/xcape/analysis"
+            to={homeCtaPath(true)}
             className="mt-4 inline-flex min-h-[44px] items-center rounded-full bg-foreground px-5 text-sm font-medium text-background"
           >
             + Start New Analysis
