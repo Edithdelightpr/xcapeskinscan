@@ -41,6 +41,8 @@ export interface OrgRef {
 export interface OriginContext {
   role: XcapeOriginRole;
   org: OrgRef | null;
+  /** The operator who created the report link. Never client-supplied. */
+  user_id?: string | null;
 }
 
 export interface CommercialContext {
@@ -52,6 +54,8 @@ export interface CommercialContext {
   /** Attribution is retained regardless of who fulfils. */
   origin_role: XcapeOriginRole;
   origin_org_id: string | null;
+  /** Operator whose report produced the sale — retained for attribution. */
+  origin_user_id?: string | null;
 }
 
 export const XCAPE_MERCHANT_NAME = 'XCAPE';
@@ -75,6 +79,7 @@ export const resolveCommercialContext = (
       pricing_source: 'cdp',
       origin_role: origin.role,
       origin_org_id: origin.org.id,
+      origin_user_id: origin.user_id ?? null,
     };
   }
   return {
@@ -83,6 +88,7 @@ export const resolveCommercialContext = (
     pricing_source: 'xcape',
     origin_role: origin.role ?? null,
     origin_org_id: origin.org?.id ?? null,
+    origin_user_id: origin.user_id ?? null,
   };
 };
 
@@ -224,9 +230,6 @@ export const buildAffiliatePayout = (
   quantity: number,
   splitPercentage: number,
 ): AffiliatePayoutSnapshot | null => {
-  if (ctx.origin_role !== 'affiliate' || !ctx.origin_org_id === undefined) {
-    /* fallthrough handled below */
-  }
   if (ctx.origin_role !== 'affiliate') return null;
   const affiliateUserId = ctx.origin_user_id;
   if (!affiliateUserId) return null;
