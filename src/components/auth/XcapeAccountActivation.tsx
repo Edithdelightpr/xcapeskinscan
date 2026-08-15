@@ -99,7 +99,8 @@ const XcapeAccountActivation = ({ onClaimed, onSignOut }: Props) => {
                 </span>
                 <span className="block text-xs text-muted-foreground mt-1">
                   A partner location with its own team, pricing and fulfilment.
-                  Reviewed by XCAPE before it goes live.
+                  Reviewed by XCAPE, then activated once your activation fee is
+                  recorded — the scanner unlocks at that point.
                 </span>
               </span>
             </button>
