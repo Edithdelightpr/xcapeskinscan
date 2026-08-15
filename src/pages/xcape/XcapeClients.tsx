@@ -14,14 +14,23 @@ const XcapeClients = () => {
   const { isAdmin, accountType } = useAuth();
   const productChrome = usesProductChrome(accountType, isAdmin);
   return (
-  <div className="px-4 sm:px-6 py-8 max-w-7xl mx-auto space-y-5">
+  <div className="px-4 sm:px-6 py-8 max-w-6xl mx-auto space-y-6">
     <Helmet>
       <title>Clients — XCAPE</title>
     </Helmet>
-    <XcapePageHeader
-      title="Clients"
-      description="Your skin library — every person you have analysed, with their captured images and progress."
-    />
+    {productChrome ? (
+      <div>
+        <h1 className="text-3xl font-semibold tracking-tight">Clients</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Your skin library — everyone you have analysed, with their images and progress.
+        </p>
+      </div>
+    ) : (
+      <XcapePageHeader
+        title="Clients"
+        description="Every person analysed, with their captured images and progress."
+      />
+    )}
     {productChrome ? (
       <XcapeClientLibrary />
     ) : (

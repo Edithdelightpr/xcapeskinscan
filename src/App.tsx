@@ -48,7 +48,8 @@ import ReferralBounce from "./pages/ReferralBounce";
 import DiscountPopup from "./components/public/DiscountPopup";
 import XcapeShell from "./components/xcape/XcapeShell";
 import XcapeAdminGate from "./components/xcape/XcapeAdminGate";
-import XcapeNewAnalysis from "./pages/xcape/XcapeNewAnalysis";
+import XcapeAnalysisRoute from "./pages/xcape/XcapeAnalysisRoute";
+import XcapeClientJourney from "./pages/xcape/XcapeClientJourney";
 import XcapeClients from "./pages/xcape/XcapeClients";
 import XcapeReports from "./pages/xcape/XcapeReports";
 import XcapeHistory from "./pages/xcape/XcapeHistory";
@@ -59,7 +60,7 @@ import XcapePerformance from "./pages/xcape/XcapePerformance";
 import XcapeOrders from "./pages/xcape/XcapeOrders";
 import XcapePricing from "./pages/xcape/XcapePricing";
 import XcapeSectionGate from "./components/xcape/XcapeSectionGate";
-import XcapeAuthorizationGate from "./components/xcape/XcapeAuthorizationGate";
+
 import EventInvite from "./pages/EventInvite";
 import XcapeAdminAccess from "./pages/xcape/admin/XcapeAdminAccess";
 import XcapeAdminPractitioners from "./pages/xcape/admin/XcapeAdminPractitioners";
@@ -155,11 +156,13 @@ const App = () => (
                 routes above remain intact at their original paths. */}
             <Route path="/xcape" element={<AuthGuard><XcapeShell /></AuthGuard>}>
               <Route index element={<Navigate to="/xcape/analysis" replace />} />
-              <Route path="analysis" element={<XcapeSectionGate section="xcape-analysis"><XcapeAuthorizationGate><XcapeNewAnalysis /></XcapeAuthorizationGate></XcapeSectionGate>} />
+              {/* One scanner: partners are redirected to /skin-analysis. */}
+              <Route path="analysis" element={<XcapeAnalysisRoute />} />
               <Route path="clients" element={<XcapeSectionGate section="xcape-clients"><XcapeClients /></XcapeSectionGate>} />
-              {/* Same profile component as the MedSpa console, inside the XCAPE
-                  shell so partner accounts never cross into MedSpa. */}
-              <Route path="clients/:id" element={<XcapeSectionGate section="xcape-clients"><ClientProfile /></XcapeSectionGate>} />
+              {/* Partners get the XCAPE Skin Journey; admins keep the
+                  operational client profile. Same data, same RLS. */}
+              <Route path="clients/:id" element={<XcapeSectionGate section="xcape-clients"><XcapeClientJourney /></XcapeSectionGate>} />
+              <Route path="clients/:id/report-preview" element={<XcapeSectionGate section="xcape-reports"><AdminReportPreview /></XcapeSectionGate>} />
               <Route path="reports" element={<XcapeSectionGate section="xcape-reports"><XcapeReports /></XcapeSectionGate>} />
               <Route path="events" element={<XcapeSectionGate section="xcape-events"><XcapeEvents /></XcapeSectionGate>} />
               <Route path="history" element={<XcapeSectionGate section="xcape-history"><XcapeHistory /></XcapeSectionGate>} />
