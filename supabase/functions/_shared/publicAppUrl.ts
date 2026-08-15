@@ -8,7 +8,7 @@
 declare const Deno: { env: { get(key: string): string | undefined } };
 
 /** Published XCAPE app domain — source of truth when no override is valid. */
-export const CANONICAL_PUBLIC_APP_URL = 'https://xcapeskinscan.lovable.app';
+export const CANONICAL_PUBLIC_APP_URL = 'https://xcape-skin-scanner.lovable.app';
 
 /** Hosts that require a Lovable session or are not publicly reachable. */
 export function isNonPublicHost(host: string): boolean {

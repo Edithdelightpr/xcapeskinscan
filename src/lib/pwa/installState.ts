@@ -29,18 +29,23 @@ export const isStandalone = (env: InstallEnv): boolean =>
 
 /**
  * Decides what install affordance (if any) should be shown.
- * - `none`   → already installed, or nothing useful to offer
- * - `prompt` → a `beforeinstallprompt` event is available (Android/desktop)
- * - `ios`    → show the manual "Add to Home Screen" instruction
+ * - `none`    → already installed, or nothing useful to offer
+ * - `prompt`  → a `beforeinstallprompt` event is available (Android/desktop)
+ * - `ios`     → manual "Add to Home Screen" instruction (Safari)
+ * - `android` → manual "Chrome menu → Install app" instruction, used when
+ *               Chrome never exposes a programmatic prompt (event missed,
+ *               in-app browser, or policy/engagement heuristics)
  */
 export const resolveInstallAffordance = (
   env: InstallEnv,
   options: { hasDeferredPrompt: boolean; dismissed?: boolean } = { hasDeferredPrompt: false },
-): 'none' | 'prompt' | 'ios' => {
+): 'none' | 'prompt' | 'ios' | 'android' => {
   if (isStandalone(env)) return 'none';
   if (options.dismissed) return 'none';
   if (options.hasDeferredPrompt) return 'prompt';
-  if (detectPlatform(env.userAgent) === 'ios' && /Safari/i.test(env.userAgent)) return 'ios';
+  const platform = detectPlatform(env.userAgent);
+  if (platform === 'ios' && /Safari/i.test(env.userAgent)) return 'ios';
+  if (platform === 'android') return 'android';
   return 'none';
 };
 
