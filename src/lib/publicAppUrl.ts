@@ -73,3 +73,12 @@ export function toPublicReportUrl(raw: string): string {
 export function reportPublicUrl(token: string): string {
   return `${publicAppUrl()}/report/${token}`;
 }
+
+/** Message used whenever no usable canonical public base URL exists. */
+export const PUBLIC_URL_CONFIG_ERROR =
+  'Public app URL is not configured. Set VITE_PUBLIC_APP_URL to the live XCAPE domain.';
+
+/** True when an error came from a missing/invalid canonical public app URL. */
+export function isPublicUrlConfigError(err: unknown): boolean {
+  return err instanceof Error && err.message.startsWith('Public app URL is not configured');
+}

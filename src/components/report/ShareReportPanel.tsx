@@ -3,6 +3,7 @@ import {
   Copy, Link2, Link2Off, Loader2, RefreshCw, Share2, ShieldCheck, Eye,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { isPublicUrlConfigError } from '@/lib/publicAppUrl';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -210,6 +211,12 @@ const ShareReportPanel = ({ clientId, assessmentId, clientName, compact }: Props
           {STATUS_LABEL[status]}
         </Badge>
       </div>
+
+      {configError && (
+        <p role="alert" className="text-[11px] rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-destructive">
+          {configError} Share links cannot be issued until this is set.
+        </p>
+      )}
 
       {isLoading ? (
         <p className="text-xs text-muted-foreground">Checking share status…</p>
