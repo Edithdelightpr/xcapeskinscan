@@ -8,6 +8,7 @@ Tropics MedSpa - premium dark purple MedSpa OS prototype.
 Font: Poppins (bold for headings). Never serif.
 Logo: src/assets/tropics-logo.jpeg - gold leaf on purple.
 Currency: Nigerian Naira (₦).
+Production origin is LOCKED to https://xcapeskinscan.lovable.app — never rename the Lovable slug (breaks installed PWAs & links).
 Non-hero sections without real images must NOT use image cards/placeholders — render as compact text rows/lists instead.
 No duplicate bottom CTA bands on public treatment detail pages (hero CTA is the single booking CTA).
 
