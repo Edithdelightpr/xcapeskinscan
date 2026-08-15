@@ -75,7 +75,7 @@ const ConsentBody = ({
       <div className="rounded-2xl border border-border">
         <button
           type="button"
-          onClick={() => setShowPrivacy((v) => !v)}
+          onClick={() => setShowPrivacy(!showPrivacy)}
           aria-expanded={showPrivacy}
           className="flex min-h-[44px] w-full items-center justify-between gap-2 px-3.5 text-left text-sm font-medium text-foreground"
         >
