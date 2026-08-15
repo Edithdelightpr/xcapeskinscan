@@ -86,6 +86,9 @@ const ShareReportPanel = ({ clientId, assessmentId, clientName, compact }: Props
   const [url, setUrl] = useState<string | null>(null);
   const [legacy, setLegacy] = useState(false);
   const [confirmRevoke, setConfirmRevoke] = useState(false);
+  // Surfaced when no canonical public app URL is configured — we refuse to
+  // silently hand out a preview/editor link a recipient cannot open.
+  const [configError, setConfigError] = useState<string | null>(null);
 
   // Recover the shareable URL for the current active link (HMAC re-derivation)
   // so an operator returning later never has to remember it.
@@ -104,8 +107,10 @@ const ShareReportPanel = ({ clientId, assessmentId, clientName, compact }: Props
         if (cancelled) return;
         if (res && res.ok) setUrl(res.url);
         else if (res && res.ok === false) setLegacy(true);
-      } catch {
-        /* operator can still regenerate */
+      } catch (err) {
+        if (cancelled) return;
+        if (isPublicUrlConfigError(err)) setConfigError((err as Error).message);
+        /* otherwise the operator can still regenerate */
       }
     })();
     return () => { cancelled = true; };
@@ -121,6 +126,7 @@ const ShareReportPanel = ({ clientId, assessmentId, clientName, compact }: Props
       });
       setUrl(res.url);
       setLegacy(false);
+      setConfigError(null);
       toast.success(
         regenerate
           ? 'New secure link created — the previous link no longer works'
@@ -130,6 +136,11 @@ const ShareReportPanel = ({ clientId, assessmentId, clientName, compact }: Props
       );
     } catch (err) {
       const e = err as Error & { legacy?: boolean };
+      if (isPublicUrlConfigError(e)) {
+        setConfigError(e.message);
+        toast.error(e.message);
+        return;
+      }
       if (e?.legacy) {
         setLegacy(true);
         toast.error('This link predates secure recovery. Use Regenerate to issue a fresh one.');
