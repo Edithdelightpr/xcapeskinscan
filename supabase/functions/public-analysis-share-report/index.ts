@@ -123,6 +123,27 @@ Deno.serve(async (req) => {
     const client_id = result.client_id!;
     const assessment_id = result.assessment_id!;
 
+    // ---- Silent ownership attribution -------------------------------------
+    // Guests and signed-in operators run the SAME public analysis. When the
+    // caller happens to carry a valid user session we resolve their role and
+    // organization SERVER-SIDE (never from the request body) and stamp the
+    // lead, the assessment and the report link with it. Guests stay anonymous.
+    const operator = await resolveOperator(admin, req);
+    if (operator) {
+      const origin = {
+        origin_user_id: operator.userId,
+        origin_role: operator.role,
+        origin_org_id: operator.orgId,
+      };
+      await admin.from('clients').update(origin).eq('id', client_id).is('origin_user_id', null);
+      await admin
+        .from('client_visit_assessments')
+        .update(origin)
+        .eq('id', assessment_id)
+        .is('origin_user_id', null);
+    }
+
+
     // ---- Persist the XCAPE protocol recommendation ONCE, write-once ----
     // A completed public scan always carries all four engine scores, so a
     // missing protocol is a real defect — not an acceptable degradation. We
