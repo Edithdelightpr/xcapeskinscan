@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import PhoneInput from '@/components/ui/PhoneInput';
 import { isValidE164, normalizePhoneKey } from '@/lib/phone';
+import { describeClientError } from '@/lib/clientCreateError';
 import {
   findMasterClientByPhone,
   openMasterClient,
@@ -99,9 +100,11 @@ const StepClientIntake = ({ client, onPick }: Props) => {
         // that accompanied the practitioner into the analysis flow.
         source_type: referralSlug ? 'referral' : 'xcape_wizard',
         captured_via: 'xcape_wizard',
+        // `referral_meta` is NOT NULL in the database — send `{}` (never null)
+        // when there is no referral/UTM context.
         referral_meta: referralSlug
           ? { slug: referralSlug, ...utm }
-          : (Object.keys(utm).length > 0 ? { ...utm } : null),
+          : { ...utm },
         attributed_staff_id: user?.id ?? null,
         status: 'lead',
       });
@@ -111,7 +114,11 @@ const StepClientIntake = ({ client, onPick }: Props) => {
       setMasterMatch(null);
       setForm({ full_name: '', phone: '', email: '', location: '' });
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Failed to create client');
+      // Keep the toast clean, but never swallow the real backend error.
+      console.error('[xcape] create client failed', e);
+      toast.error('Could not create this client', {
+        description: describeClientError(e),
+      });
     }
   };
 
