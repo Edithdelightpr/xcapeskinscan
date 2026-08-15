@@ -178,7 +178,10 @@ const PublicScanIntro = ({ starting, error, onStart }: Props) => {
               aria-hidden
               className="h-full w-full object-cover object-center"
             />
-            <span className="absolute bottom-3 left-1/2 -translate-x-1/2 rounded-full bg-foreground px-4 py-1.5 text-xs font-medium text-background">
+            <span className="pointer-events-none absolute top-3 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-background/90 px-3 py-1 text-[11px] font-medium text-foreground shadow-sm backdrop-blur-sm">
+              Alignment guide · auto-capture
+            </span>
+            <span className="pointer-events-none absolute bottom-3 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-foreground px-4 py-1.5 text-xs font-medium text-background">
               Hold still — no button to press
             </span>
           </div>
