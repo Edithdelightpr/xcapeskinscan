@@ -1,5 +1,4 @@
-// Canonical public domain only — never a Lovable preview/editor origin.
-const APP_URL = publicAppUrl();// Admin edge function: recover the shareable URL for an existing active
+// Admin edge function: recover the shareable URL for an existing active
 // personal-report link. The raw token is never stored — we re-derive it from
 // the link id using REPORT_LINK_SIGNING_SECRET and verify it against the
 // persisted token_hash. If they don't match, the link was minted before the

@@ -1,5 +1,4 @@
-// Canonical public domain only — never a Lovable preview/editor origin.
-const APP_URL = publicAppUrl();// Turns a finished anonymous public skin-analysis session into a real lead and
+// Turns a finished anonymous public skin-analysis session into a real lead and
 // issues the client's persistent Personal Report link.
 //
 // Authenticated ONLY by the raw session token in the request body — never by a

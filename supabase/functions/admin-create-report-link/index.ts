@@ -1,5 +1,4 @@
-// Canonical public domain only — never a Lovable preview/editor origin.
-const APP_URL = publicAppUrl();// Admin edge function: creates or recovers a persistent Personal Report link
+// Admin edge function: creates or recovers a persistent Personal Report link
 // for a client's assessment.
 //
 //   - Tokens are DETERMINISTIC HMACs of the link id, so an authorised staff
