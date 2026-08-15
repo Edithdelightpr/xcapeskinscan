@@ -41,6 +41,8 @@ export interface OrgRef {
 export interface OriginContext {
   role: XcapeOriginRole;
   org: OrgRef | null;
+  /** The operator who created the report link. Never client-supplied. */
+  user_id?: string | null;
 }
 
 export interface CommercialContext {
@@ -52,6 +54,8 @@ export interface CommercialContext {
   /** Attribution is retained regardless of who fulfils. */
   origin_role: XcapeOriginRole;
   origin_org_id: string | null;
+  /** Operator whose report produced the sale — retained for attribution. */
+  origin_user_id?: string | null;
 }
 
 export const XCAPE_MERCHANT_NAME = 'XCAPE';
@@ -75,6 +79,7 @@ export const resolveCommercialContext = (
       pricing_source: 'cdp',
       origin_role: origin.role,
       origin_org_id: origin.org.id,
+      origin_user_id: origin.user_id ?? null,
     };
   }
   return {
@@ -83,6 +88,7 @@ export const resolveCommercialContext = (
     pricing_source: 'xcape',
     origin_role: origin.role ?? null,
     origin_org_id: origin.org?.id ?? null,
+    origin_user_id: origin.user_id ?? null,
   };
 };
 
@@ -156,3 +162,83 @@ export const buildOrderPriceSnapshot = (
   merchant_org_id: ctx.merchant_org_id,
   captured_at: now.toISOString(),
 });
+
+/* ------------------------------------------------------------------------- */
+/* Report-time commercial snapshot                                            */
+/* ------------------------------------------------------------------------- */
+
+/**
+ * The frozen commercial context stamped onto a report share link when it is
+ * created. Mirrors `public.xcape_build_report_commercial_snapshot` so the
+ * workspace, the public report and the order RPC all agree on one price.
+ */
+export interface ReportCommercialSnapshot {
+  version: number;
+  captured_at: string;
+  currency: string;
+  merchant: { org_id: string | null; name: string; kind: string; price_source: PricingSource };
+  items: {
+    product_id: string;
+    name?: string;
+    kind?: string;
+    unit_price: number | null;
+    currency?: string;
+    price_source?: string;
+    formula_snapshot_id?: string | null;
+  }[];
+}
+
+export type SnapshotPriceResult =
+  | { ok: true; unit_price: number }
+  | { ok: false; reason: 'not_in_snapshot' | 'price_not_configured' };
+
+/**
+ * Resolves what a product costs on a given report — and ONLY from that
+ * report's snapshot. A product the report never recommended can't be bought
+ * from it, and a zero/absent price is an unconfigured catalogue row rather
+ * than a free product, so both fail closed instead of guessing.
+ *
+ * Live catalogue or CDP price-book edits after capture cannot move this value.
+ */
+export const resolveSnapshotPrice = (
+  snapshot: ReportCommercialSnapshot | null | undefined,
+  productId: string,
+): SnapshotPriceResult => {
+  const item = snapshot?.items?.find((i) => i.product_id === productId);
+  if (!item) return { ok: false, reason: 'not_in_snapshot' };
+  const price = usablePrice(item.unit_price);
+  if (price == null) return { ok: false, reason: 'price_not_configured' };
+  return { ok: true, unit_price: price };
+};
+
+/** Affiliate payout snapshot written alongside an affiliate-origin order. */
+export interface AffiliatePayoutSnapshot {
+  affiliate_user_id: string;
+  affiliate_split_percentage: number;
+  affiliate_payout_base: number;
+  affiliate_payout_amount: number;
+}
+
+/**
+ * Computes the affiliate payout for an order, mirroring the database trigger.
+ * Only affiliate-origin sales earn a split — a CDP keeps its own margin, so
+ * no split is invented for partner-origin orders.
+ */
+export const buildAffiliatePayout = (
+  ctx: CommercialContext,
+  unitPrice: number,
+  quantity: number,
+  splitPercentage: number,
+): AffiliatePayoutSnapshot | null => {
+  if (ctx.origin_role !== 'affiliate') return null;
+  const affiliateUserId = ctx.origin_user_id;
+  if (!affiliateUserId) return null;
+  const pct = Math.max(0, Math.min(100, splitPercentage));
+  const base = Math.round(Math.max(0, unitPrice) * Math.max(0, quantity) * 100) / 100;
+  return {
+    affiliate_user_id: affiliateUserId,
+    affiliate_split_percentage: pct,
+    affiliate_payout_base: base,
+    affiliate_payout_amount: Math.round(base * pct) / 100,
+  };
+};
