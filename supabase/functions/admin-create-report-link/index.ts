@@ -25,7 +25,8 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
-const APP_URL = Deno.env.get('APP_PUBLIC_URL') || 'https://xcapeskinscan.lovable.app';
+// Canonical public domain only — never a Lovable preview/editor origin.
+const APP_URL = publicAppUrl();
 // Authorisation lives in ../_shared/reportLinkAccess.ts: clinic roles may
 // manage any client's link; XCAPE Affiliate / CDP accounts may only manage
 // clients they actually have a touchpoint on.

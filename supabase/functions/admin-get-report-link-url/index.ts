@@ -18,7 +18,8 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
-const APP_URL = Deno.env.get('APP_PUBLIC_URL') || 'https://xcapeskinscan.lovable.app';
+// Canonical public domain only — never a Lovable preview/editor origin.
+const APP_URL = publicAppUrl();
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
