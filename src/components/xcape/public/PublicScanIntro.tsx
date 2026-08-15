@@ -47,14 +47,16 @@ const ConsentBody = ({
   setConsent,
   starting,
   onContinue,
+  showPrivacy,
+  setShowPrivacy,
 }: {
   consent: boolean;
   setConsent: (v: boolean) => void;
   starting: boolean;
   onContinue: () => void;
+  showPrivacy: boolean;
+  setShowPrivacy: (v: boolean) => void;
 }) => {
-  const [showPrivacy, setShowPrivacy] = useState(false);
-
   return (
     <div className="space-y-4 px-4 pb-6 sm:px-0 sm:pb-0">
       <label className="flex cursor-pointer gap-3 rounded-2xl border border-border p-3.5">
