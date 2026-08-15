@@ -169,14 +169,10 @@ async function callFn<T>(name: string, body: unknown): Promise<T> {
     }
     if (payload && typeof payload.error === 'string') message = payload.error;
     if (payload && typeof payload.guidance === 'string') message = payload.guidance;
-    const kind = kindForStatus(status);
-    const err = new PublicAnalysisError(
-      message,
-      status,
-      kind === 'invalid',
-      kind,
-      typeof payload?.code === 'string' ? payload.code : undefined,
-    );
+    const code = typeof payload?.code === 'string' ? payload.code : undefined;
+    const kind = kindForStatus(status, code);
+    const err = new PublicAnalysisError(message, status, kind === 'invalid', kind, code);
+
     Object.assign(err, { payload });
     throw err;
   }
