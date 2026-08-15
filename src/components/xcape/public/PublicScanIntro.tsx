@@ -114,17 +114,33 @@ const ConsentBody = ({
 const PublicScanIntro = ({ starting, error, onStart }: Props) => {
   const [pendingMethod, setPendingMethod] = useState<Method | null>(null);
   const [consent, setConsent] = useState(false);
+  const [showPrivacy, setShowPrivacy] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
   const isMobile = useIsMobile();
   const detailsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (showDetails) detailsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    if (!showDetails) return;
+    const prefersReduced =
+      typeof window !== 'undefined' &&
+      typeof window.matchMedia === 'function' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    detailsRef.current?.scrollIntoView({
+      behavior: prefersReduced ? 'auto' : 'smooth',
+      block: 'start',
+    });
   }, [showDetails]);
+
+  const openConsent = (method: Method) => {
+    setShowPrivacy(false);
+    setConsent(false);
+    setPendingMethod(method);
+  };
 
   const closeConsent = () => {
     setPendingMethod(null);
     setConsent(false);
+    setShowPrivacy(false);
   };
 
   const handleContinue = () => {
@@ -138,6 +154,8 @@ const PublicScanIntro = ({ starting, error, onStart }: Props) => {
       setConsent={setConsent}
       starting={starting}
       onContinue={handleContinue}
+      showPrivacy={showPrivacy}
+      setShowPrivacy={setShowPrivacy}
     />
   );
 
