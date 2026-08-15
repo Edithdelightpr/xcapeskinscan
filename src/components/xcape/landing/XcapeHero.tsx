@@ -1,13 +1,17 @@
 import { Link } from 'react-router-dom';
-import { XCAPE_DEMO_CTA, XCAPE_DEMO_MICROCOPY, XCAPE_DEMO_PATH } from '@/lib/xcapeMarketing';
+import { XCAPE_DEMO_MICROCOPY } from '@/lib/xcapeMarketing';
 import { BlurFade } from './BlurFade';
 import xcapeLogo from '@/assets/xcape-logo-black.png';
 import heroScan from '@/assets/xcape-hero-scan.webp';
+import { useAuth } from '@/hooks/useAuth';
+import { homeCtaLabel, homeCtaPath } from '@/lib/xcapeExperience';
 
 /**
- * Hero: outcome-first headline, short credibility line, primary Join CTA,
- * an always-visible Sign in link, and the guided three-view scan illustration.
+ * Hero: outcome-first headline, short credibility line, and one canonical
+ * analysis CTA — "Try Skin Analysis" for guests, "+ Start New Analysis" for
+ * signed-in Affiliate / CDP operators. Same product, same workflow.
  */
+
 export function XcapeHero() {
   return (
     <section className="mx-auto grid max-w-6xl items-center gap-10 pl-[max(1.5rem,env(safe-area-inset-left))] pr-[max(1.5rem,env(safe-area-inset-right))] pb-16 pt-[max(2.5rem,env(safe-area-inset-top))] lg:grid-cols-[1.05fr_1fr] lg:gap-8 lg:pb-24 lg:pt-16">
