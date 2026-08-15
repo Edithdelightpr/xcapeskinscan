@@ -13,6 +13,10 @@ import { buildXcapeNav, type XcapeNavItem } from '@/lib/xcapeNav';
 import NotificationBell from '@/components/notifications/NotificationBell';
 import xcapeLogo from '@/assets/xcape-logo-gold.png';
 import xcapeIcon from '@/assets/xcape-icon.png';
+import xcapeLogoLight from '@/assets/xcape-logo-black.png';
+import XcapeProfileMenu from '@/components/xcape/XcapeProfileMenu';
+import { homeCtaPath, usesProductChrome, XCAPE_CTA_OPERATOR } from '@/lib/xcapeExperience';
+
 import {
   Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent,
   SidebarGroupLabel, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem,
