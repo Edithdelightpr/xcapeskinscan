@@ -4,6 +4,7 @@ import {
   isNonPublicHost,
   publicAppUrl,
   reportPublicUrl,
+  isPublicUrlConfigError,
   sanitizePublicBase,
   toPublicReportUrl,
 } from '@/lib/publicAppUrl';
@@ -46,6 +47,23 @@ describe('publicAppUrl', () => {
     expect(toPublicReportUrl('/report/tok_123')).toBe(
       'https://xcapeskinscan.lovable.app/report/tok_123',
     );
+  });
+
+  it('a link generated from a preview origin still yields the production URL', () => {
+    // Simulates the editor/preview runtime, where window.location.origin and a
+    // misconfigured APP_PUBLIC_URL both point at a Lovable-auth-gated host.
+    const previewOrigin = 'https://id-preview--1593f986-2fe5-47b3.lovable.app';
+    const serverIssued = `${previewOrigin}/report/opaque-token-xyz`;
+    expect(sanitizePublicBase(previewOrigin)).toBeNull();
+    expect(toPublicReportUrl(serverIssued)).toBe(
+      `${CANONICAL_PUBLIC_APP_URL}/report/opaque-token-xyz`,
+    );
+    expect(toPublicReportUrl(serverIssued)).not.toContain('id-preview--');
+  });
+
+  it('flags configuration errors instead of leaking a preview origin', () => {
+    expect(isPublicUrlConfigError(new Error('Public app URL is not configured. Set it.'))).toBe(true);
+    expect(isPublicUrlConfigError(new Error('network error'))).toBe(false);
   });
 
   it('regeneration keeps the same public domain for a new token', () => {
