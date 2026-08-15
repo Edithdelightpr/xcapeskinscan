@@ -220,9 +220,15 @@ const ShareReportPanel = ({ clientId, assessmentId, clientName, compact }: Props
       ) : (
         <>
           {url ? (
-            <p className="text-[11px] text-muted-foreground break-all rounded-lg bg-surface/70 px-3 py-2">
-              {url}
-            </p>
+            <div className="space-y-1">
+              <p className="text-[11px] text-muted-foreground break-all rounded-lg bg-surface/70 px-3 py-2">
+                {url}
+              </p>
+              <p className="text-[11px] text-muted-foreground">
+                Anyone with this link can view the report — no account needed
+                {active?.expires_at ? ', until it expires' : ''} unless you revoke it.
+              </p>
+            </div>
           ) : legacy ? (
             <p className="text-[11px] text-amber-600">
               This link was issued before secure recovery was added, so it cannot be shown again.

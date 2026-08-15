@@ -1,3 +1,4 @@
+import { toPublicReportUrl } from '@/lib/publicAppUrl';
 import {
   isPublicScoreKey,
   priorityFromScores,
@@ -449,11 +450,21 @@ export async function shareReport(input: {
   email?: string;
   consent: boolean;
 }): Promise<ShareReportResult> {
-  return callFn<ShareReportResult>('public-analysis-share-report', {
+  const res = await callFn<ShareReportResult>('public-analysis-share-report', {
     token: input.token,
     full_name: input.fullName,
     phone: input.phone,
     email: input.email || undefined,
     consent: input.consent,
   });
+  // Recipient-facing link: force the canonical public domain.
+  const url = toPublicReportUrl(res.url);
+  return {
+    ...res,
+    url,
+    share_text: res.share_text ? res.share_text.split(res.url).join(url) : res.share_text,
+    whatsapp_url: res.whatsapp_url
+      ? res.whatsapp_url.split(encodeURIComponent(res.url)).join(encodeURIComponent(url))
+      : res.whatsapp_url,
+  };
 }

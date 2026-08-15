@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { toPublicReportUrl } from '@/lib/publicAppUrl';
 
 export interface ReportLink {
   id: string;
@@ -127,7 +128,10 @@ export const useCreateReportLink = () => {
         err.link_id = data?.link_id;
         throw err;
       }
-      return data as CreatedReportLink;
+      // Defensive: links are recipient-facing, so force the canonical public
+      // domain even if the backend was configured with a preview origin.
+      const created = data as CreatedReportLink;
+      return { ...created, url: toPublicReportUrl(created.url) };
     },
     onSuccess: (_d, vars) => {
       qc.invalidateQueries({ queryKey: ['report-links', 'assessment', vars.assessment_id] });
@@ -179,7 +183,9 @@ export const useRecoverReportLinkUrl = () =>
         if (status === 404) return null;
         throw error;
       }
-      return data as ReportLinkUrlResult;
+      const res = data as ReportLinkUrlResult;
+      if (res && res.ok) return { ...res, url: toPublicReportUrl(res.url) };
+      return res;
     },
   });
 
