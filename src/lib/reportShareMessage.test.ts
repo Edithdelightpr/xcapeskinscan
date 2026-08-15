@@ -18,11 +18,11 @@ describe('reportShareMessage', () => {
   it('always leads with the greeting then the report URL', () => {
     const msg = buildReportShareMessage({
       firstName: 'Ada',
-      reportUrl: 'https://xcapeskinscan.lovable.app/report/abc',
+      reportUrl: 'https://xcape-skin-scanner.lovable.app/report/abc',
     });
     const blocks = msg.split('\n\n');
     expect(blocks[0]).toBe('Hi Ada, here is your XCAPE skin analysis report:');
-    expect(blocks[1]).toBe('https://xcapeskinscan.lovable.app/report/abc');
+    expect(blocks[1]).toBe('https://xcape-skin-scanner.lovable.app/report/abc');
   });
 
   it('falls back to a neutral greeting without a name', () => {
@@ -62,7 +62,7 @@ describe('reportShareMessage', () => {
 
   it('is the same text the staff share dialog produces', () => {
     const first = 'Ada';
-    const reportUrl = 'https://xcapeskinscan.lovable.app/report/abc';
+    const reportUrl = 'https://xcape-skin-scanner.lovable.app/report/abc';
     expect(
       buildShareMessage({ first, reportUrl, promoCode: null, promoPct: null, referralLink: null }),
     ).toBe(
