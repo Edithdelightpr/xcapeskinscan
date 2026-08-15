@@ -1,4 +1,5 @@
-// Turns a finished anonymous public skin-analysis session into a real lead and
+// Canonical public domain only — never a Lovable preview/editor origin.
+const APP_URL = publicAppUrl();// Turns a finished anonymous public skin-analysis session into a real lead and
 // issues the client's persistent Personal Report link.
 //
 // Authenticated ONLY by the raw session token in the request body — never by a
@@ -11,6 +12,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
 import { corsHeaders, json, sha256Hex } from '../_shared/publicAnalysis.ts';
 import { deriveToken, reportUrl, sha256Hex as tokenHash } from '../_shared/reportLinkToken.ts';
+import { publicAppUrl } from '../_shared/publicAppUrl.ts';
 import { buildReportShareMessage, whatsAppShareUrl } from '../_shared/reportShareMessage.ts';
 import {
   buildPublicProtocolSnapshot,

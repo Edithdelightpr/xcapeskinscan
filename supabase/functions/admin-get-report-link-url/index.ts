@@ -1,4 +1,5 @@
-// Admin edge function: recover the shareable URL for an existing active
+// Canonical public domain only — never a Lovable preview/editor origin.
+const APP_URL = publicAppUrl();// Admin edge function: recover the shareable URL for an existing active
 // personal-report link. The raw token is never stored — we re-derive it from
 // the link id using REPORT_LINK_SIGNING_SECRET and verify it against the
 // persisted token_hash. If they don't match, the link was minted before the
@@ -8,6 +9,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
 // Single source of truth for deterministic report-link tokens.
 import { deriveToken, reportUrl, sha256Hex } from '../_shared/reportLinkToken.ts';
+import { publicAppUrl } from '../_shared/publicAppUrl.ts';
 import { resolveReportLinkAccess } from '../_shared/reportLinkAccess.ts';
 
 const corsHeaders = {
