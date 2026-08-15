@@ -88,7 +88,7 @@ const XcapeSidebar = () => {
       <SidebarContent>
         <SidebarGroup>
           {!collapsed && (
-            <SidebarGroupLabel>{accountType === 'affiliate' ? 'XCAPE Affiliate' : accountType === 'cdp' ? 'Partner Location' : isTeam ? 'XCAPE Field' : 'Practice'}</SidebarGroupLabel>
+            <SidebarGroupLabel>{accountType === 'affiliate' ? 'XCAPE Affiliate' : accountType === 'cdp' ? 'Partner Location' : isTeam ? 'XCAPE Field' : 'XCAPE'}</SidebarGroupLabel>
           )}
           <SidebarGroupContent>{renderNav(primaryNav)}</SidebarGroupContent>
         </SidebarGroup>
@@ -104,7 +104,7 @@ const XcapeSidebar = () => {
       <SidebarFooter className="border-t border-border/40 p-3 space-y-2">
         {!collapsed && (
           <div className="px-1 min-w-0">
-            <p className="text-xs font-medium text-foreground truncate">{profile?.full_name ?? 'Staff member'}</p>
+            <p className="text-xs font-medium text-foreground truncate">{profile?.full_name ?? 'XCAPE member'}</p>
             <p className="text-[10px] text-muted-foreground truncate">
               {roles.length > 0 ? roles.map((r) => APP_ROLE_LABELS[r] ?? r).join(' · ') : 'No role assigned'}
             </p>

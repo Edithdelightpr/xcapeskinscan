@@ -86,17 +86,27 @@ const XcapeReports = () => {
       <Helmet>
         <title>Reports — XCAPE</title>
       </Helmet>
-      <XcapePageHeader
-        title="Reports"
-        description="Generated skin analysis reports and their secure share links across all clients."
-      />
+      {productChrome ? (
+        <div>
+          <h1 className="text-3xl font-semibold tracking-tight">Reports</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Every report you have generated, and the secure link you shared with each person.
+          </p>
+        </div>
+      ) : (
+        <XcapePageHeader
+          title="Reports"
+          description="Generated skin analysis reports and their secure share links across all clients."
+        />
+      )}
 
       {isLoading ? (
-        <div className="glass rounded-xl p-12 text-center text-sm text-muted-foreground">Loading reports…</div>
+        <div className={`${productChrome ? 'rounded-2xl border border-border' : 'glass rounded-xl'} p-12 text-center text-sm text-muted-foreground`}>Loading reports…</div>
       ) : rows.length === 0 ? (
-        <div className="glass rounded-xl p-12 text-center">
-          <p className="text-sm text-muted-foreground">No report links generated yet. Reports appear here once created from an assessment.</p>
+        <div className={`${productChrome ? 'rounded-2xl border border-border' : 'glass rounded-xl'} p-12 text-center`}>
+          <p className="text-sm text-muted-foreground">No reports yet. Reports appear here once you finish an analysis.</p>
         </div>
+
       ) : productChrome ? (
 
         <ul className="grid gap-4 sm:grid-cols-2">

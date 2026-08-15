@@ -1,6 +1,6 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { Menu } from 'lucide-react';
-import { useAuth, APP_ROLE_LABELS } from '@/hooks/useAuth';
+import { useAuth } from '@/hooks/useAuth';
 import { profileMenuFor } from '@/lib/xcapeExperience';
 import {
   DropdownMenu,
@@ -11,12 +11,22 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 
+/** Plain-language access label — never a raw role stack. */
+const ACCESS_LABEL: Record<string, string> = {
+  affiliate: 'XCAPE Affiliate',
+  cdp: 'Partner Location',
+  team: 'XCAPE Field',
+  admin: 'XCAPE Admin',
+  staff: 'XCAPE member',
+};
+
 /**
- * The single navigation control for signed-in operators — replaces the
- * staff sidebar in the Affiliate / CDP product experience.
+ * The single navigation control for signed-in XCAPE members. Styled to match
+ * the public top navigation — same white surface, border, typography and
+ * 44px touch targets — so the product feels continuous after sign-in.
  */
 const XcapeProfileMenu = ({ className = '' }: { className?: string }) => {
-  const { user, profile, roles, accountType, signOut } = useAuth();
+  const { user, profile, accountType, signOut } = useAuth();
   const navigate = useNavigate();
   if (!user) return null;
 
@@ -27,26 +37,31 @@ const XcapeProfileMenu = ({ className = '' }: { className?: string }) => {
     <DropdownMenu>
       <DropdownMenuTrigger
         aria-label="Open menu"
-        className={`inline-flex h-11 min-w-[44px] items-center justify-center gap-2 rounded-full border border-border px-3 text-sm font-medium transition-colors hover:bg-muted ${className}`}
+        className={`inline-flex h-11 min-w-[44px] items-center justify-center gap-2 rounded-full border border-border bg-background px-4 text-sm font-medium transition-colors hover:bg-muted ${className}`}
       >
         <Menu className="h-4 w-4" aria-hidden />
-        <span className="hidden sm:inline max-w-[10ch] truncate">{name.split(' ')[0]}</span>
+        <span className="hidden max-w-[10ch] truncate sm:inline">{name.split(' ')[0]}</span>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-56">
-        <DropdownMenuLabel className="space-y-0.5">
+      <DropdownMenuContent
+        align="end"
+        sideOffset={10}
+        className="w-60 rounded-2xl border-border bg-background p-2 shadow-lg"
+      >
+        <DropdownMenuLabel className="space-y-0.5 px-3 py-2">
           <span className="block truncate text-sm font-medium">{name}</span>
           <span className="block truncate text-xs font-normal text-muted-foreground">
-            {roles.map((r) => APP_ROLE_LABELS[r] ?? r).join(' · ') || 'XCAPE'}
+            {ACCESS_LABEL[accountType] ?? 'XCAPE member'}
           </span>
         </DropdownMenuLabel>
-        <DropdownMenuSeparator />
+        <DropdownMenuSeparator className="my-1" />
         {items.map((item) => (
-          <DropdownMenuItem key={item.to} asChild>
+          <DropdownMenuItem key={item.to} asChild className="rounded-xl px-3 py-2.5 text-sm font-medium">
             <Link to={item.to}>{item.label}</Link>
           </DropdownMenuItem>
         ))}
-        <DropdownMenuSeparator />
+        <DropdownMenuSeparator className="my-1" />
         <DropdownMenuItem
+          className="rounded-xl px-3 py-2.5 text-sm font-medium text-muted-foreground"
           onSelect={() => {
             void signOut();
             navigate('/');
