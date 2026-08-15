@@ -10,6 +10,8 @@ import ShareReportPanel from '@/components/report/ShareReportPanel';
 import XcapePageHeader from '@/components/xcape/XcapePageHeader';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { useAuth } from '@/hooks/useAuth';
+import { usesProductChrome } from '@/lib/xcapeExperience';
 
 interface ReportRow {
   id: string;
@@ -29,6 +31,8 @@ interface ReportRow {
  */
 const XcapeReports = () => {
   const qc = useQueryClient();
+  const { isAdmin, accountType } = useAuth();
+  const productChrome = usesProductChrome(accountType, isAdmin);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [manageId, setManageId] = useState<string | null>(null);
   const recoverMut = useRecoverReportLinkUrl();
