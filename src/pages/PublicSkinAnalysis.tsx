@@ -166,10 +166,12 @@ const PublicSkinAnalysis = () => {
       } catch (e) {
         if (cancelled) return;
         if (e instanceof PublicAnalysisError && e.kind === 'invalid') {
-          // Only an invalid/expired token is discarded.
+          // Only an invalid/expired token is discarded — the visitor sees why.
           clearStoredToken();
           setToken(null);
+          setError(e.message);
           setStage('intro');
+
         } else {
           // Network / 5xx: keep the token, let the visitor retry.
           setError('We could not reach the analysis service. Please try again.');
