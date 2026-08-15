@@ -232,6 +232,13 @@ Deno.serve(async (req) => {
           token_hash: 'pending',
           token_prefix: 'pending',
           expires_at: null,
+          ...(operator
+            ? {
+                created_by: operator.userId,
+                origin_role: operator.role,
+                origin_org_id: operator.orgId,
+              }
+            : {}),
         })
         .select('id')
         .single();
