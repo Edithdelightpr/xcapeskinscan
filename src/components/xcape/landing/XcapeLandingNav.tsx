@@ -3,6 +3,9 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import xcapeLogo from '@/assets/xcape-logo-black.png';
 import { XCAPE_DEMO_CTA_SHORT, XCAPE_DEMO_PATH } from '@/lib/xcapeMarketing';
+import { homeCtaPath, XCAPE_CTA_OPERATOR } from '@/lib/xcapeExperience';
+import XcapeProfileMenu from '@/components/xcape/XcapeProfileMenu';
+
 
 const NAV_LINKS = [
   { label: 'How it works', href: '#how-it-works' },
@@ -59,27 +62,30 @@ export function XcapeLandingNav() {
         </nav>
 
         <div className="flex items-center gap-2">
-          <Link
-            to={XCAPE_DEMO_PATH}
-            tabIndex={shown ? 0 : -1}
-            title="Free skin analysis demo — no signup required"
-            className="inline-flex min-h-[44px] items-center rounded-full bg-foreground px-4 text-sm font-medium text-background transition-opacity hover:opacity-85 md:hidden"
-          >
-            {XCAPE_DEMO_CTA_SHORT}
-          </Link>
           {loading ? (
             // Fixed-size placeholder prevents layout shift / flicker while the session loads.
             <span className="inline-block h-11 w-24" aria-hidden />
           ) : user ? (
-            <Link
-              to="/xcape/analysis"
-              tabIndex={shown ? 0 : -1}
-              className="inline-flex min-h-[44px] items-center rounded-full bg-foreground px-5 text-sm font-medium text-background transition-opacity hover:opacity-85"
-            >
-              Open workspace
-            </Link>
+            <>
+              <Link
+                to={homeCtaPath(true)}
+                tabIndex={shown ? 0 : -1}
+                className="inline-flex min-h-[44px] items-center rounded-full bg-foreground px-5 text-sm font-medium text-background transition-opacity hover:opacity-85"
+              >
+                {XCAPE_CTA_OPERATOR}
+              </Link>
+              <XcapeProfileMenu />
+            </>
           ) : (
             <>
+              <Link
+                to={XCAPE_DEMO_PATH}
+                tabIndex={shown ? 0 : -1}
+                title="Free skin analysis demo — no signup required"
+                className="inline-flex min-h-[44px] items-center rounded-full bg-foreground px-4 text-sm font-medium text-background transition-opacity hover:opacity-85 md:hidden"
+              >
+                {XCAPE_DEMO_CTA_SHORT}
+              </Link>
               <Link
                 to="/auth"
                 tabIndex={shown ? 0 : -1}
@@ -97,6 +103,7 @@ export function XcapeLandingNav() {
             </>
           )}
         </div>
+
       </div>
     </header>
   );
