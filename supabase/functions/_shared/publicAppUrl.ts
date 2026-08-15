@@ -7,8 +7,11 @@
 
 declare const Deno: { env: { get(key: string): string | undefined } };
 
-/** Published XCAPE app domain — source of truth when no override is valid. */
-export const CANONICAL_PUBLIC_APP_URL = 'https://xcape-skin-scanner.lovable.app';
+/**
+ * Published XCAPE app domain — the PERMANENT PWA identity origin.
+ * Locked to the original slug; changing it orphans installed PWAs.
+ */
+export const CANONICAL_PUBLIC_APP_URL = 'https://xcapeskinscan.lovable.app';
 
 /** Hosts that require a Lovable session or are not publicly reachable. */
 export function isNonPublicHost(host: string): boolean {

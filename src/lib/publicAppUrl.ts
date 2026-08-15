@@ -4,8 +4,14 @@
 // Lovable editor/preview, `window.location.origin` requires a Lovable login,
 // so it must never leak into a link we display, copy or share.
 
-/** Published XCAPE app domain — source of truth when no override is set. */
-export const CANONICAL_PUBLIC_APP_URL = 'https://xcape-skin-scanner.lovable.app';
+/**
+ * Published XCAPE app domain — the PERMANENT PWA identity origin.
+ *
+ * Installed PWAs are origin-scoped: renaming the Lovable slug orphans every
+ * existing home-screen install. This value is locked to the original public
+ * origin and must NEVER be changed casually (see publicAppUrl.test.ts).
+ */
+export const CANONICAL_PUBLIC_APP_URL = 'https://xcapeskinscan.lovable.app';
 
 /** Hosts that require a Lovable session or are not publicly reachable. */
 export function isNonPublicHost(host: string): boolean {
