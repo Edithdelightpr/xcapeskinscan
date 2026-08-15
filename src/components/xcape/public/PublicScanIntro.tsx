@@ -197,7 +197,7 @@ const PublicScanIntro = ({ starting, error, onStart }: Props) => {
               size="lg"
               className="min-h-[48px] w-full"
               disabled={starting}
-              onClick={() => setPendingMethod('camera')}
+              onClick={() => openConsent('camera')}
             >
               {starting && <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />}
               Start analysis here
@@ -207,7 +207,7 @@ const PublicScanIntro = ({ starting, error, onStart }: Props) => {
               <button
                 type="button"
                 disabled={starting}
-                onClick={() => setPendingMethod('upload')}
+                onClick={() => openConsent('upload')}
                 className="inline-flex min-h-[44px] items-center gap-2 text-sm font-medium text-foreground underline underline-offset-4 disabled:opacity-50"
               >
                 <ImageUp className="h-4 w-4" aria-hidden />
