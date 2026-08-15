@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import PhoneInput from '@/components/ui/PhoneInput';
 import { isValidE164, normalizePhoneKey } from '@/lib/phone';
+import { describeClientError } from '@/lib/clientCreateError';
 import {
   findMasterClientByPhone,
   openMasterClient,
