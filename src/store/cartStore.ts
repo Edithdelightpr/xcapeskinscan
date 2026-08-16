@@ -65,6 +65,13 @@ const emptyAttribution: CartAttribution = {
   report_token: null,
 };
 
+/** A cart line is identified by product id AND formula snapshot id, so a
+ *  customized kit never merges with (or is removed by) the plain product. */
+const isLine = (i: CartItem, product_id: string, formula_snapshot_id: string | null) =>
+  i.product_id === product_id &&
+  (i.formula_snapshot_id ?? null) === (formula_snapshot_id ?? null);
+
+
 export const useCartStore = create<CartState>()(
   persist(
     (set, get) => ({
