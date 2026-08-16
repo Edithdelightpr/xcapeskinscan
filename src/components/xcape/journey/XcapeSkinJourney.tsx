@@ -21,6 +21,8 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { formatNaira } from '@/lib/finance';
+import { pickPreferredImage } from '@/lib/xcapeMedia';
+
 
 /**
  * XCAPE Skin Journey — the product-facing client history for Affiliate / CDP
