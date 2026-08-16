@@ -64,34 +64,54 @@ const ReportCheckout = () => {
   const merchantName = data?.merchant?.name ?? 'XCAPE';
   const orderingAvailable = data ? data.ordering_available !== false && canOrderFromMerchant(contact) : false;
 
-  // Re-fetch and reconcile: only products still recommended on THIS report, at
-  // the live server price. A stale cart line silently drops out.
+  // Re-fetch and reconcile against THIS report: standard products must still
+  // be recommended and priced live by the server, and a customized-kit line
+  // must still match an approved, live-priced formula snapshot on the report.
+  // Anything else silently drops out — the client never sets a price.
   const eligible = useMemo(() => {
     const priced = new Map(
       (data?.recommended_products ?? [])
         .filter((p) => p.selling_price != null && Number(p.selling_price) > 0)
         .map((p) => [p.id, p]),
     );
-    return items
-      .filter((i) => priced.has(i.product_id))
-      .map((i) => {
-        const p = priced.get(i.product_id)!;
-        return {
+    const formulas = new Map((data?.formulas ?? []).map((f) => [f.id, f]));
+    return items.flatMap((i) => {
+      if (i.formula_snapshot_id) {
+        const f = formulas.get(i.formula_snapshot_id);
+        if (!f || f.kit_product_id !== i.product_id) return [];
+        if (f.kit_unit_price == null || !(Number(f.kit_unit_price) > 0)) return [];
+        return [{
           product_id: i.product_id,
-          name: p.name,
+          formula_snapshot_id: f.id,
+          name: f.kit_name ?? 'Customized kit',
+          detail: i.formula_label ?? null,
           quantity: i.quantity,
-          unit_price: Number(p.selling_price),
-        };
-      });
+          unit_price: Number(f.kit_unit_price),
+        }];
+      }
+      const p = priced.get(i.product_id);
+      if (!p) return [];
+      return [{
+        product_id: i.product_id,
+        formula_snapshot_id: null as string | null,
+        name: p.name,
+        detail: null as string | null,
+        quantity: i.quantity,
+        unit_price: Number(p.selling_price),
+      }];
+    });
   }, [items, data]);
 
   const dropped = items.length - eligible.length;
-  const total = eligible.reduce((n, l) => n + n * 0 + l.quantity * l.unit_price, 0);
+  const total = eligible.reduce((n, l) => n + l.quantity * l.unit_price, 0);
 
-  // Guard: a cart belonging to another report can never be spent here.
+  // Guard: this checkout spends ONLY a cart that belongs to this report.
+  // Marketplace items, or another report's items, are never reused here.
   useEffect(() => {
-    if (report && token && report.token !== token) clear();
+    if (!token) return;
+    if (report?.token !== token) clear();
   }, [report, token, clear]);
+
 
   const sentNumber = Number(amountSent);
   const mismatch =
@@ -113,7 +133,11 @@ const ReportCheckout = () => {
     try {
       const { data: res, error } = await (supabase.rpc as any)('submit_report_momo_order', {
         _report_token: token,
-        _items: eligible.map((l) => ({ product_id: l.product_id, quantity: l.quantity })),
+        _items: eligible.map((l) => ({
+          product_id: l.product_id,
+          quantity: l.quantity,
+          formula_snapshot_id: l.formula_snapshot_id,
+        })),
         _buyer_name: buyerName.trim(),
         _buyer_phone: buyerPhone.trim(),
         _sender_phone: senderPhone.trim(),
@@ -204,9 +228,13 @@ const ReportCheckout = () => {
           ) : (
             <div className="divide-y divide-bronze/10">
               {eligible.map((l) => (
-                <div key={l.product_id} className="py-2.5 flex items-center gap-3">
+                <div
+                  key={`${l.product_id}:${l.formula_snapshot_id ?? 'plain'}`}
+                  className="py-2.5 flex items-center gap-3"
+                >
                   <div className="min-w-0 flex-1">
                     <p className="text-sm text-cocoa truncate">{l.name}</p>
+                    {l.detail && <p className="text-[11.5px] text-bronze truncate">{l.detail}</p>}
                     <p className="text-xs text-cocoa/60">{formatFcfa(l.unit_price)} each</p>
                   </div>
                   <Input
@@ -215,7 +243,9 @@ const ReportCheckout = () => {
                     aria-label={`Quantity for ${l.name}`}
                     className="w-16 h-9"
                     value={l.quantity}
-                    onChange={(e) => setQty(l.product_id, Math.max(1, Number(e.target.value) || 1))}
+                    onChange={(e) =>
+                      setQty(l.product_id, Math.max(1, Number(e.target.value) || 1), l.formula_snapshot_id)
+                    }
                   />
                   <span className="text-sm font-semibold text-cocoa tabular-nums w-24 text-right">
                     {formatFcfa(l.unit_price * l.quantity)}
@@ -223,7 +253,7 @@ const ReportCheckout = () => {
                   <button
                     type="button"
                     aria-label={`Remove ${l.name}`}
-                    onClick={() => removeItem(l.product_id)}
+                    onClick={() => removeItem(l.product_id, l.formula_snapshot_id)}
                     className="text-cocoa/40 hover:text-cocoa"
                   >
                     <Trash2 className="w-4 h-4" />

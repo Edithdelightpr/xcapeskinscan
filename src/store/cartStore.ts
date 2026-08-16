@@ -42,8 +42,11 @@ interface CartState {
   /** Non-null only while the cart belongs to a report. */
   report: CartReportContext | null;
   addItem: (item: Omit<CartItem, 'quantity'>, qty?: number) => void;
-  removeItem: (product_id: string) => void;
-  setQty: (product_id: string, qty: number) => void;
+  /** Targets the composite line (product + formula snapshot), never every
+   *  line that happens to share a product id. */
+  removeItem: (product_id: string, formula_snapshot_id?: string | null) => void;
+  setQty: (product_id: string, qty: number, formula_snapshot_id?: string | null) => void;
+
   clear: () => void;
   setAttribution: (a: Partial<CartAttribution>) => void;
   /** Enters (or switches to) a report cart, clearing incompatible items. */
@@ -61,6 +64,13 @@ const emptyAttribution: CartAttribution = {
   utm: null,
   report_token: null,
 };
+
+/** A cart line is identified by product id AND formula snapshot id, so a
+ *  customized kit never merges with (or is removed by) the plain product. */
+const isLine = (i: CartItem, product_id: string, formula_snapshot_id: string | null) =>
+  i.product_id === product_id &&
+  (i.formula_snapshot_id ?? null) === (formula_snapshot_id ?? null);
+
 
 export const useCartStore = create<CartState>()(
   persist(
@@ -85,14 +95,19 @@ export const useCartStore = create<CartState>()(
           }
           return { items: [...s.items, { ...item, quantity: qty }] };
         }),
-      removeItem: (product_id) =>
-        set((s) => ({ items: s.items.filter((i) => i.product_id !== product_id) })),
-      setQty: (product_id, qty) =>
+      removeItem: (product_id, formula_snapshot_id = null) =>
+        set((s) => ({
+          items: s.items.filter((i) => !isLine(i, product_id, formula_snapshot_id)),
+        })),
+      setQty: (product_id, qty, formula_snapshot_id = null) =>
         set((s) => ({
           items: s.items
-            .map((i) => (i.product_id === product_id ? { ...i, quantity: Math.max(0, qty) } : i))
+            .map((i) =>
+              isLine(i, product_id, formula_snapshot_id) ? { ...i, quantity: Math.max(0, qty) } : i,
+            )
             .filter((i) => i.quantity > 0),
         })),
+
       clear: () => set({ items: [], attribution: emptyAttribution, report: null }),
       setReportContext: (ctx) =>
         set((s) => {

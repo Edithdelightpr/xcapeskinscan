@@ -1,11 +1,22 @@
 import { Helmet } from 'react-helmet-async';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useState } from 'react';
 import { PackageSearch, Check, X, ShieldCheck, ShieldX } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import XcapePageHeader from '@/components/xcape/XcapePageHeader';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { useAuth } from '@/hooks/useAuth';
 import { useMyOrganization } from '@/hooks/useXcapeOrg';
 import { formatFcfa } from '@/lib/xcapeRetail';
@@ -25,7 +36,26 @@ export interface FulfilmentOrder {
   product_id: string | null;
   report_payment_claim_id: string | null;
   fulfilment_org_id: string | null;
+  /** Immutable line snapshot written at order time — the only source used for
+   *  display, so a CDP never needs read access to hidden product rows. */
+  price_snapshot: {
+    product_name?: string | null;
+    formula_label?: string | null;
+    formula_snapshot_id?: string | null;
+  } | null;
+  formula_summary: { active_name?: string | null; dose_ml?: number | null } | null;
 }
+
+/** Names come from the order's own snapshot; legacy rows fall back safely. */
+export const lineLabel = (l: Pick<FulfilmentOrder, 'price_snapshot' | 'formula_summary'>) => {
+  const name = l.price_snapshot?.product_name?.trim() || 'Product';
+  const detail =
+    l.price_snapshot?.formula_label?.trim() ||
+    (l.formula_summary?.active_name
+      ? `${l.formula_summary.active_name}${l.formula_summary.dose_ml != null ? ` - ${l.formula_summary.dose_ml} ml` : ''}`
+      : null);
+  return detail ? `${name} (${detail})` : name;
+};
 
 export interface PaymentClaim {
   id: string;
@@ -60,13 +90,12 @@ const useFulfilmentQueue = (orgId: string | null | undefined) =>
     queryFn: async (): Promise<{
       orders: FulfilmentOrder[];
       claims: Record<string, PaymentClaim>;
-      productNames: Record<string, string>;
       merchantNames: Record<string, string>;
     }> => {
       let q = (supabase as any)
         .from('pending_outreach_orders')
         .select(
-          'id, order_ref, customer_name, customer_phone, quantity, unit_price, status, created_at, origin_role, product_id, report_payment_claim_id, fulfilment_org_id',
+          'id, order_ref, customer_name, customer_phone, quantity, unit_price, status, created_at, origin_role, product_id, report_payment_claim_id, fulfilment_org_id, price_snapshot, formula_summary',
         )
         .order('created_at', { ascending: false })
         .limit(300);
@@ -74,13 +103,6 @@ const useFulfilmentQueue = (orgId: string | null | undefined) =>
       const { data, error } = await q;
       if (error) throw error;
       const orders = (data ?? []) as FulfilmentOrder[];
-
-      const productIds = [...new Set(orders.map((o) => o.product_id).filter(Boolean))] as string[];
-      const productNames: Record<string, string> = {};
-      if (productIds.length) {
-        const { data: prods } = await (supabase as any).from('products').select('id, name').in('id', productIds);
-        for (const p of (prods ?? []) as any[]) productNames[p.id] = p.name;
-      }
 
       const claimIds = [...new Set(orders.map((o) => o.report_payment_claim_id).filter(Boolean))] as string[];
       const claims: Record<string, PaymentClaim> = {};
@@ -99,7 +121,7 @@ const useFulfilmentQueue = (orgId: string | null | undefined) =>
           for (const o of (orgs ?? []) as any[]) merchantNames[o.id] = o.name;
         }
       }
-      return { orders, claims, productNames, merchantNames };
+      return { orders, claims, merchantNames };
     },
   });
 
@@ -131,6 +153,8 @@ const XcapeOrders = () => {
   const scopeOrgId = isAdmin ? null : org?.id ?? null;
   const { data, isLoading } = useFulfilmentQueue(scopeOrgId);
   const canFulfil = isAdmin || accountType === 'cdp';
+  const [rejecting, setRejecting] = useState<string | null>(null);
+  const [rejectReason, setRejectReason] = useState('');
 
   const groups: OrderGroup[] = (() => {
     const map = new Map<string, OrderGroup>();
@@ -155,9 +179,18 @@ const XcapeOrders = () => {
   })();
 
   const mutate = useMutation({
-    mutationFn: async (input: { ids: string[]; action: 'confirm' | 'cancel' }) => {
-      // Reuse the existing order RPCs rather than writing status directly, so
-      // stock, finance and attribution side effects stay intact.
+    mutationFn: async (input: { ids: string[]; action: 'confirm' | 'cancel'; claimId?: string | null }) => {
+      // A claimed report order is fulfilled atomically for the whole group —
+      // all lines confirm together or none do.
+      if (input.action === 'confirm' && input.claimId) {
+        const { error } = await (supabase.rpc as any)('xcape_fulfil_report_order', {
+          _claim_id: input.claimId,
+        });
+        if (error) throw error;
+        return;
+      }
+      // Legacy (non-claim) orders keep the existing per-line RPCs so stock,
+      // finance and attribution side effects stay intact.
       for (const id of input.ids) {
         const { error } =
           input.action === 'confirm'
@@ -174,9 +207,9 @@ const XcapeOrders = () => {
   });
 
   const review = useMutation({
-    mutationFn: async (input: { claimId: string; action: 'verify' | 'reject' }) => {
+    mutationFn: async (input: { claimId: string; action: 'verify' | 'reject'; reason?: string }) => {
       if (input.action === 'reject') {
-        const reason = window.prompt('Why is this payment being rejected?')?.trim();
+        const reason = input.reason?.trim();
         if (!reason) throw new Error('A reason is required to reject a payment');
         const { error } = await (supabase.rpc as any)('xcape_reject_payment_claim', {
           _claim_id: input.claimId,
@@ -193,6 +226,8 @@ const XcapeOrders = () => {
     },
     onSuccess: (_d, v) => {
       toast.success(v.action === 'verify' ? 'Payment verified' : 'Payment rejected');
+      setRejecting(null);
+      setRejectReason('');
       qc.invalidateQueries({ queryKey: ['xcape-fulfilment-orders'] });
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : 'Could not review payment'),
@@ -263,7 +298,7 @@ const XcapeOrders = () => {
               <ul className="text-xs text-muted-foreground space-y-0.5">
                 {g.lines.map((l) => (
                   <li key={l.id}>
-                    {(l.product_id ? data?.productNames[l.product_id] : null) ?? 'Product'} × {l.quantity}
+                    {lineLabel(l)} × {l.quantity}
                     {' · '}
                     {formatFcfa(Number(l.unit_price ?? 0) * Number(l.quantity ?? 1))}
                   </li>
@@ -308,7 +343,7 @@ const XcapeOrders = () => {
                         variant="outline"
                         className="min-h-10"
                         disabled={review.isPending}
-                        onClick={() => review.mutate({ claimId: claim.id, action: 'reject' })}
+                        onClick={() => { setRejectReason(''); setRejecting(claim.id); }}
                       >
                         <ShieldX className="w-3.5 h-3.5 mr-1.5" /> Reject payment
                       </Button>
@@ -319,7 +354,7 @@ const XcapeOrders = () => {
                     className="min-h-10"
                     disabled={mutate.isPending || (!!claim && !verified)}
                     title={claim && !verified ? 'Verify the payment before fulfilling' : undefined}
-                    onClick={() => mutate.mutate({ ids: pendingLines, action: 'confirm' })}
+                    onClick={() => mutate.mutate({ ids: pendingLines, action: 'confirm', claimId: claim?.id ?? null })}
                   >
                     <Check className="w-3.5 h-3.5 mr-1.5" /> Mark fulfilled
                   </Button>
@@ -338,6 +373,44 @@ const XcapeOrders = () => {
           );
         })}
       </div>
+
+      <Dialog open={rejecting != null} onOpenChange={(o) => !o && setRejecting(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Reject this payment</DialogTitle>
+            <DialogDescription>
+              The buyer's claim stays on record. Give a clear reason — it is stored with the order.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-1.5">
+            <Label htmlFor="reject-reason" className="text-xs text-muted-foreground">
+              Reason for rejection
+            </Label>
+            <Textarea
+              id="reject-reason"
+              rows={3}
+              autoFocus
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+              placeholder="e.g. No matching Mobile Money transfer was received"
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRejecting(null)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={rejectReason.trim().length < 3 || review.isPending}
+              onClick={() =>
+                rejecting && review.mutate({ claimId: rejecting, action: 'reject', reason: rejectReason })
+              }
+            >
+              Reject payment
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

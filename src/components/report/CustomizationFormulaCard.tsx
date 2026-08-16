@@ -1,6 +1,6 @@
 import { AlertTriangle, Check, FlaskConical, Image as ImageIcon, ShoppingBag } from 'lucide-react';
 import { toast } from 'sonner';
-import { formatNaira } from '@/lib/serviceDiscount';
+import { formatFcfa } from '@/lib/xcapeRetail';
 import { CUSTOMIZATION_CATEGORIES } from '@/lib/xcapeRules/customization';
 import { buildFormulaCartItem } from '@/lib/reportFormulas';
 import { logReportEvent, type ReportFormula } from '@/hooks/useReportPayload';
@@ -22,6 +22,9 @@ interface Props {
   mock?: boolean;
   /** Optional CTA label override (used by the admin mockup preview). */
   ctaLabel?: string;
+  /** False when the role-resolved merchant has not enabled/configured
+   *  Mobile Money ordering — the kit is shown, but never purchasable. */
+  orderingAvailable?: boolean;
 }
 
 /**
@@ -33,7 +36,14 @@ interface Props {
  * fulfilment sees the same formula. Base/active/companion components are
  * prepared by XCAPE within the kit and are never sold separately here.
  */
-const CustomizationFormulaCard = ({ token, formula, compact = false, mock = false, ctaLabel }: Props) => {
+const CustomizationFormulaCard = ({
+  token,
+  formula,
+  compact = false,
+  mock = false,
+  ctaLabel,
+  orderingAvailable = true,
+}: Props) => {
   const cartItems = useCartStore((s) => s.items);
   const addItem = useCartStore((s) => s.addItem);
 
@@ -42,7 +52,7 @@ const CustomizationFormulaCard = ({ token, formula, compact = false, mock = fals
 
   // Mock mode never builds a cart line — the formula preview is display-only.
   const cartItem = mock ? null : buildFormulaCartItem(formula);
-  const purchasable = cartItem != null;
+  const purchasable = cartItem != null && orderingAvailable;
   const inCart =
     purchasable &&
     cartItems.some(
@@ -57,7 +67,7 @@ const CustomizationFormulaCard = ({ token, formula, compact = false, mock = fals
       kit_product_id: formula.kit_product_id,
     });
     toast.success(`${formula.kit_name ?? 'Kit'} added to your care plan`, {
-      description: `Your customized formula travels with the order · ${formatNaira(formula.kit_unit_price!)}`,
+      description: `Your customized formula travels with the order · ${formatFcfa(formula.kit_unit_price!)}`,
     });
   };
 
@@ -188,6 +198,10 @@ const CustomizationFormulaCard = ({ token, formula, compact = false, mock = fals
             Mockup only — not purchasable
           </span>
         </div>
+      ) : !orderingAvailable ? (
+        <p className="text-[11px] text-bronze font-medium">
+          Ordering is not available yet — please contact your practitioner.
+        </p>
       ) : purchasable ? (
         <button
           type="button"
@@ -253,7 +267,7 @@ const CustomizationFormulaCard = ({ token, formula, compact = false, mock = fals
         </div>
         {formula.kit_unit_price != null && formula.kit_unit_price > 0 && (
           <span className="text-[15px] text-cocoa font-semibold tabular-nums shrink-0">
-            {formatNaira(formula.kit_unit_price)}
+            {formatFcfa(formula.kit_unit_price)}
           </span>
         )}
       </div>

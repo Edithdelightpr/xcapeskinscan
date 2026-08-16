@@ -14,6 +14,8 @@ interface Props {
    * brightening routines, antioxidants) never renders there.
    */
   formula?: ReportFormula | null;
+  /** Merchant commerce readiness for this report. */
+  orderingAvailable?: boolean;
 }
 
 /**
@@ -35,7 +37,7 @@ const Row = ({ label, value }: { label: string; value: string }) => {
   );
 };
 
-const ConcernCard = ({ concern, token, formula }: Props) => (
+const ConcernCard = ({ concern, token, formula, orderingAvailable = true }: Props) => (
   <article
     id={concern.anchorId}
     className="scroll-mt-24 rounded-3xl border border-bronze/15 bg-white/85 backdrop-blur p-4 sm:p-8 shadow-[0_1px_0_hsl(28_30%_60%_/_0.06)]"
@@ -78,7 +80,12 @@ const ConcernCard = ({ concern, token, formula }: Props) => (
             Customization
           </div>
           <div className="min-w-0">
-            <CustomizationFormulaCard token={token} formula={formula} compact />
+            <CustomizationFormulaCard
+              token={token}
+              formula={formula}
+              orderingAvailable={orderingAvailable}
+              compact
+            />
           </div>
         </div>
       ) : null}
