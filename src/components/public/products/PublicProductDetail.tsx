@@ -23,6 +23,7 @@ const PublicProductDetail = ({ product }: Props) => {
   const [active, setActive] = useState(gallery[0] ?? null);
   const [cartOpen, setCartOpen] = useState(false);
   const addItem = useCartStore((s) => s.addItem);
+  const clearReportContext = useCartStore((s) => s.clearReportContext);
   const price = product.promo_price ?? product.market_price ?? product.selling_price;
   const hasPromo = product.promo_price && product.market_price && product.promo_price < product.market_price;
   const waUrl = buildWhatsAppLink(
@@ -31,6 +32,8 @@ const PublicProductDetail = ({ product }: Props) => {
   );
 
   const handleAddToCart = () => {
+    // A marketplace purchase never joins a report order.
+    clearReportContext();
     addItem({
       product_id: product.id,
       name: product.name,

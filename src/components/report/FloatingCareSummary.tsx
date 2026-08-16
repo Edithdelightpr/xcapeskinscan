@@ -2,10 +2,13 @@ import { ArrowRight, ShoppingBag } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useCartStore } from '@/store/cartStore';
 import { formatNaira } from '@/lib/serviceDiscount';
+import { formatFcfa } from '@/lib/xcapeRetail';
 
 const FloatingCareSummary = () => {
   const count = useCartStore((s) => s.items.reduce((n, i) => n + i.quantity, 0));
   const total = useCartStore((s) => s.items.reduce((n, i) => n + i.quantity * i.unit_price, 0));
+  const report = useCartStore((s) => s.report);
+  const money = report ? formatFcfa : formatNaira;
   if (count === 0) return null;
   return (
     <div className="fixed inset-x-0 bottom-0 z-40 pointer-events-none px-3 pb-3 sm:px-6 sm:pb-6">
@@ -18,11 +21,11 @@ const FloatingCareSummary = () => {
           <div className="text-[13px] text-cocoa">
             <span className="font-medium">{count}</span> product{count === 1 ? '' : 's'}
             <span className="text-cocoa/40"> · </span>
-            <span className="font-semibold tabular-nums">{formatNaira(total)}</span>
+            <span className="font-semibold tabular-nums">{money(total)}</span>
           </div>
         </div>
         <Link
-          to="/checkout"
+          to={report ? `/report/${report.token}/order` : '/checkout'}
           className="inline-flex items-center gap-1.5 rounded-full bg-cocoa text-white text-[12.5px] font-medium px-4 py-2 hover:bg-cocoa/90 transition"
         >
           Checkout

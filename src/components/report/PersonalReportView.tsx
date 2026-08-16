@@ -139,7 +139,13 @@ const PersonalReportView = ({ data, token, onDownloadPdf, downloadDisabled }: Pr
           </p>
         )}
         <div id="recommended-products" className="scroll-mt-24">
-          <RecommendedProducts token={token} products={data.recommended_products} />
+          <RecommendedProducts
+            token={token}
+            products={data.recommended_products}
+            orderingAvailable={data.ordering_available !== false}
+            merchantName={data.merchant?.name ?? 'XCAPE'}
+            merchantContactPhone={data.merchant_contact?.order_contact_phone ?? null}
+          />
         </div>
         <TreatmentJourney
           hasAssessment={true}

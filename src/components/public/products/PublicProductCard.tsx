@@ -24,6 +24,7 @@ const PublicProductCard = ({ product }: Props) => {
   const price = product.promo_price ?? product.market_price ?? product.selling_price;
   const hasPromo = product.promo_price && product.market_price && product.promo_price < product.market_price;
   const addItem = useCartStore((s) => s.addItem);
+  const clearReportContext = useCartStore((s) => s.clearReportContext);
   const [hovering, setHovering] = useState(false);
   const [touchToggled, setTouchToggled] = useState(false);
   const detailHref = `/products/${product.public_slug ?? product.id}`;
@@ -40,6 +41,8 @@ const PublicProductCard = ({ product }: Props) => {
 
   const handleAdd = (e: React.MouseEvent) => {
     e.preventDefault();
+    // A marketplace purchase never joins a report order.
+    clearReportContext();
     addItem({
       product_id: product.id,
       name: product.name,

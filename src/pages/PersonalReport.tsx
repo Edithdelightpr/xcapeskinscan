@@ -52,13 +52,22 @@ const PersonalReport = () => {
   const { token } = useParams<{ token: string }>();
   const status = useReportPayload(token);
   const [downloading, setDownloading] = useState(false);
-  const setCartAttribution = useCartStore((s) => s.setAttribution);
+  const setReportContext = useCartStore((s) => s.setReportContext);
+  const merchant = status.state === 'ok' ? status.data.merchant ?? null : null;
 
   // Purchases started from this report must stay attributed to the operator who
-  // shared it — anonymous checkout has no session to derive that from.
+  // shared it — anonymous checkout has no session to derive that from. Entering
+  // a different report clears any incompatible cart from another merchant.
   useEffect(() => {
-    if (token && token !== 'preview') setCartAttribution({ report_token: token });
-  }, [token, setCartAttribution]);
+    if (token && token !== 'preview') {
+      setReportContext({
+        token,
+        merchant_org_id: merchant?.org_id ?? null,
+        merchant_name: merchant?.name ?? 'XCAPE',
+        currency: 'XAF',
+      });
+    }
+  }, [token, merchant?.org_id, merchant?.name, setReportContext]);
 
   const handleDownloadPdf = async () => {
     if (!token || downloading) return;

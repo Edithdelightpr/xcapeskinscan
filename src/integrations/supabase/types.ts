@@ -6206,6 +6206,7 @@ export type Database = {
           promo_staff_id: string | null
           quantity: number
           report_link_id: string | null
+          report_payment_claim_id: string | null
           resulting_finance_entry_id: string | null
           status: string
           unit_price: number
@@ -6252,6 +6253,7 @@ export type Database = {
           promo_staff_id?: string | null
           quantity: number
           report_link_id?: string | null
+          report_payment_claim_id?: string | null
           resulting_finance_entry_id?: string | null
           status?: string
           unit_price: number
@@ -6298,6 +6300,7 @@ export type Database = {
           promo_staff_id?: string | null
           quantity?: number
           report_link_id?: string | null
+          report_payment_claim_id?: string | null
           resulting_finance_entry_id?: string | null
           status?: string
           unit_price?: number
@@ -6422,6 +6425,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "operational_truth_shadow_v"
             referencedColumns: ["report_link_id"]
+          },
+          {
+            foreignKeyName: "pending_outreach_orders_report_payment_claim_id_fkey"
+            columns: ["report_payment_claim_id"]
+            isOneToOne: false
+            referencedRelation: "xcape_report_payment_claims"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -10395,6 +10405,56 @@ export type Database = {
           },
         ]
       }
+      xcape_commerce_settings: {
+        Row: {
+          commerce_enabled: boolean
+          created_at: string
+          currency: string
+          momo_provider: string | null
+          momo_recipient_name: string | null
+          momo_recipient_number: string | null
+          order_contact_phone: string | null
+          organization_id: string
+          updated_at: string
+          updated_by: string | null
+          whatsapp_number: string | null
+        }
+        Insert: {
+          commerce_enabled?: boolean
+          created_at?: string
+          currency?: string
+          momo_provider?: string | null
+          momo_recipient_name?: string | null
+          momo_recipient_number?: string | null
+          order_contact_phone?: string | null
+          organization_id: string
+          updated_at?: string
+          updated_by?: string | null
+          whatsapp_number?: string | null
+        }
+        Update: {
+          commerce_enabled?: boolean
+          created_at?: string
+          currency?: string
+          momo_provider?: string | null
+          momo_recipient_name?: string | null
+          momo_recipient_number?: string | null
+          order_contact_phone?: string | null
+          organization_id?: string
+          updated_at?: string
+          updated_by?: string | null
+          whatsapp_number?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "xcape_commerce_settings_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       xcape_compatibility_rules: {
         Row: {
           config_id: string
@@ -11191,6 +11251,115 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      xcape_report_payment_claims: {
+        Row: {
+          amount_due: number
+          buyer_email: string | null
+          buyer_name: string | null
+          buyer_note: string | null
+          buyer_phone: string | null
+          client_id: string | null
+          created_at: string
+          currency: string
+          id: string
+          merchant_contact_snapshot: Json | null
+          merchant_org_id: string | null
+          order_ref: string
+          origin_org_id: string | null
+          origin_role: string | null
+          origin_user_id: string | null
+          provider: string | null
+          recipient_number: string | null
+          reference: string | null
+          rejected_reason: string | null
+          report_link_id: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          sender_phone: string
+          status: string
+          submitted_amount: number
+          updated_at: string
+        }
+        Insert: {
+          amount_due: number
+          buyer_email?: string | null
+          buyer_name?: string | null
+          buyer_note?: string | null
+          buyer_phone?: string | null
+          client_id?: string | null
+          created_at?: string
+          currency?: string
+          id?: string
+          merchant_contact_snapshot?: Json | null
+          merchant_org_id?: string | null
+          order_ref: string
+          origin_org_id?: string | null
+          origin_role?: string | null
+          origin_user_id?: string | null
+          provider?: string | null
+          recipient_number?: string | null
+          reference?: string | null
+          rejected_reason?: string | null
+          report_link_id?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          sender_phone: string
+          status?: string
+          submitted_amount: number
+          updated_at?: string
+        }
+        Update: {
+          amount_due?: number
+          buyer_email?: string | null
+          buyer_name?: string | null
+          buyer_note?: string | null
+          buyer_phone?: string | null
+          client_id?: string | null
+          created_at?: string
+          currency?: string
+          id?: string
+          merchant_contact_snapshot?: Json | null
+          merchant_org_id?: string | null
+          order_ref?: string
+          origin_org_id?: string | null
+          origin_role?: string | null
+          origin_user_id?: string | null
+          provider?: string | null
+          recipient_number?: string | null
+          reference?: string | null
+          rejected_reason?: string | null
+          report_link_id?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          sender_phone?: string
+          status?: string
+          submitted_amount?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "xcape_report_payment_claims_merchant_org_id_fkey"
+            columns: ["merchant_org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "xcape_report_payment_claims_report_link_id_fkey"
+            columns: ["report_link_id"]
+            isOneToOne: false
+            referencedRelation: "client_report_links"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "xcape_report_payment_claims_report_link_id_fkey"
+            columns: ["report_link_id"]
+            isOneToOne: false
+            referencedRelation: "operational_truth_shadow_v"
+            referencedColumns: ["report_link_id"]
+          },
+        ]
       }
       xcape_rule_audit: {
         Row: {
@@ -13497,6 +13666,20 @@ export type Database = {
         }
         Returns: Json
       }
+      submit_report_momo_order: {
+        Args: {
+          _amount_sent: number
+          _buyer_email?: string
+          _buyer_name: string
+          _buyer_phone: string
+          _items: Json
+          _notes?: string
+          _payment_reference?: string
+          _report_token: string
+          _sender_phone: string
+        }
+        Returns: Json
+      }
       sync_plan_appointments: {
         Args: {
           p_assigned_aesthetician_id?: string
@@ -13593,6 +13776,7 @@ export type Database = {
         Args: { _link_id: string }
         Returns: Json
       }
+      xcape_get_commerce_settings: { Args: never; Returns: Json }
       xcape_is_authorized: { Args: { _user?: string }; Returns: boolean }
       xcape_lookup_client_by_phone: {
         Args: { _phone: string }
@@ -13617,11 +13801,22 @@ export type Database = {
         Args: { _actor: string; _client_id: string }
         Returns: boolean
       }
+      xcape_may_review_claim: { Args: { _claim_id: string }; Returns: boolean }
       xcape_media_path_parts: { Args: { _name: string }; Returns: string[] }
+      xcape_my_commerce_org: { Args: never; Returns: string }
       xcape_normalise_phone: { Args: { _raw: string }; Returns: string }
       xcape_phone_key: {
         Args: { _default_dial?: string; _raw: string }
         Returns: string
+      }
+      xcape_reject_payment_claim: {
+        Args: { _claim_id: string; _reason: string }
+        Returns: Json
+      }
+      xcape_report_context: { Args: { _token: string }; Returns: Json }
+      xcape_report_eligible_product: {
+        Args: { _assessment_id: string; _product_id: string }
+        Returns: boolean
       }
       xcape_report_merchant_org: { Args: { _token: string }; Returns: string }
       xcape_required_cdp_fee: { Args: never; Returns: number }
@@ -13629,6 +13824,22 @@ export type Database = {
         Args: { _org: string; _product: string }
         Returns: number
       }
+      xcape_retail_price_book: {
+        Args: never
+        Returns: {
+          currency: string
+          default_price: number
+          image_url: string
+          name: string
+          org_id: string
+          org_kind: string
+          override_price: number
+          product_id: string
+          resolved_price: number
+          sku: string
+        }[]
+      }
+      xcape_retail_skus: { Args: never; Returns: string[] }
       xcape_reuse_client: {
         Args: { _client_id: string; _phone: string }
         Returns: {
@@ -13689,6 +13900,14 @@ export type Database = {
         }
       }
       xcape_root_org_id: { Args: never; Returns: string }
+      xcape_set_default_price: {
+        Args: { _price: number; _product_id: string }
+        Returns: undefined
+      }
+      xcape_set_org_price: {
+        Args: { _price: number; _product_id: string }
+        Returns: undefined
+      }
       xcape_setting_num: {
         Args: { _default: number; _field: string; _key: string }
         Returns: number
@@ -13696,6 +13915,21 @@ export type Database = {
       xcape_unit_price: {
         Args: { _merchant_org: string; _product_id: string }
         Returns: number
+      }
+      xcape_update_commerce_settings: {
+        Args: {
+          _commerce_enabled: boolean
+          _momo_provider?: string
+          _momo_recipient_name?: string
+          _momo_recipient_number?: string
+          _order_contact_phone?: string
+          _whatsapp_number?: string
+        }
+        Returns: Json
+      }
+      xcape_verify_payment_claim: {
+        Args: { _claim_id: string; _note?: string }
+        Returns: Json
       }
     }
     Enums: {

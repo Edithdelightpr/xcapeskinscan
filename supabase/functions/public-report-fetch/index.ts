@@ -8,6 +8,7 @@ import { buildCareJourneyBlock } from '../_shared/reportCareJourney.ts';
 import { sanitizeSnapshotLines } from '../_shared/xcapeProtocol.ts';
 import { sanitizePublicProtocolSnapshot } from '../_shared/publicProtocolSnapshot.ts';
 import { sanitizeReportSkinAnalysis } from '../_shared/reportSkinAnalysis.ts';
+import { resolveReportMerchant, usablePrice } from '../_shared/xcapeMerchant.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -25,11 +26,6 @@ function json(body: unknown, status = 200) {
 async function sha256Hex(input: string): Promise<string> {
   const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(input));
   return Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, '0')).join('');
-}
-
-// deno-lint-ignore no-explicit-any
-function snapshot_captured(s: any): string | null {
-  return typeof s?.captured_at === 'string' ? s.captured_at : null;
 }
 
 function initials(name?: string | null): string {
@@ -55,7 +51,7 @@ Deno.serve(async (req) => {
 
     const { data: link, error: linkErr } = await admin
       .from('client_report_links')
-      .select('id, client_id, assessment_id, expires_at, revoked_at, token_prefix, origin_org_id, open_count, first_opened_at, commercial_snapshot')
+      .select('id, client_id, assessment_id, expires_at, revoked_at, token_prefix, origin_org_id, open_count, first_opened_at, origin_role')
       .eq('token_hash', token_hash)
       .maybeSingle();
     if (linkErr) throw linkErr;
@@ -218,75 +214,95 @@ Deno.serve(async (req) => {
       }
     }
 
-    // ---- Commercial routing: who sells and at what price ----
-    // The report's originating organisation decides the merchant. A CDP with an
-    // active price-book override sells at its own price; everyone else (XCAPE
-    // staff, affiliates, unattributed links) sells at the XCAPE system price.
-    // Approved formula snapshots keep their own immutable kit_unit_price.
-    let merchant: { org_id: string | null; name: string; kind: string } = {
-      org_id: null,
-      name: 'XCAPE',
-      kind: 'xcape_root',
-    };
-    const priceOverrides: Record<string, number> = {};
+    // ---- Commercial routing: who sells, at what live price ----
+    // The link's TRUSTED origin_role decides the merchant first. Only a
+    // cdp-origin report with an active CDP org routes away from XCAPE root —
+    // an affiliate sitting in a CDP org still sells at XCAPE prices, with
+    // XCAPE contacts, Mobile Money and fulfilment.
+    const { data: rootOrg } = await admin
+      .from('organizations')
+      .select('id, name')
+      .eq('kind', 'xcape_root')
+      .maybeSingle();
+
+    // deno-lint-ignore no-explicit-any
+    let originOrg: any = null;
     if (link.origin_org_id) {
-      const { data: org } = await admin
+      const { data } = await admin
         .from('organizations')
         .select('id, name, kind, status')
         .eq('id', link.origin_org_id)
         .maybeSingle();
-      if (org && org.status === 'active') {
-        merchant = { org_id: org.id, name: org.name, kind: org.kind };
-        if (org.kind === 'cdp') {
-          const priceIds = [
-            ...new Set([
-              ...prodIds,
-              ...kitIds,
-            ]),
-          ] as string[];
-          if (priceIds.length > 0) {
-            const { data: book } = await admin
-              .from('organization_product_prices')
-              .select('product_id, price, active')
-              .eq('organization_id', org.id)
-              .in('product_id', priceIds);
-            // deno-lint-ignore no-explicit-any
-            for (const row of (book ?? []) as any[]) {
-              if (row.active) priceOverrides[row.product_id] = Number(row.price);
-            }
-          }
-        }
-      }
-    }
-    // ---- Report-time commercial snapshot (authoritative) ----
-    // Prices were captured when the link was created and never move again. The
-    // live price book is only a fallback for legacy links without a snapshot.
-    // deno-lint-ignore no-explicit-any
-    const snapshot = (link as any).commercial_snapshot as
-      | { merchant?: { org_id: string | null; name: string; kind: string }; items?: any[] }
-      | null;
-    const snapshotPrices: Record<string, number> = {};
-    if (snapshot && Array.isArray(snapshot.items)) {
-      for (const item of snapshot.items) {
-        const pid = item?.product_id;
-        const price = Number(item?.unit_price);
-        if (pid && Number.isFinite(price) && price > 0) snapshotPrices[pid] = price;
-      }
-      if (snapshot.merchant?.name) {
-        merchant = {
-          org_id: snapshot.merchant.org_id ?? null,
-          name: snapshot.merchant.name,
-          kind: snapshot.merchant.kind ?? 'xcape_root',
-        };
-      }
+      originOrg = data ?? null;
     }
 
     // deno-lint-ignore no-explicit-any
+    const routed = resolveReportMerchant((link as any).origin_role, originOrg, rootOrg);
+    const merchant = {
+      org_id: routed.org_id,
+      name: routed.name,
+      kind: routed.kind,
+      price_source: routed.price_source,
+    };
+
+    // Live price book for the resolved merchant (never a frozen snapshot).
+    const priceOverrides: Record<string, number> = {};
+    if (routed.price_source === 'cdp' && routed.org_id) {
+      const priceIds = [...new Set([...prodIds, ...kitIds])] as string[];
+      if (priceIds.length > 0) {
+        const { data: book } = await admin
+          .from('organization_product_prices')
+          .select('product_id, price, active')
+          .eq('organization_id', routed.org_id)
+          .in('product_id', priceIds);
+        // deno-lint-ignore no-explicit-any
+        for (const row of (book ?? []) as any[]) {
+          const p = usablePrice(row.price);
+          if (row.active && p != null) priceOverrides[row.product_id] = p;
+        }
+      }
+    }
+
+    // Public order contact + Mobile Money details of the RESOLVED merchant only.
+    let merchant_contact = {
+      commerce_enabled: false,
+      order_contact_phone: null as string | null,
+      whatsapp_number: null as string | null,
+      momo_provider: null as string | null,
+      momo_recipient_number: null as string | null,
+      momo_recipient_name: null as string | null,
+    };
+    if (routed.org_id) {
+      const { data: settings } = await admin
+        .from('xcape_commerce_settings')
+        .select('commerce_enabled, order_contact_phone, whatsapp_number, momo_provider, momo_recipient_number, momo_recipient_name')
+        .eq('organization_id', routed.org_id)
+        .maybeSingle();
+      if (settings) {
+        merchant_contact = {
+          commerce_enabled: !!settings.commerce_enabled,
+          order_contact_phone: settings.order_contact_phone ?? null,
+          whatsapp_number: settings.whatsapp_number ?? null,
+          momo_provider: settings.momo_provider ?? null,
+          momo_recipient_number: settings.momo_recipient_number ?? null,
+          momo_recipient_name: settings.momo_recipient_name ?? null,
+        };
+      }
+    }
+    const ordering_available =
+      merchant_contact.commerce_enabled &&
+      !!merchant_contact.momo_provider?.trim() &&
+      !!merchant_contact.momo_recipient_number?.trim() &&
+      !!merchant_contact.order_contact_phone?.trim();
+
+    // deno-lint-ignore no-explicit-any
     const pricedProducts = ((products ?? []) as any[]).map((p) => {
-      // A 0/absent snapshot price is "not configured" — never guessed.
-      const resolved = snapshotPrices[p.id] ?? priceOverrides[p.id];
-      return resolved != null ? { ...p, selling_price: resolved } : p;
+      // Live resolution: positive CDP override wins, otherwise the live XCAPE
+      // default. Zero/absent is "not configured", never a free product.
+      const resolved = priceOverrides[p.id] ?? usablePrice(p.selling_price);
+      return { ...p, selling_price: resolved ?? null, currency: 'XAF' };
     });
+
 
     // ---- Engagement: persistent open counters on the link itself ----
     const nowIso = new Date().toISOString();
@@ -346,9 +362,9 @@ Deno.serve(async (req) => {
       recommended_services: services ?? [],
       recommended_products: pricedProducts,
       merchant,
-      commercial_snapshot: snapshot
-        ? { captured_at: snapshot_captured(snapshot), currency: 'NGN', item_count: (snapshot.items ?? []).length }
-        : null,
+      merchant_contact,
+      ordering_available,
+      currency: 'XAF',
       recommended_sessions_by_service_id,
       treatment_plan,
       payment_settings,

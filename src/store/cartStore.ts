@@ -14,6 +14,18 @@ export interface CartItem {
   formula_label?: string | null;
 }
 
+/**
+ * Trusted commercial context for a cart built from ONE secure report link.
+ * A report cart is scoped to exactly one token / merchant / currency —
+ * marketplace items and items from another report can never share it.
+ */
+export interface CartReportContext {
+  token: string;
+  merchant_org_id: string | null;
+  merchant_name: string;
+  currency: 'XAF';
+}
+
 export interface CartAttribution {
   referral_staff_id: string | null;
   outreach_id: string | null;
@@ -27,11 +39,17 @@ export interface CartAttribution {
 interface CartState {
   items: CartItem[];
   attribution: CartAttribution;
+  /** Non-null only while the cart belongs to a report. */
+  report: CartReportContext | null;
   addItem: (item: Omit<CartItem, 'quantity'>, qty?: number) => void;
   removeItem: (product_id: string) => void;
   setQty: (product_id: string, qty: number) => void;
   clear: () => void;
   setAttribution: (a: Partial<CartAttribution>) => void;
+  /** Enters (or switches to) a report cart, clearing incompatible items. */
+  setReportContext: (ctx: CartReportContext) => void;
+  /** Leaves report mode — used by the ordinary marketplace cart. */
+  clearReportContext: () => void;
   count: () => number;
   total: () => number;
 }
@@ -49,6 +67,7 @@ export const useCartStore = create<CartState>()(
     (set, get) => ({
       items: [],
       attribution: emptyAttribution,
+      report: null,
       addItem: (item, qty = 1) =>
         set((s) => {
           // Formula lines are distinct from plain catalogue lines of the same
@@ -74,12 +93,31 @@ export const useCartStore = create<CartState>()(
             .map((i) => (i.product_id === product_id ? { ...i, quantity: Math.max(0, qty) } : i))
             .filter((i) => i.quantity > 0),
         })),
-      clear: () => set({ items: [], attribution: emptyAttribution }),
+      clear: () => set({ items: [], attribution: emptyAttribution, report: null }),
+      setReportContext: (ctx) =>
+        set((s) => {
+          const same = s.report?.token === ctx.token;
+          return {
+            report: ctx,
+            // Switching report (or arriving from the marketplace) drops every
+            // item that does not belong to this report's merchant/currency.
+            items: same ? s.items : [],
+            attribution: same
+              ? { ...s.attribution, report_token: ctx.token }
+              : { ...emptyAttribution, report_token: ctx.token },
+          };
+        }),
+      clearReportContext: () =>
+        set((s) => ({
+          report: null,
+          items: s.report ? [] : s.items,
+          attribution: { ...s.attribution, report_token: null },
+        })),
       setAttribution: (a) =>
         set((s) => ({ attribution: { ...s.attribution, ...a } })),
       count: () => get().items.reduce((n, i) => n + i.quantity, 0),
       total: () => get().items.reduce((n, i) => n + i.quantity * i.unit_price, 0),
     }),
-    { name: 'tropics-cart-v1' },
+    { name: 'tropics-cart-v2' },
   ),
 );
