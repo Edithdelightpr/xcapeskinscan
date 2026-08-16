@@ -49,7 +49,7 @@ export function XcapeLandingNav() {
         </Link>
 
         <nav className="hidden items-center gap-6 md:flex" aria-label="Landing sections">
-          {(user ? MEMBER_NAV_LINKS : GUEST_NAV_LINKS).map((link) => (
+          {(loading ? [] : user ? MEMBER_NAV_LINKS : GUEST_NAV_LINKS).map((link) => (
             <a
               key={link.href}
               href={link.href}
