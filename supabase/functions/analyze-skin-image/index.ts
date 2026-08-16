@@ -5,6 +5,12 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
 import { SKIN_AI_SYSTEM_PROMPT, SKIN_AI_USER_INSTRUCTION } from './prompt.ts';
+import {
+  hasPartnerRole,
+  hasStaffRole,
+  validatePartnerMedia,
+  type MediaRowFacts,
+} from '../_shared/aiMediaAccess.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -20,12 +26,12 @@ const json = (body: unknown, status = 200) =>
 
 interface Body {
   client_id: string;
+  /** Required for Affiliate / CDP callers; optional for legacy staff calls. */
+  assessment_id?: string | null;
   visit_id?: string | null;
   media_ids: string[];
   model?: string;
 }
-
-const STAFF_ROLES = new Set(['admin', 'medical_aesthetician', 'front_desk', 'outreach']);
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
@@ -38,7 +44,7 @@ Deno.serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     if (!LOVABLE_API_KEY) return json({ error: 'AI gateway not configured' }, 500);
 
-    // --- Auth: require staff role ---
+    // --- Auth: staff (existing) or XCAPE partner (assessment-scoped) ---
     const auth = req.headers.get('Authorization') ?? '';
     if (!auth.startsWith('Bearer ')) return json({ error: 'Missing Authorization' }, 401);
     const callerClient = createClient(SUPABASE_URL, ANON_KEY, {
@@ -47,10 +53,16 @@ Deno.serve(async (req) => {
     const { data: { user: caller }, error: callerErr } = await callerClient.auth.getUser();
     if (callerErr || !caller) return json({ error: 'Invalid session' }, 401);
 
-    const { data: roles } = await callerClient
+    const admin = createClient(SUPABASE_URL, SERVICE_KEY, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    });
+
+    const { data: roleRows } = await admin
       .from('user_roles').select('role').eq('user_id', caller.id);
-    const isStaff = (roles ?? []).some((r: { role: string }) => STAFF_ROLES.has(r.role));
-    if (!isStaff) return json({ error: 'Staff role required' }, 403);
+    const roles = (roleRows ?? []).map((r: { role: string }) => r.role);
+    const isStaff = hasStaffRole(roles);
+    const isPartner = hasPartnerRole(roles);
+    if (!isStaff && !isPartner) return json({ error: 'Not authorized' }, 403);
 
     // --- Validate body ---
     const body = (await req.json()) as Body;
@@ -62,18 +74,53 @@ Deno.serve(async (req) => {
     }
 
     // --- Fetch media rows with service key (bucket is private) ---
-    const admin = createClient(SUPABASE_URL, SERVICE_KEY, {
-      auth: { autoRefreshToken: false, persistSession: false },
-    });
     const { data: mediaRows, error: mediaErr } = await admin
       .from('client_media')
-      .select('id, client_id, storage_path, bucket_path, mime_type')
+      .select('id, client_id, assessment_id, archived, file_type, storage_path, bucket_path, mime_type')
       .in('id', body.media_ids);
-    if (mediaErr) return json({ error: mediaErr.message }, 500);
-    const rows = (mediaRows ?? []).filter((r) => r.client_id === body.client_id);
+    if (mediaErr) {
+      console.error('analyze-skin-image media lookup failed', mediaErr);
+      return json({ error: 'Could not load media' }, 500);
+    }
+    let rows = (mediaRows ?? []).filter((r) => r.client_id === body.client_id);
+
+    if (!isStaff) {
+      // Partner branch: every requested row must belong to this client and to
+      // the ONE supplied assessment, and the caller must be authorized for
+      // that assessment (active CDP org/membership, or Affiliate origin).
+      const check = validatePartnerMedia(
+        body.media_ids,
+        (mediaRows ?? []) as MediaRowFacts[],
+        body.client_id,
+        body.assessment_id ?? null,
+      );
+      if (!check.ok) {
+        const status = check.reason === 'assessment_required' ? 400 : 403;
+        return json(
+          {
+            error:
+              check.reason === 'assessment_required'
+                ? 'assessment_id required'
+                : 'Not authorized for this media',
+          },
+          status,
+        );
+      }
+      const { data: allowed, error: accessErr } = await admin.rpc(
+        'xcape_may_access_assessment_media',
+        { _assessment_id: body.assessment_id, _actor: caller.id },
+      );
+      if (accessErr) {
+        console.error('analyze-skin-image access check failed', accessErr);
+        return json({ error: 'Server error' }, 500);
+      }
+      if (allowed !== true) return json({ error: 'Not authorized for this media' }, 403);
+      rows = (mediaRows ?? []).filter((r) => body.media_ids.includes(r.id));
+    }
+
     if (rows.length === 0) return json({ error: 'No matching media for client' }, 404);
 
-    // --- Sign URLs (short-lived) ---
+    // --- Sign URLs (short-lived, server-side only — never returned) ---
     const signed: { url: string; mime: string }[] = [];
     for (const r of rows) {
       const path = (r.storage_path ?? r.bucket_path) as string;
@@ -83,6 +130,7 @@ Deno.serve(async (req) => {
       signed.push({ url: sig.signedUrl, mime: r.mime_type ?? 'image/jpeg' });
     }
     if (signed.length === 0) return json({ error: 'Could not sign media URLs' }, 500);
+
 
     // --- Call Lovable AI Gateway (OpenAI-compatible) ---
     const model = body.model || 'google/gemini-3-flash-preview';

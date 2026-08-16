@@ -6,6 +6,8 @@ import type { EnginePayload } from '@/lib/skinEngine';
 
 interface Props {
   clientId: string;
+  /** The analysis these images belong to — required for partner AI access. */
+  assessmentId: string | null;
   media: ClientMedia[];
   skin: SkinAnalysisPayload;
   setSkin: React.Dispatch<React.SetStateAction<SkinAnalysisPayload>>;
@@ -18,7 +20,8 @@ interface Props {
  * selected in the Images step are passed in directly; nothing here is a new
  * engine — the same `analyze-skin-image` function and payload shape are used.
  */
-const StepAiAnalysis = ({ clientId, media, skin, setSkin, onRefine }: Props) => {
+const StepAiAnalysis = ({ clientId, assessmentId, media, skin, setSkin, onRefine }: Props) => {
+
   const engine = (skin.engine ?? null) as EnginePayload | null;
 
   return (
@@ -46,8 +49,10 @@ const StepAiAnalysis = ({ clientId, media, skin, setSkin, onRefine }: Props) => 
 
       <SkinAnalysisAiPanel
         clientId={clientId}
+        assessmentId={assessmentId}
         visitId={null}
         externalMedia={media}
+
         current={skin.ai_assist ?? null}
         currentEngine={engine}
         onChange={(next) => setSkin((prev) => ({ ...prev, ai_assist: next }))}

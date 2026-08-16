@@ -251,9 +251,13 @@ const JourneyBody = ({ clientId, client }: { clientId: string; client: RealClien
     }
     return map;
   }, [media]);
+  /** Front view where available; strictly scoped to the analysis it belongs to. */
+  const imageForAssessment = (assessmentId: string | null | undefined) =>
+    imageFor(pickPreferredImage(mediaByAssessment.get(assessmentId ?? '') ?? []));
 
   const latest = assessments[0];
-  const latestImage = imageFor(mediaByAssessment.get(latest?.id ?? '')?.[0] ?? media[0]);
+  const latestImage = imageForAssessment(latest?.id);
+
 
   const { data: reports = [] } = useQuery({
     queryKey: ['xcape-journey-reports', clientId],

@@ -25,7 +25,14 @@ import { useAuth } from '@/hooks/useAuth';
 
 interface Props {
   clientId: string;
+  /**
+   * XCAPE analysis these images belong to. Required for Affiliate/CDP
+   * accounts: uploads are stored against it and the edge function authorizes
+   * partner access per assessment. Legacy MedSpa callers omit it.
+   */
+  assessmentId?: string | null;
   visitId?: string | null;
+
   current: AiAssistPayload | null | undefined;
   /** Existing engine variables the practitioner may have already entered. */
   currentEngine?: EnginePayload | null;
@@ -49,9 +56,10 @@ interface Props {
 type SuggestedMap = NonNullable<AiAssistPayload['suggested_scores']>;
 
 const SkinAnalysisAiPanel = ({
-  clientId, visitId, current, currentEngine, externalMedia,
+  clientId, assessmentId, visitId, current, currentEngine, externalMedia,
   onChange, onApplyAiEngine, onRefineInEngine,
 }: Props) => {
+
   const uploadMut = useUploadClientMedia();
   const { user } = useAuth();
   const [uploading, setUploading] = useState(false);
@@ -81,11 +89,14 @@ const SkinAnalysisAiPanel = ({
         if (!file.type.startsWith('image/')) continue;
         const row = await uploadMut.mutateAsync({
           clientId,
+          assessmentId: assessmentId ?? undefined,
+          requireAssessment: assessmentId !== undefined,
           file,
           category: 'other',
           caption: 'AI-Assist skin snapshot',
           extra: { visit_id: visitId ?? null },
         });
+
         rows.push(row);
       }
       setSessionUploaded((prev) => [...prev, ...rows]);
@@ -108,10 +119,14 @@ const SkinAnalysisAiPanel = ({
       const { data, error } = await (supabase as any).functions.invoke('analyze-skin-image', {
         body: {
           client_id: clientId,
+          // Partner accounts are authorized per assessment server-side; the id
+          // must therefore travel with the request.
+          assessment_id: assessmentId ?? null,
           visit_id: visitId ?? null,
           media_ids: uploaded.map((u) => u.id),
         },
       });
+
       if (error) throw error;
       if (!data?.ok) throw new Error(data?.error ?? 'AI analysis failed');
 

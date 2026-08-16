@@ -15,7 +15,9 @@ type Stage = 'consent' | 'capture' | 'uploading' | 'done';
 
 interface Props {
   client: RealClient;
-  /** Called for each successfully persisted image (rows appended by StepImages). */
+  /** Saved analysis the three stills belong to — required for persistence. */
+  assessmentId: string;
+
   onUploaded: (row: ClientMedia) => void;
   /** All three views uploaded — parent advances the wizard. */
   onComplete: () => void;
@@ -40,7 +42,7 @@ interface Props {
  * landmark data are ever transmitted or stored; all tracks stop on
  * complete/cancel/unmount.
  */
-const GuidedFacialScan = ({ client, onUploaded, onComplete, onFallback }: Props) => {
+const GuidedFacialScan = ({ client, assessmentId, onUploaded, onComplete, onFallback }: Props) => {
   const uploadMut = useUploadClientMedia();
   const [stage, setStage] = useState<Stage>('consent');
 
@@ -75,6 +77,8 @@ const GuidedFacialScan = ({ client, onUploaded, onComplete, onFallback }: Props)
         });
         const row = await uploadMut.mutateAsync({
           clientId: client.id,
+          assessmentId,
+          requireAssessment: true,
           file,
           category: 'other',
           caption: `Guided facial scan — ${meta.label} view`,
@@ -86,8 +90,9 @@ const GuidedFacialScan = ({ client, onUploaded, onComplete, onFallback }: Props)
         throw e;
       }
     },
-    [capture.accepted, client.id, uploadMut, onUploaded],
+    [capture.accepted, client.id, assessmentId, uploadMut, onUploaded],
   );
+
 
   useEffect(() => {
     if (stage !== 'uploading') return;

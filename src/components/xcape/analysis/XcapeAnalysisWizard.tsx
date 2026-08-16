@@ -3,6 +3,15 @@ import { toast } from 'sonner';
 import { Check, ChevronLeft, ChevronRight, Plus, RotateCcw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+
 import { useRealClients, type RealClient } from '@/hooks/useRealClients';
 import {
   computeReportReadiness,
@@ -14,7 +23,9 @@ import {
   type SkinAnalysisPayload,
   type VisitAssessment,
 } from '@/hooks/useVisitAssessments';
-import type { ClientMedia } from '@/hooks/useClientMedia';
+import { useClientMedia, type ClientMedia } from '@/hooks/useClientMedia';
+import { mergeAssessmentMedia } from '@/lib/xcapeMedia';
+
 import StepClientIntake from './StepClientIntake';
 import StepImages from './StepImages';
 import StepAiAnalysis from './StepAiAnalysis';
@@ -100,12 +111,29 @@ const XcapeAnalysisWizard = () => {
   const [homeCare, setHomeCare] = useState('');
   const [followUp, setFollowUp] = useState('');
   const [nextWeeks, setNextWeeks] = useState('');
-  const [media, setMedia] = useState<ClientMedia[]>([]);
+  /** Photos captured in this session; persisted rows are loaded separately. */
+  const [localMedia, setLocalMedia] = useState<ClientMedia[]>([]);
+  const [removedMediaIds, setRemovedMediaIds] = useState<string[]>([]);
+  /** Draft-save state for the Client & Intake → Images transition. */
+  const [preparingCapture, setPreparingCapture] = useState(false);
+  const [noPhotoPrompt, setNoPhotoPrompt] = useState(false);
 
   const saveMut = useSaveVisitAssessment();
   const { data: assessments = [], isLoading: assessmentsLoading } =
     useClientAssessments(clientId ?? undefined);
   const hydratedFor = useRef<string | null>(null);
+
+  // Photos already saved against THIS assessment (refresh / resume). A new
+  // analysis has no assessment id yet, so it always starts with an empty set —
+  // a previous analysis's photos can never leak into it.
+  const { data: persistedMedia = [] } = useClientMedia(
+    assessmentId ? clientId ?? undefined : undefined,
+    { assessmentId: assessmentId ?? undefined },
+  );
+  const media = useMemo(
+    () => mergeAssessmentMedia(persistedMedia, localMedia, assessmentId, removedMediaIds),
+    [persistedMedia, localMedia, assessmentId, removedMediaIds],
+  );
 
   const resetFields = () => {
     setAssessmentId(null);
@@ -118,8 +146,10 @@ const XcapeAnalysisWizard = () => {
     setHomeCare('');
     setFollowUp('');
     setNextWeeks('');
-    setMedia([]);
+    setLocalMedia([]);
+    setRemovedMediaIds([]);
   };
+
 
   // Resume the in-progress assessment when a client is selected:
   //   1. The exact WIP assessment recorded in the session — even when it is
@@ -251,6 +281,52 @@ const XcapeAnalysisWizard = () => {
   };
 
   /**
+   * Continue from Client & Intake into Images. The draft assessment is created
+   * (or reused) FIRST, so every photo captured next is written against a real
+   * assessment id and the canonical storage path. Without it the partner
+   * storage/table policies would reject the upload and the analysis would end
+   * up with no visual history at all.
+   */
+  const goToImages = async () => {
+    if (!client || preparingCapture) return;
+    setPreparingCapture(true);
+    try {
+      await ensureSaved();
+      goTo(1);
+    } catch (e) {
+      toast.error(
+        e instanceof Error
+          ? `Could not start the photo step: ${e.message}`
+          : 'Could not start the photo step',
+      );
+    } finally {
+      setPreparingCapture(false);
+    }
+  };
+
+  /** Continue out of Images — never silently past a failed capture. */
+  const continueFromImages = () => {
+    if (media.length === 0) {
+      setNoPhotoPrompt(true);
+      return;
+    }
+    goTo(2);
+  };
+
+  const handleContinue = () => {
+    if (step === 0) {
+      void goToImages();
+      return;
+    }
+    if (step === 1) {
+      continueFromImages();
+      return;
+    }
+    goTo(step + 1);
+  };
+
+
+  /**
    * "+ New Analysis" — start a completely fresh flow. Transient wizard state
    * only (client selection, images, scores, proposals, report draft) is
    * cleared; NOTHING previously saved is mutated. Prior assessments,
@@ -358,18 +434,33 @@ const XcapeAnalysisWizard = () => {
 
       {/* Step body */}
       {step === 0 && <StepClientIntake client={client} onPick={(id) => setClientId(id)} />}
-      {step === 1 && client && (
+      {step === 1 && client && assessmentId && (
         <StepImages
           client={client}
+          assessmentId={assessmentId}
           media={media}
-          onAdd={(m) => setMedia((prev) => (prev.some((p) => p.id === m.id) ? prev : [...prev, m]))}
-          onRemove={(id) => setMedia((prev) => prev.filter((m) => m.id !== id))}
+          onAdd={(m) =>
+            setLocalMedia((prev) => (prev.some((p) => p.id === m.id) ? prev : [...prev, m]))
+          }
+          onRemove={(id) => setRemovedMediaIds((prev) => (prev.includes(id) ? prev : [...prev, id]))}
         />
       )}
+      {step === 1 && client && !assessmentId && (
+        <section className="glass rounded-xl p-5 space-y-3">
+          <p className="text-sm text-foreground">Preparing this analysis…</p>
+          <p className="text-[11px] text-muted-foreground">
+            Photos can only be saved once the analysis record exists. Go back and press Continue
+            again if this does not clear.
+          </p>
+        </section>
+      )}
+
       {step === 2 && client && (
         <StepAiAnalysis
           clientId={client.id}
+          assessmentId={assessmentId}
           media={media}
+
           skin={skin}
           setSkin={setSkin}
           onRefine={() => goTo(3)}
@@ -440,14 +531,50 @@ const XcapeAnalysisWizard = () => {
         {step < STEPS.length - 1 && (
           <Button
             type="button"
-            onClick={() => goTo(step + 1)}
-            disabled={!client}
+            onClick={handleContinue}
+            disabled={!client || preparingCapture || (step === 0 && assessmentsLoading)}
             className="glow-primary"
           >
-            Continue <ChevronRight className="w-4 h-4 ml-1" />
+            {preparingCapture ? 'Preparing…' : 'Continue'}
+            <ChevronRight className="w-4 h-4 ml-1" />
           </Button>
         )}
       </div>
+
+      {/* Explicit escape hatch — manual scoring without any saved photo. It is
+          deliberately a warning, never a success state. */}
+      <Dialog open={noPhotoPrompt} onOpenChange={setNoPhotoPrompt}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>No photo has been saved yet</DialogTitle>
+            <DialogDescription asChild>
+              <div className="space-y-2 text-left text-sm">
+                <p>
+                  Nothing was saved for this analysis, so it will have no visual history — the
+                  client report, progress comparison and AI assist will have no image.
+                </p>
+                <p>Go back and retry the capture, or continue and score manually.</p>
+              </div>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-2">
+            <Button type="button" variant="outline" onClick={() => setNoPhotoPrompt(false)}>
+              Back to photos
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={() => {
+                setNoPhotoPrompt(false);
+                goTo(2);
+              }}
+            >
+              Continue without a saved photo
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
     </div>
   );
 };
