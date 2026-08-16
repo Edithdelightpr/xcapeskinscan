@@ -2056,6 +2056,7 @@ export type Database = {
           age_group: string | null
           archived: boolean
           archived_at: string | null
+          archived_by: string | null
           attributed_staff_id: string | null
           captured_via: string | null
           client_code: string
@@ -2077,6 +2078,9 @@ export type Database = {
           last_interaction_at: string | null
           location: string | null
           marketing_consent: boolean
+          media_purge_error: string | null
+          media_purge_status: string | null
+          media_purged_at: string | null
           membership_type: Database["public"]["Enums"]["membership_type"]
           normalized_phone: string | null
           notes: string | null
@@ -2102,6 +2106,7 @@ export type Database = {
           age_group?: string | null
           archived?: boolean
           archived_at?: string | null
+          archived_by?: string | null
           attributed_staff_id?: string | null
           captured_via?: string | null
           client_code?: string
@@ -2123,6 +2128,9 @@ export type Database = {
           last_interaction_at?: string | null
           location?: string | null
           marketing_consent?: boolean
+          media_purge_error?: string | null
+          media_purge_status?: string | null
+          media_purged_at?: string | null
           membership_type?: Database["public"]["Enums"]["membership_type"]
           normalized_phone?: string | null
           notes?: string | null
@@ -2148,6 +2156,7 @@ export type Database = {
           age_group?: string | null
           archived?: boolean
           archived_at?: string | null
+          archived_by?: string | null
           attributed_staff_id?: string | null
           captured_via?: string | null
           client_code?: string
@@ -2169,6 +2178,9 @@ export type Database = {
           last_interaction_at?: string | null
           location?: string | null
           marketing_consent?: boolean
+          media_purge_error?: string | null
+          media_purge_status?: string | null
+          media_purged_at?: string | null
           membership_type?: Database["public"]["Enums"]["membership_type"]
           normalized_phone?: string | null
           notes?: string | null
@@ -13572,6 +13584,10 @@ export type Database = {
       verify_cron_secret: { Args: { candidate: string }; Returns: boolean }
       visit_finance_netting: { Args: { p_visit_id: string }; Returns: Json }
       xcape_affiliate_split_pct: { Args: never; Returns: number }
+      xcape_archive_client: {
+        Args: { _actor: string; _client_id: string }
+        Returns: Json
+      }
       xcape_authorization_state: { Args: { _user?: string }; Returns: Json }
       xcape_build_report_commercial_snapshot: {
         Args: { _link_id: string }
@@ -13588,6 +13604,14 @@ export type Database = {
           id: string
           phone_masked: string
         }[]
+      }
+      xcape_mark_client_media_purged: {
+        Args: { _client_id: string; _error?: string; _status: string }
+        Returns: undefined
+      }
+      xcape_may_archive_client: {
+        Args: { _actor: string; _client_id: string }
+        Returns: boolean
       }
       xcape_normalise_phone: { Args: { _raw: string }; Returns: string }
       xcape_phone_key: {
@@ -13608,6 +13632,7 @@ export type Database = {
           age_group: string | null
           archived: boolean
           archived_at: string | null
+          archived_by: string | null
           attributed_staff_id: string | null
           captured_via: string | null
           client_code: string
@@ -13629,6 +13654,9 @@ export type Database = {
           last_interaction_at: string | null
           location: string | null
           marketing_consent: boolean
+          media_purge_error: string | null
+          media_purge_status: string | null
+          media_purged_at: string | null
           membership_type: Database["public"]["Enums"]["membership_type"]
           normalized_phone: string | null
           notes: string | null
