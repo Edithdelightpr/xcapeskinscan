@@ -33,16 +33,16 @@ interface Body {
   model?: string;
 }
 
-Deno./**
+/**
  * Postgres/Supabase errors carry query text, row values and storage paths.
  * Only the structured, non-content fields are safe to log.
  */
-const safePgError = (err: { code?: string | null; status?: number | null } | null) => ({
+const safePgError = (err: { code?: string | null } | null) => ({
   code: err?.code ?? null,
   status: (err as { status?: number } | null)?.status ?? null,
 });
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
   if (req.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
 
