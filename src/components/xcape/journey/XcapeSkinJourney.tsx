@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { ArrowLeft, Eye, ImageIcon, Share2, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
-import { useRealClient } from '@/hooks/useRealClients';
+import { useRealClient, type RealClient } from '@/hooks/useRealClients';
 import { useArchiveXcapeClient } from '@/hooks/useArchiveXcapeClient';
 import { useClientAssessments, type VisitAssessment } from '@/hooks/useVisitAssessments';
 import { useClientMedia, type ClientMedia } from '@/hooks/useClientMedia';
@@ -102,16 +102,24 @@ const RemoveClientAction = ({
     try {
       const result = await archive.mutateAsync(clientId);
       setOpen(false);
-      toast.success(`${clientName ?? 'Client'} removed`, {
-        description: result.cleanup_pending
-          ? 'Shared links no longer work. Photo cleanup is still finishing — retry removal if it does not complete.'
-          : 'Shared report links no longer work and stored photos were cleared.',
-      });
+      if (result.cleanup_pending) {
+        // Links are dead and the client is hidden, but the photo purge did not
+        // finish — never report that as a success.
+        toast.warning(`${clientName ?? 'Client'} removed — photo cleanup unfinished`, {
+          description:
+            'Shared report links no longer work. Some stored photos were not cleared yet — run Remove client again to finish the cleanup.',
+        });
+      } else {
+        toast.success(`${clientName ?? 'Client'} removed`, {
+          description: 'Shared report links no longer work and stored photos were cleared.',
+        });
+      }
       navigate('/xcape/clients', { replace: true });
     } catch (e) {
       setError(e instanceof Error ? e.message : 'We could not remove this client.');
     }
   };
+
 
   return (
     <>
@@ -129,8 +137,16 @@ const RemoveClientAction = ({
         <Trash2 className="mr-1 h-3.5 w-3.5" aria-hidden /> Remove client
       </Button>
 
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="sm:max-w-md">
+      {/* While the archive is in flight the dialog cannot be dismissed — no
+          escape, overlay click, close button, Keep, or typing. */}
+      <Dialog open={open} onOpenChange={(next) => { if (!archive.isPending) setOpen(next); }}>
+        <DialogContent
+          className={`sm:max-w-md ${archive.isPending ? '[&>button.absolute]:pointer-events-none [&>button.absolute]:opacity-40' : ''}`}
+
+          onEscapeKeyDown={(e) => { if (archive.isPending) e.preventDefault(); }}
+          onPointerDownOutside={(e) => { if (archive.isPending) e.preventDefault(); }}
+          onInteractOutside={(e) => { if (archive.isPending) e.preventDefault(); }}
+        >
           <DialogHeader>
             <DialogTitle>Remove {clientName ?? 'this client'}?</DialogTitle>
             <DialogDescription asChild>
@@ -156,11 +172,18 @@ const RemoveClientAction = ({
               placeholder="REMOVE"
               aria-label="Type REMOVE to confirm"
               autoComplete="off"
+              disabled={archive.isPending}
             />
           </label>
           {error && <p className="text-sm text-destructive">{error}</p>}
           <DialogFooter className="gap-2 sm:gap-2">
-            <Button type="button" variant="outline" className="rounded-full" onClick={() => setOpen(false)}>
+            <Button
+              type="button"
+              variant="outline"
+              className="rounded-full"
+              disabled={archive.isPending}
+              onClick={() => setOpen(false)}
+            >
               Keep client
             </Button>
             <Button
@@ -179,9 +202,37 @@ const RemoveClientAction = ({
   );
 };
 
+/** Shown when the client was removed, or never visible to this account. */
+const ClientUnavailable = () => (
+  <div className="space-y-4 py-12 text-center">
+    <h1 className="text-2xl font-semibold tracking-tight">Client no longer available</h1>
+    <p className="mx-auto max-w-md text-sm text-muted-foreground">
+      This client has been removed from your XCAPE clients. Their shared report links no longer
+      work and their photos have been cleared.
+    </p>
+    <Button asChild variant="outline" className="rounded-full">
+      <Link to="/xcape/clients">Back to clients</Link>
+    </Button>
+  </div>
+);
+
+/**
+ * Gate: no assessment, media, report-link or purchase query is started until
+ * the client query has resolved to a live (non-archived) client. A removed
+ * client therefore never triggers reads of their remaining records.
+ */
 const XcapeSkinJourney = ({ clientId }: { clientId: string }) => {
-  const [tab, setTab] = useState<Tab>('Overview');
   const { data: client, isLoading } = useRealClient(clientId);
+  if (isLoading) {
+    return <p className="py-16 text-center text-sm text-muted-foreground">Loading skin journey…</p>;
+  }
+  if (!client) return <ClientUnavailable />;
+  return <JourneyBody clientId={clientId} client={client} />;
+};
+
+const JourneyBody = ({ clientId, client }: { clientId: string; client: RealClient }) => {
+  const [tab, setTab] = useState<Tab>('Overview');
+
   const { data: assessments = [] } = useClientAssessments(clientId);
   const { data: media = [] } = useClientMedia(clientId);
   const { data: signed = {} } = useSignedMedia(media);
@@ -248,25 +299,8 @@ const XcapeSkinJourney = ({ clientId }: { clientId: string }) => {
   const from = assessments.find((a) => a.id === fromId) ?? assessments[assessments.length - 1];
   const to = assessments.find((a) => a.id === toId) ?? assessments[0];
 
-  if (isLoading) {
-    return <p className="py-16 text-center text-sm text-muted-foreground">Loading skin journey…</p>;
-  }
 
-  // Removed clients disappear from the product experience entirely.
-  if (!client) {
-    return (
-      <div className="space-y-4 py-12 text-center">
-        <h1 className="text-2xl font-semibold tracking-tight">Client no longer available</h1>
-        <p className="mx-auto max-w-md text-sm text-muted-foreground">
-          This client has been removed from your XCAPE clients. Their shared report links no longer
-          work and their photos have been cleared.
-        </p>
-        <Button asChild variant="outline" className="rounded-full">
-          <Link to="/xcape/clients">Back to clients</Link>
-        </Button>
-      </div>
-    );
-  }
+
 
   return (
     <div className="space-y-6">

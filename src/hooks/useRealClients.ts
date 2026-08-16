@@ -33,14 +33,16 @@ export const useRealClient = (id: string | undefined, options?: { includeArchive
     queryKey: ['real-client', id, options?.includeArchived === true ? 'all' : 'active'],
     enabled: !!id,
     queryFn: async () => {
-      const { data, error } = await supabase.from('clients').select('*').eq('id', id!).maybeSingle();
+      // Archived rows are excluded IN THE QUERY, so removed clients' personal
+      // details never reach the browser to be filtered out afterwards.
+      let query = supabase.from('clients').select('*').eq('id', id!);
+      if (options?.includeArchived !== true) query = query.or('archived.is.null,archived.eq.false');
+      const { data, error } = await query.maybeSingle();
       if (error) throw error;
-      const row = data as (RealClient & { archived?: boolean | null }) | null;
-      if (!row) return null;
-      if (options?.includeArchived !== true && row.archived === true) return null;
-      return row as RealClient;
+      return (data as RealClient | null) ?? null;
     },
   });
+
 
 export const useCreateRealClient = () => {
   const qc = useQueryClient();

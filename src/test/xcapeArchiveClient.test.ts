@@ -75,3 +75,30 @@ describe('organization scope gating', () => {
     expect(orgConfersAccess(activeOrg, null)).toBe(false);
   });
 });
+
+describe('Affiliate clients stamped with the XCAPE root organization', () => {
+  // Affiliate captures are stamped with the xcape_root org. That is NOT a CDP
+  // origin, so the affiliate must still be able to remove their own client.
+  it('lets the originating Affiliate remove a root-stamped client', () => {
+    const rootStamped = {
+      directOwner: true,
+      // organizations.kind = 'xcape_root' → not a CDP origin
+      hasCdpOrigin: orgConfersAccess({ kind: 'xcape_root', status: 'active' }, { status: 'active' }),
+      activeOrgManager: false,
+    };
+    expect(decideArchiveAccess(['affiliate'], rootStamped)).toEqual({
+      allowed: true,
+      scope: 'owner',
+    });
+  });
+
+  it("still denies another Affiliate for that same root-stamped client", () => {
+    expect(
+      decideArchiveAccess(['affiliate'], {
+        directOwner: false,
+        hasCdpOrigin: false,
+        activeOrgManager: false,
+      }),
+    ).toEqual({ allowed: false, reason: 'not_own_client' });
+  });
+});

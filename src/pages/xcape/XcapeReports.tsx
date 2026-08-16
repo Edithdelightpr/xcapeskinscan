@@ -41,19 +41,19 @@ const XcapeReports = () => {
   const { data: rows = [], isLoading } = useQuery({
     queryKey: ['xcape', 'report-links'],
     queryFn: async (): Promise<ReportRow[]> => {
+      // Inner relation + server-side archived filter: removed clients' details
+      // are never returned to the browser at all.
       const { data, error } = await (supabase as any)
         .from('client_report_links')
-        .select('id, client_id, assessment_id, created_at, revoked_at, expires_at, token_prefix, clients(full_name, client_code, archived), client_visit_assessments(created_at, main_concern)')
+        .select('id, client_id, assessment_id, created_at, revoked_at, expires_at, token_prefix, clients!inner(full_name, client_code, archived), client_visit_assessments(created_at, main_concern)')
+        .or('archived.is.null,archived.eq.false', { referencedTable: 'clients' })
         .order('created_at', { ascending: false })
         .limit(200);
       if (error) throw error;
-      // Removed (archived) clients drop out of the reports surface; their
-      // links are already revoked server-side by the archive transaction.
-      return ((data ?? []) as unknown as ReportRow[]).filter(
-        (r) => (r.clients as { archived?: boolean | null } | null)?.archived !== true,
-      );
+      return (data ?? []) as unknown as ReportRow[];
     },
   });
+
 
   const refresh = () => qc.invalidateQueries({ queryKey: ['xcape', 'report-links'] });
 

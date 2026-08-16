@@ -167,11 +167,18 @@ Deno.serve(async (req) => {
       }
     }
 
-    await admin.rpc('xcape_mark_client_media_purged', {
+    const { error: markErr } = await admin.rpc('xcape_mark_client_media_purged', {
       _client_id: clientId,
       _status: cleanupPending ? 'error' : 'complete',
       _error: cleanupPending ? 'storage cleanup incomplete' : null,
     });
+    if (markErr) {
+      // We could not record the outcome, so we cannot honestly claim the purge
+      // completed — report it as pending so a retry finishes the job.
+      console.error('archive-xcape-client purge status write failed', markErr);
+      cleanupPending = true;
+    }
+
 
     // Counts only — never storage paths, ids of other records, or internals.
     return json({
