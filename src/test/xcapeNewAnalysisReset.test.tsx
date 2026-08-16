@@ -68,12 +68,20 @@ for (const mod of [
   vi.doMock(mod, () => ({ default: () => <div /> }));
 }
 
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import XcapeAnalysisWizard from '@/components/xcape/analysis/XcapeAnalysisWizard';
 
 describe('XCAPE new analysis', () => {
   it('always exposes a New Analysis action and resets only transient state', async () => {
     window.sessionStorage.clear();
-    render(<XcapeAnalysisWizard />);
+    // The wizard now loads persisted analysis photos, so it needs a query client.
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={qc}>
+        <XcapeAnalysisWizard />
+      </QueryClientProvider>,
+    );
+
 
     const cta = screen.getByRole('button', { name: /new analysis/i });
     expect(cta).toBeInTheDocument();
