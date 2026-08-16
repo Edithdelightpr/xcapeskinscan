@@ -1,0 +1,2 @@
+ALTER TABLE public.xcape_customization_usage_events
+  DROP CONSTRAINT IF EXISTS xcape_customization_usage_events_formula_snapshot_id_fkey;

@@ -1,6 +1,6 @@
 CREATE TABLE IF NOT EXISTS public.xcape_customization_usage_events (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  formula_snapshot_id uuid NOT NULL UNIQUE REFERENCES public.xcape_formula_snapshots(id) ON DELETE CASCADE,
+  formula_snapshot_id uuid NOT NULL UNIQUE,
   assessment_id uuid NOT NULL,
   client_id uuid NOT NULL,
   cdp_org_id uuid NOT NULL,
