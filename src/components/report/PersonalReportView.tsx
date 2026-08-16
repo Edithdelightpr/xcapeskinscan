@@ -74,6 +74,7 @@ const PersonalReportView = ({ data, token, onDownloadPdf, downloadDisabled }: Pr
                   concern={c}
                   token={token}
                   formula={formulaMap.get(c.key) ?? null}
+                  orderingAvailable={data.ordering_available !== false}
                 />
               ))}
             </div>
