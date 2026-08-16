@@ -88,14 +88,19 @@ export const useCartStore = create<CartState>()(
           }
           return { items: [...s.items, { ...item, quantity: qty }] };
         }),
-      removeItem: (product_id) =>
-        set((s) => ({ items: s.items.filter((i) => i.product_id !== product_id) })),
-      setQty: (product_id, qty) =>
+      removeItem: (product_id, formula_snapshot_id = null) =>
+        set((s) => ({
+          items: s.items.filter((i) => !isLine(i, product_id, formula_snapshot_id)),
+        })),
+      setQty: (product_id, qty, formula_snapshot_id = null) =>
         set((s) => ({
           items: s.items
-            .map((i) => (i.product_id === product_id ? { ...i, quantity: Math.max(0, qty) } : i))
+            .map((i) =>
+              isLine(i, product_id, formula_snapshot_id) ? { ...i, quantity: Math.max(0, qty) } : i,
+            )
             .filter((i) => i.quantity > 0),
         })),
+
       clear: () => set({ items: [], attribution: emptyAttribution, report: null }),
       setReportContext: (ctx) =>
         set((s) => {
