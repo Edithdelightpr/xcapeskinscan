@@ -7,6 +7,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useRealClients } from '@/hooks/useRealClients';
 import { Input } from '@/components/ui/input';
 import { signMediaPaths, SIGNED_URL_TTL_SECONDS } from '@/hooks/useSignedMediaUrls';
+import { pickLibraryThumbPath, type ThumbCandidate } from '@/lib/xcapeMedia';
 
 interface JourneyMeta {
   assessments: number;
