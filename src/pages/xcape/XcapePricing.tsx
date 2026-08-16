@@ -21,7 +21,9 @@ interface PriceBookRow {
   image_url: string | null;
   default_price: number | null;
   override_price: number | null;
-  effective_price: number | null;
+  /** Live client-facing price from the RPC: active positive CDP override,
+   *  otherwise the live XCAPE default. Blank/zero override = XCAPE default. */
+  resolved_price: number | null;
   currency: string;
   org_id: string | null;
   org_kind: string | null;
@@ -197,7 +199,7 @@ const XcapePricing = () => {
               <p className="text-xs text-muted-foreground">
                 XCAPE price: {p.default_price != null ? formatFcfa(p.default_price) : 'not configured'}
                 {' · '}Client sees:{' '}
-                {p.effective_price != null ? formatFcfa(p.effective_price) : 'pricing required'}
+                {p.resolved_price != null ? formatFcfa(p.resolved_price) : 'pricing required'}
                 {isCdpOrg && p.override_price == null && p.default_price != null ? ' (XCAPE price)' : ''}
               </p>
             </div>
