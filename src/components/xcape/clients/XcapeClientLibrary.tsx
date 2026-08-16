@@ -2,10 +2,11 @@ import { useMemo, useState } from 'react';
 import { homeCtaPath } from '@/lib/xcapeExperience';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Search, ImageIcon, ArrowRight } from 'lucide-react';
+import { Search, ImageIcon, ImageOff, ArrowRight } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useRealClients } from '@/hooks/useRealClients';
 import { Input } from '@/components/ui/input';
+import { signMediaPaths, SIGNED_URL_TTL_SECONDS } from '@/hooks/useSignedMediaUrls';
 
 interface JourneyMeta {
   assessments: number;
@@ -24,11 +25,12 @@ const useJourneyMeta = (clientIds: string[]) =>
     enabled: clientIds.length > 0,
     queryFn: async (): Promise<Record<string, JourneyMeta>> => {
       const meta: Record<string, JourneyMeta> = {};
-      const { data: assessments } = await supabase
+      const { data: assessments, error: assessmentsError } = await supabase
         .from('client_visit_assessments')
         .select('id, client_id, created_at')
         .in('client_id', clientIds)
         .order('created_at', { ascending: false });
+      if (assessmentsError) throw assessmentsError;
       for (const a of assessments ?? []) {
         const entry = (meta[a.client_id] ??= { assessments: 0, lastAnalysis: null, thumbUrl: null });
         entry.assessments += 1;
@@ -37,12 +39,13 @@ const useJourneyMeta = (clientIds: string[]) =>
 
       // Latest non-archived captured image per client (consented storage only).
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data: media } = await (supabase as any)
+      const { data: media, error: mediaError } = await (supabase as any)
         .from('client_media')
         .select('client_id, storage_path, bucket_path, file_type, archived, created_at')
         .in('client_id', clientIds)
         .eq('archived', false)
         .order('created_at', { ascending: false });
+      if (mediaError) throw mediaError;
 
       const firstPath: Record<string, string> = {};
       for (const m of (media ?? []) as Array<Record<string, string | null>>) {
@@ -54,17 +57,19 @@ const useJourneyMeta = (clientIds: string[]) =>
       }
       const paths = Object.values(firstPath);
       if (paths.length) {
-        const { data: signed } = await supabase.storage
-          .from('client-media')
-          .createSignedUrls(paths, 600);
-        const byPath = new Map((signed ?? []).map((s) => [s.path, s.signedUrl]));
+        // Throws on a signing error or a missing signed result — a retrieval
+        // failure must never look like "this client has no photo".
+        const byPath = await signMediaPaths(paths, SIGNED_URL_TTL_SECONDS);
         for (const [cid, path] of Object.entries(firstPath)) {
           const entry = (meta[cid] ??= { assessments: 0, lastAnalysis: null, thumbUrl: null });
-          entry.thumbUrl = byPath.get(path) ?? null;
+          entry.thumbUrl = byPath[path] ?? null;
         }
       }
       return meta;
     },
+    staleTime: (SIGNED_URL_TTL_SECONDS * 1000) / 3,
+    refetchInterval: (SIGNED_URL_TTL_SECONDS * 1000) / 3,
+    retry: 1,
   });
 
 const initials = (name: string) =>
@@ -79,7 +84,13 @@ const XcapeClientLibrary = () => {
   const [query, setQuery] = useState('');
   const { data: clients = [], isLoading } = useRealClients();
   const ids = useMemo(() => clients.slice(0, 200).map((c) => c.id), [clients]);
-  const { data: meta = {} } = useJourneyMeta(ids);
+  const {
+    data: meta = {},
+    isError: metaFailed,
+    isFetching: metaFetching,
+    refetch: refetchMeta,
+  } = useJourneyMeta(ids);
+  const [brokenThumbs, setBrokenThumbs] = useState<Record<string, boolean>>({});
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
