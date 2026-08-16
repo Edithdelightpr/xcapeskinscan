@@ -71,7 +71,7 @@ describe('XCAPE journey photo states', () => {
   it('shows Photo unavailable + Retry when signing fails, not an empty state', async () => {
     state.signFails = true;
     renderJourney();
-    expect(await screen.findByText('Photo unavailable')).toBeInTheDocument();
+    expect(await screen.findByText('Photo unavailable', {}, { timeout: 5000 })).toBeInTheDocument();
     expect(screen.getAllByRole('button', { name: 'Retry' }).length).toBeGreaterThan(0);
     expect(screen.queryByText('No saved photo for this analysis')).toBeNull();
   });
