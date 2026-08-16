@@ -132,7 +132,7 @@ Deno.serve(async (req) => {
     if (kitIds.length > 0) {
       const { data: kitProducts } = await admin
         .from('products')
-        .select('id, name, image_url, thumbnail_url, public_slug, short_description')
+        .select('id, name, image_url, thumbnail_url, public_slug, short_description, selling_price')
         .in('id', kitIds);
       // deno-lint-ignore no-explicit-any
       kitById = new Map((kitProducts ?? []).map((p: any) => [p.id, p]));
@@ -296,6 +296,25 @@ Deno.serve(async (req) => {
       !!merchant_contact.order_contact_phone?.trim();
 
     // deno-lint-ignore no-explicit-any
+    // Customized kits price exactly like standard retail products: the live
+    // catalogue price under the SAME role-resolved merchant routing (active
+    // positive CDP override for a CDP report, otherwise the live XCAPE
+    // default). The snapshot's historical kit_unit_price is never charged.
+    // deno-lint-ignore no-explicit-any
+    const pricedFormulas = (hydratedFormulas as any[]).map((f) => {
+      const kit = f.kit_product_id ? kitById.get(f.kit_product_id) : null;
+      const live = f.kit_product_id
+        ? (priceOverrides[f.kit_product_id] ?? usablePrice(kit?.selling_price))
+        : null;
+      return {
+        ...f,
+        kit_unit_price: live ?? null,
+        kit_snapshot_price: usablePrice(f.kit_unit_price),
+        currency: 'XAF',
+      };
+    });
+
+    // deno-lint-ignore no-explicit-any
     const pricedProducts = ((products ?? []) as any[]).map((p) => {
       // Live resolution: positive CDP override wins, otherwise the live XCAPE
       // default. Zero/absent is "not configured", never a free product.
@@ -370,7 +389,7 @@ Deno.serve(async (req) => {
       payment_settings,
       promo,
       care_journey,
-      formulas: hydratedFormulas,
+      formulas: pricedFormulas,
       protocol_recommendation,
       link: { prefix: link.token_prefix, expires_at: link.expires_at },
     });
