@@ -1,14 +1,24 @@
 import { useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { ArrowLeft, Eye, ImageIcon, Share2 } from 'lucide-react';
+import { ArrowLeft, Eye, ImageIcon, Share2, Trash2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useRealClient } from '@/hooks/useRealClients';
+import { useArchiveXcapeClient } from '@/hooks/useArchiveXcapeClient';
 import { useClientAssessments, type VisitAssessment } from '@/hooks/useVisitAssessments';
 import { useClientMedia, type ClientMedia } from '@/hooks/useClientMedia';
 import { scoresFromSkin } from '@/components/xcape/protocol/StaffProtocolPanel';
 import ShareReportPanel from '@/components/report/ShareReportPanel';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { formatNaira } from '@/lib/finance';
 
 /**
