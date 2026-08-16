@@ -1,138 +1,164 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Tags, Save } from 'lucide-react';
+import { Tags, Save, Phone, Smartphone, RotateCcw } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import XcapePageHeader from '@/components/xcape/XcapePageHeader';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 import { useAuth } from '@/hooks/useAuth';
-import { useMyOrganization, useOrgPriceBook } from '@/hooks/useXcapeOrg';
-import { resolveProductPrice } from '@/lib/xcapeCommerce';
+import { formatFcfa } from '@/lib/xcapeRetail';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-const NGN = new Intl.NumberFormat('en-NG', {
-  style: 'currency',
-  currency: 'NGN',
-  maximumFractionDigits: 0,
-});
-
-interface CatalogueProduct {
-  id: string;
-  name: string;
+interface PriceBookRow {
+  product_id: string;
   sku: string | null;
-  selling_price: number | null;
+  name: string;
+  image_url: string | null;
+  default_price: number | null;
+  override_price: number | null;
+  effective_price: number | null;
+  currency: string;
+  org_id: string | null;
+  org_kind: string | null;
 }
 
-const useCatalogue = () =>
+interface CommerceSettings {
+  organization_id: string | null;
+  org_name?: string | null;
+  org_kind?: string | null;
+  can_edit?: boolean;
+  commerce_enabled: boolean;
+  order_contact_phone: string | null;
+  whatsapp_number: string | null;
+  momo_provider: string | null;
+  momo_recipient_number: string | null;
+  momo_recipient_name: string | null;
+}
+
+const usePriceBook = () =>
   useQuery({
-    queryKey: ['xcape-catalogue-prices'],
-    queryFn: async (): Promise<CatalogueProduct[]> => {
-      const { data, error } = await (supabase as any)
-        .from('products')
-        .select('id, name, sku, selling_price')
-        .eq('active', true)
-        .order('name');
+    queryKey: ['xcape-retail-price-book'],
+    queryFn: async (): Promise<PriceBookRow[]> => {
+      const { data, error } = await (supabase.rpc as any)('xcape_retail_price_book');
       if (error) throw error;
-      return (data ?? []) as CatalogueProduct[];
+      return (data ?? []) as PriceBookRow[];
+    },
+  });
+
+const useCommerceSettings = () =>
+  useQuery({
+    queryKey: ['xcape-commerce-settings'],
+    queryFn: async (): Promise<CommerceSettings | null> => {
+      const { data, error } = await (supabase.rpc as any)('xcape_get_commerce_settings');
+      if (error) throw error;
+      return (data ?? null) as CommerceSettings | null;
     },
   });
 
 /**
- * Pricing surface for both sides of the network:
+ * XCAPE retail pricing — the six retail SKUs only, always in FCFA.
  *
- * - XCAPE Admin edits the SYSTEM selling price on the existing catalogue row.
- * - A CDP layers a price-book override onto that same catalogue product.
- *
- * The catalogue is never cloned, and an empty CDP override means
- * "sell at the XCAPE system price".
+ * - XCAPE Admin edits the live default price (affects existing shared reports
+ *   on their next fetch; past orders keep their price-at-order snapshot).
+ * - An active CDP sets or clears its own override. A blank/zero override falls
+ *   back to the live XCAPE default — zero never means a free product.
  */
 const XcapePricing = () => {
   const { isAdmin } = useAuth();
   const qc = useQueryClient();
-  const { data: org } = useMyOrganization();
-  const { data: catalogue, isLoading } = useCatalogue();
-  const { data: priceBook } = useOrgPriceBook(org?.id);
-  const [draft, setDraft] = useState<Record<string, string>>({});
-  const [systemDraft, setSystemDraft] = useState<Record<string, string>>({});
+  const { data: rows, isLoading } = usePriceBook();
+  const { data: settings } = useCommerceSettings();
+
+  const [defaultDraft, setDefaultDraft] = useState<Record<string, string>>({});
+  const [overrideDraft, setOverrideDraft] = useState<Record<string, string>>({});
+  const [form, setForm] = useState<CommerceSettings | null>(null);
+
+  const isCdpOrg = (rows?.[0]?.org_kind ?? settings?.org_kind) === 'cdp';
+  const canEditSettings = !!settings?.can_edit;
 
   useEffect(() => {
-    if (priceBook) {
-      setDraft(Object.fromEntries(Object.entries(priceBook).map(([k, v]) => [k, String(v)])));
-    }
-  }, [priceBook]);
+    if (!rows) return;
+    setDefaultDraft(
+      Object.fromEntries(rows.map((r) => [r.product_id, r.default_price != null ? String(r.default_price) : ''])),
+    );
+    setOverrideDraft(
+      Object.fromEntries(rows.map((r) => [r.product_id, r.override_price != null ? String(r.override_price) : ''])),
+    );
+  }, [rows]);
 
   useEffect(() => {
-    if (catalogue) {
-      setSystemDraft(
-        Object.fromEntries(
-          catalogue.map((p) => [p.id, p.selling_price != null ? String(p.selling_price) : '']),
-        ),
-      );
-    }
-  }, [catalogue]);
+    if (settings) setForm(settings);
+  }, [settings]);
 
-
-  const save = useMutation({
+  const saveDefault = useMutation({
     mutationFn: async (input: { productId: string; value: string }) => {
-      if (!org?.id) throw new Error('No organisation');
-      const raw = input.value.trim();
-      if (raw === '') {
-        const { error } = await (supabase as any)
-          .from('organization_product_prices')
-          .delete()
-          .eq('organization_id', org.id)
-          .eq('product_id', input.productId);
-        if (error) throw error;
-        return;
-      }
-      const price = Number(raw);
-      if (!Number.isFinite(price) || price < 0) throw new Error('Enter a valid amount');
-      const { error } = await (supabase as any)
-        .from('organization_product_prices')
-        .upsert(
-          { organization_id: org.id, product_id: input.productId, price, active: true },
-          { onConflict: 'organization_id,product_id' },
-        );
+      const price = Number(input.value.trim());
+      if (!Number.isFinite(price) || price <= 0) throw new Error('Enter a price above zero');
+      const { error } = await (supabase.rpc as any)('xcape_set_default_price', {
+        _product_id: input.productId,
+        _price: price,
+      });
       if (error) throw error;
     },
     onSuccess: () => {
-      toast.success('Price saved');
-      qc.invalidateQueries({ queryKey: ['org-price-book', org?.id] });
+      toast.success('XCAPE price updated');
+      qc.invalidateQueries({ queryKey: ['xcape-retail-price-book'] });
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : 'Could not save price'),
   });
 
-  /**
-   * XCAPE Admin edits the system selling price in place on the existing
-   * catalogue row — historical orders keep their own immutable price
-   * snapshot, so past sales are never revalued by this change.
-   */
-  const saveSystemPrice = useMutation({
+  const saveOverride = useMutation({
     mutationFn: async (input: { productId: string; value: string }) => {
       const raw = input.value.trim();
+      // Blank clears the override — the product then sells at the live XCAPE price.
       const price = raw === '' ? null : Number(raw);
-      if (price !== null && (!Number.isFinite(price) || price < 0)) {
-        throw new Error('Enter a valid amount');
+      if (price !== null && (!Number.isFinite(price) || price <= 0)) {
+        throw new Error('Enter a price above zero, or clear it to use the XCAPE price');
       }
-      const { error } = await (supabase as any)
-        .from('products')
-        .update({ selling_price: price })
-        .eq('id', input.productId);
+      const { error } = await (supabase.rpc as any)('xcape_set_org_price', {
+        _product_id: input.productId,
+        _price: price,
+      });
       if (error) throw error;
     },
     onSuccess: () => {
-      toast.success('System price saved');
-      qc.invalidateQueries({ queryKey: ['xcape-catalogue-prices'] });
+      toast.success('Your price updated');
+      qc.invalidateQueries({ queryKey: ['xcape-retail-price-book'] });
     },
-    onError: (e) => toast.error(e instanceof Error ? e.message : 'Could not save system price'),
+    onError: (e) => toast.error(e instanceof Error ? e.message : 'Could not save price'),
   });
 
-  const isCdpOrg = org?.kind === 'cdp';
-  const rows = useMemo(() => catalogue ?? [], [catalogue]);
+  const saveSettings = useMutation({
+    mutationFn: async (v: CommerceSettings) => {
+      const { error } = await (supabase.rpc as any)('xcape_update_commerce_settings', {
+        _commerce_enabled: !!v.commerce_enabled,
+        _order_contact_phone: v.order_contact_phone || null,
+        _whatsapp_number: v.whatsapp_number || null,
+        _momo_provider: v.momo_provider || null,
+        _momo_recipient_number: v.momo_recipient_number || null,
+        _momo_recipient_name: v.momo_recipient_name || null,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success('Order contact saved');
+      qc.invalidateQueries({ queryKey: ['xcape-commerce-settings'] });
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : 'Could not save settings'),
+  });
 
+  const list = useMemo(() => rows ?? [], [rows]);
+
+  const ready =
+    !!form?.commerce_enabled &&
+    !!form?.momo_provider?.trim() &&
+    !!form?.momo_recipient_number?.trim() &&
+    !!form?.order_contact_phone?.trim();
 
   return (
     <div className="px-4 sm:px-6 py-8 max-w-4xl mx-auto space-y-5">
@@ -140,110 +166,166 @@ const XcapePricing = () => {
         <title>Pricing — XCAPE</title>
       </Helmet>
       <XcapePageHeader
-        title={isAdmin ? 'System Pricing' : 'Your Pricing'}
+        title={isCdpOrg ? 'Your Pricing' : 'Retail Pricing'}
         description={
           isCdpOrg
-            ? 'Set the prices your clients see on reports you issue. Leave blank to sell at the XCAPE system price.'
+            ? 'Set what your clients pay on reports you issue. Leave a price blank to sell at the XCAPE price.'
             : isAdmin
-              ? 'The XCAPE system selling price used by Affiliate and Admin reports. Partner locations may price above or below it.'
-              : 'XCAPE system prices apply to your reports. They are controlled by XCAPE administration.'
+              ? 'The live XCAPE retail price for each product. Existing shared reports pick up a change immediately; orders already placed keep the price captured at the time of sale.'
+              : 'XCAPE retail prices apply to your reports and are managed by XCAPE administration.'
         }
       />
 
-      {!isCdpOrg && !isAdmin && (
-        <div className="glass rounded-xl p-4 text-xs text-muted-foreground">
-          Your reports use XCAPE system pricing and XCAPE fulfils the orders. Price overrides are
-          available to Certified Distribution Partners only.
-        </div>
-      )}
+      <div className="glass rounded-xl p-4 text-xs text-muted-foreground">
+        All XCAPE retail prices are in FCFA (XAF). A blank partner price is not a free product — it
+        simply means the item sells at the live XCAPE price.
+      </div>
 
-      {isAdmin && (
-        <div className="glass rounded-xl p-4 text-xs text-muted-foreground">
-          Editing a system price changes what future Affiliate and Admin reports charge. Orders
-          already placed keep the price captured at the time of sale.
-        </div>
-      )}
+      {isLoading && <div className="glass rounded-xl p-8 text-sm text-muted-foreground">Loading price book…</div>}
 
-
-      {isLoading && <div className="glass rounded-xl p-8 text-sm text-muted-foreground">Loading catalogue…</div>}
-
-      {!isLoading && rows.length === 0 && (
+      {!isLoading && list.length === 0 && (
         <div className="glass rounded-xl p-10 text-center space-y-2">
           <Tags className="w-8 h-8 mx-auto text-muted-foreground" />
-          <p className="text-sm text-muted-foreground">
-            No active catalogue products yet. Pricing appears once XCAPE publishes products.
-          </p>
+          <p className="text-sm text-muted-foreground">Retail products are not published yet.</p>
         </div>
       )}
 
       <div className="space-y-2">
-        {rows.map((p) => {
-          const resolved = resolveProductPrice(
-            p.selling_price,
-            draft[p.id] ? Number(draft[p.id]) : undefined,
-            isCdpOrg ? 'cdp' : 'xcape',
-          );
-          return (
-            <div key={p.id} className="glass rounded-xl p-4 flex flex-col sm:flex-row sm:items-center gap-3">
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold text-foreground truncate">{p.name}</p>
-                <p className="text-xs text-muted-foreground">
-                  XCAPE price:{' '}
-                  {p.selling_price != null && p.selling_price > 0
-                    ? NGN.format(p.selling_price)
-                    : 'not configured'}
-                  {' · '}Client sees: {resolved != null ? NGN.format(resolved) : 'pricing required'}
-                </p>
-              </div>
-              {isCdpOrg && (
-                <div className="flex items-center gap-2">
-                  <Input
-                    inputMode="decimal"
-                    aria-label={`Your price for ${p.name}`}
-                    placeholder="XCAPE price"
-                    className="flex-1 sm:w-32 sm:flex-none bg-surface border-border/60"
-                    value={draft[p.id] ?? ''}
-                    onChange={(e) => setDraft((d) => ({ ...d, [p.id]: e.target.value }))}
-                  />
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="min-h-10 shrink-0"
-                    disabled={save.isPending}
-                    onClick={() => save.mutate({ productId: p.id, value: draft[p.id] ?? '' })}
-                  >
-                    <Save className="w-3.5 h-3.5 mr-1.5" /> Save
-                  </Button>
-                </div>
-              )}
-              {isAdmin && !isCdpOrg && (
-                <div className="flex items-center gap-2">
-                  <Input
-                    inputMode="decimal"
-                    aria-label={`System price for ${p.name}`}
-                    placeholder="Not configured"
-                    className="flex-1 sm:w-32 sm:flex-none bg-surface border-border/60"
-                    value={systemDraft[p.id] ?? ''}
-                    onChange={(e) => setSystemDraft((d) => ({ ...d, [p.id]: e.target.value }))}
-                  />
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="min-h-10 shrink-0"
-                    disabled={saveSystemPrice.isPending}
-                    onClick={() =>
-                      saveSystemPrice.mutate({ productId: p.id, value: systemDraft[p.id] ?? '' })
-                    }
-                  >
-                    <Save className="w-3.5 h-3.5 mr-1.5" /> Save
-                  </Button>
-                </div>
-              )}
-
+        {list.map((p) => (
+          <div key={p.product_id} className="glass rounded-xl p-4 flex flex-col sm:flex-row sm:items-center gap-3">
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold text-foreground truncate">{p.name}</p>
+              <p className="text-xs text-muted-foreground">
+                XCAPE price: {p.default_price != null ? formatFcfa(p.default_price) : 'not configured'}
+                {' · '}Client sees:{' '}
+                {p.effective_price != null ? formatFcfa(p.effective_price) : 'pricing required'}
+                {isCdpOrg && p.override_price == null && p.default_price != null ? ' (XCAPE price)' : ''}
+              </p>
             </div>
-          );
-        })}
+
+            {isAdmin && !isCdpOrg && (
+              <div className="flex items-center gap-2">
+                <Input
+                  inputMode="decimal"
+                  aria-label={`XCAPE price for ${p.name}`}
+                  className="flex-1 sm:w-32 sm:flex-none bg-surface border-border/60"
+                  value={defaultDraft[p.product_id] ?? ''}
+                  onChange={(e) => setDefaultDraft((d) => ({ ...d, [p.product_id]: e.target.value }))}
+                />
+                <Button
+                  size="sm"
+                  className="min-h-10 shrink-0"
+                  disabled={saveDefault.isPending}
+                  onClick={() =>
+                    saveDefault.mutate({ productId: p.product_id, value: defaultDraft[p.product_id] ?? '' })
+                  }
+                >
+                  <Save className="w-3.5 h-3.5 mr-1.5" /> Save
+                </Button>
+              </div>
+            )}
+
+            {isCdpOrg && (
+              <div className="flex items-center gap-2">
+                <Input
+                  inputMode="decimal"
+                  aria-label={`Your price for ${p.name}`}
+                  placeholder="XCAPE price"
+                  className="flex-1 sm:w-32 sm:flex-none bg-surface border-border/60"
+                  value={overrideDraft[p.product_id] ?? ''}
+                  onChange={(e) => setOverrideDraft((d) => ({ ...d, [p.product_id]: e.target.value }))}
+                />
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="min-h-10 shrink-0"
+                  disabled={saveOverride.isPending}
+                  onClick={() =>
+                    saveOverride.mutate({ productId: p.product_id, value: overrideDraft[p.product_id] ?? '' })
+                  }
+                >
+                  <Save className="w-3.5 h-3.5 mr-1.5" /> Save
+                </Button>
+                {p.override_price != null && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="min-h-10 shrink-0"
+                    aria-label={`Clear your price for ${p.name}`}
+                    disabled={saveOverride.isPending}
+                    onClick={() => saveOverride.mutate({ productId: p.product_id, value: '' })}
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" />
+                  </Button>
+                )}
+              </div>
+            )}
+          </div>
+        ))}
       </div>
+
+      {form && (
+        <div className="glass rounded-xl p-5 space-y-4">
+          <div className="flex items-start gap-3">
+            <Smartphone className="w-4 h-4 mt-0.5 text-muted-foreground" />
+            <div className="min-w-0">
+              <h2 className="text-sm font-semibold text-foreground">Orders & Mobile Money</h2>
+              <p className="text-xs text-muted-foreground">
+                {canEditSettings
+                  ? 'Clients ordering from your reports pay to this Mobile Money number and are followed up on this contact. Until all three are set, reports show prices but ordering stays closed.'
+                  : 'These details are managed by the organisation responsible for your reports.'}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <Switch
+              id="commerce-enabled"
+              checked={!!form.commerce_enabled}
+              disabled={!canEditSettings}
+              onCheckedChange={(v) => setForm({ ...form, commerce_enabled: v })}
+            />
+            <Label htmlFor="commerce-enabled" className="text-sm">
+              Accept orders from reports
+            </Label>
+            <span className={`text-[11px] ${ready ? 'text-primary' : 'text-amber-500'}`}>
+              {ready ? 'Ordering open' : 'Ordering closed'}
+            </span>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            {[
+              { k: 'order_contact_phone', label: 'Order contact phone', ph: 'e.g. 6XX XXX XXX' },
+              { k: 'whatsapp_number', label: 'WhatsApp number (optional)', ph: 'Optional' },
+              { k: 'momo_provider', label: 'Mobile Money provider', ph: 'e.g. MTN MoMo' },
+              { k: 'momo_recipient_number', label: 'Mobile Money number', ph: 'Recipient number' },
+              { k: 'momo_recipient_name', label: 'Mobile Money account name', ph: 'Optional' },
+            ].map((f) => (
+              <div key={f.k} className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground">{f.label}</Label>
+                <Input
+                  className="bg-surface border-border/60"
+                  placeholder={f.ph}
+                  disabled={!canEditSettings}
+                  value={(form as any)[f.k] ?? ''}
+                  onChange={(e) => setForm({ ...form, [f.k]: e.target.value } as CommerceSettings)}
+                />
+              </div>
+            ))}
+          </div>
+
+          {canEditSettings && (
+            <Button
+              size="sm"
+              className="min-h-10"
+              disabled={saveSettings.isPending}
+              onClick={() => saveSettings.mutate(form)}
+            >
+              <Phone className="w-3.5 h-3.5 mr-1.5" /> Save order contact
+            </Button>
+          )}
+        </div>
+      )}
     </div>
   );
 };
