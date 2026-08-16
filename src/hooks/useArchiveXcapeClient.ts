@@ -31,7 +31,7 @@ export const useArchiveXcapeClient = () => {
     onSuccess: (_r, clientId) => {
       qc.invalidateQueries({ queryKey: ['real-clients'] });
       qc.invalidateQueries({ queryKey: ['real-client', clientId] });
-      qc.invalidateQueries({ queryKey: ['xcape-report-links'] });
+      qc.invalidateQueries({ queryKey: ['xcape', 'report-links'] });
       qc.invalidateQueries({ queryKey: ['xcape-journey-reports', clientId] });
       qc.invalidateQueries({ queryKey: ['client-media', clientId] });
     },
