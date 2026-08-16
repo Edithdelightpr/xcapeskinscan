@@ -10632,15 +10632,7 @@ export type Database = {
           rule_version?: number | null
           rule_version_id?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "xcape_customization_usage_events_formula_snapshot_id_fkey"
-            columns: ["formula_snapshot_id"]
-            isOneToOne: true
-            referencedRelation: "xcape_formula_snapshots"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       xcape_formula_snapshots: {
         Row: {
