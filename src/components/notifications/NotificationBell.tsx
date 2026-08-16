@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { Bell } from 'lucide-react';
-import {
-  useUnreadNotificationCount,
-  useUrgentUnreadCount,
-} from '@/hooks/useNotifications';
+import { useNotifications } from '@/hooks/useNotifications';
+import { useAuth } from '@/hooks/useAuth';
+import { usesProductChrome } from '@/lib/xcapeExperience';
+import { isPartnerNotification } from '@/lib/xcapeNotifications';
 import NotificationCenter from './NotificationCenter';
 
 interface Props {
@@ -13,23 +13,62 @@ interface Props {
 }
 
 /**
- * Glassy bell button with a 3D-feeling badge: layered shadow, subtle hover
- * lift, and an animated ring when there is an urgent unread item. Mounts
- * the slide-out NotificationCenter when clicked.
+ * Notification trigger.
+ *
+ * Partners (Affiliate / CDP) get a clean monochrome XCAPE button — no glass,
+ * glow, urgent ping or accent badge — and its count is restricted to the rows
+ * their inbox actually shows, so the badge can never claim unread items while
+ * the opened partner inbox is empty. Admin / backstage keeps the legacy
+ * operational bell with urgent styling.
  */
 const NotificationBell = ({ className = '', showLabel = false }: Props) => {
   const [open, setOpen] = useState(false);
-  const unread = useUnreadNotificationCount();
-  const urgent = useUrgentUnreadCount();
+  const { isAdmin, accountType } = useAuth();
+  const { data: notifications = [] } = useNotifications();
+  const partnerView = usesProductChrome(accountType, isAdmin);
+
+  const visible = partnerView ? notifications.filter(isPartnerNotification) : notifications;
+  const unread = visible.filter((n) => !n.read_at).length;
+  const urgent = partnerView
+    ? 0
+    : visible.filter((n) => !n.read_at && n.severity === 'urgent').length;
   const showBadge = unread > 0;
   const display = unread > 99 ? '99+' : String(unread);
+  const label = `Notifications${unread ? ` — ${unread} new` : ''}`;
+
+  if (partnerView) {
+    return (
+      <>
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          aria-label={label}
+          className={[
+            'relative inline-flex h-11 min-w-[44px] items-center justify-center gap-2 rounded-full',
+            'border border-border bg-background px-3 text-foreground',
+            'transition-colors hover:bg-muted',
+            className,
+          ].join(' ')}
+        >
+          <Bell className="h-4 w-4" aria-hidden />
+          {showLabel && <span className="hidden text-sm font-medium sm:inline">Inbox</span>}
+          {showBadge && (
+            <span className="absolute -right-0.5 -top-0.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full border border-background bg-foreground px-1 text-[10px] font-semibold text-background">
+              {display}
+            </span>
+          )}
+        </button>
+        <NotificationCenter open={open} onOpenChange={setOpen} />
+      </>
+    );
+  }
 
   return (
     <>
       <button
         type="button"
         onClick={() => setOpen(true)}
-        aria-label={`Notifications${unread ? ` — ${unread} new` : ''}`}
+        aria-label={label}
         className={[
           'relative inline-flex items-center gap-2 rounded-xl',
           'px-2.5 py-2 bg-surface/60 hover:bg-surface text-foreground',
