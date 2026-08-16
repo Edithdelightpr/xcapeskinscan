@@ -7,6 +7,16 @@ import {
   type NotificationRow,
 } from '@/hooks/useNotifications';
 import NotificationCard from './NotificationCard';
+import XcapeNotificationCard from './XcapeNotificationCard';
+import { useAuth } from '@/hooks/useAuth';
+import { usesProductChrome } from '@/lib/xcapeExperience';
+import {
+  XCAPE_EMPTY_NOTIFICATIONS,
+  isPartnerNotification,
+  partnerFilters,
+  toXcapeCategory,
+  type XcapeNotificationCategory,
+} from '@/lib/xcapeNotifications';
 
 type Tab = 'all' | 'unread' | 'kudos';
 type CategoryFilter = 'all' | 'ops' | 'client' | 'hurdle' | 'recognition' | 'finance' | 'system';
@@ -26,7 +36,80 @@ interface Props {
   onOpenChange: (open: boolean) => void;
 }
 
-const NotificationCenter = ({ open, onOpenChange }: Props) => {
+/** Product-specific XCAPE inbox for Affiliate / CDP members. */
+const XcapeNotificationCenter = ({ open, onOpenChange }: Props) => {
+  const { data: all = [], isLoading } = useNotifications(80);
+  const markAll = useMarkAllNotificationsRead();
+  const [filter, setFilter] = useState<'all' | 'unread' | XcapeNotificationCategory>('all');
+
+  const notifications = useMemo(() => all.filter(isPartnerNotification), [all]);
+  const chips = useMemo(() => partnerFilters(notifications), [notifications]);
+  const unreadCount = notifications.filter((n) => !n.read_at).length;
+
+  const filtered = useMemo(() => {
+    if (filter === 'all') return notifications;
+    if (filter === 'unread') return notifications.filter((n) => !n.read_at);
+    return notifications.filter((n) => toXcapeCategory(n) === filter);
+  }, [notifications, filter]);
+
+  return (
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent
+        side="right"
+        className="xcape-public flex w-full flex-col border-border bg-background p-0 text-foreground sm:max-w-md"
+      >
+        <SheetHeader className="border-b border-border px-5 pb-4 pt-5 text-left">
+          <SheetTitle className="flex items-center gap-2 text-lg font-bold tracking-tight text-foreground">
+            Notifications
+            {unreadCount > 0 && (
+              <span className="rounded-full bg-foreground px-2 py-0.5 text-[10px] font-medium text-background">
+                {unreadCount} new
+              </span>
+            )}
+          </SheetTitle>
+
+          <div className="mt-3 flex flex-wrap items-center gap-1.5">
+            {chips.map((c) => (
+              <button
+                key={c.id}
+                onClick={() => setFilter(c.id)}
+                className={`inline-flex min-h-[36px] items-center rounded-full border px-3 text-xs font-medium transition-colors ${
+                  filter === c.id
+                    ? 'border-foreground bg-foreground text-background'
+                    : 'border-border text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                {c.label}
+              </button>
+            ))}
+            <button
+              onClick={() => markAll.mutate()}
+              disabled={unreadCount === 0 || markAll.isPending}
+              className="ml-auto inline-flex min-h-[36px] items-center text-xs font-medium text-muted-foreground underline-offset-4 hover:text-foreground hover:underline disabled:opacity-40"
+            >
+              Mark all read
+            </button>
+          </div>
+        </SheetHeader>
+
+        <div className="flex-1 space-y-2 overflow-y-auto p-4">
+          {isLoading ? (
+            <p className="py-8 text-center text-sm text-muted-foreground">Loading…</p>
+          ) : filtered.length === 0 ? (
+            <p className="mx-auto max-w-xs py-12 text-center text-sm leading-relaxed text-muted-foreground">
+              {XCAPE_EMPTY_NOTIFICATIONS}
+            </p>
+          ) : (
+            filtered.map((n) => <XcapeNotificationCard key={n.recipient_id} notification={n} />)
+          )}
+        </div>
+      </SheetContent>
+    </Sheet>
+  );
+};
+
+/** Legacy operational inbox — admin / backstage only. */
+const StaffNotificationCenter = ({ open, onOpenChange }: Props) => {
   const { data: notifications = [], isLoading } = useNotifications(80);
   const markAll = useMarkAllNotificationsRead();
   const [tab, setTab] = useState<Tab>('all');
@@ -116,6 +199,15 @@ const NotificationCenter = ({ open, onOpenChange }: Props) => {
         </div>
       </SheetContent>
     </Sheet>
+  );
+};
+
+const NotificationCenter = (props: Props) => {
+  const { accountType, isAdmin } = useAuth();
+  return usesProductChrome(accountType, isAdmin) ? (
+    <XcapeNotificationCenter {...props} />
+  ) : (
+    <StaffNotificationCenter {...props} />
   );
 };
 
