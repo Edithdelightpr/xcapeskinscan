@@ -1,7 +1,7 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { ArrowLeft, Eye, ImageIcon, Share2, Trash2 } from 'lucide-react';
+import { ArrowLeft, Eye, ImageIcon, ImageOff, Share2, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useRealClient, type RealClient } from '@/hooks/useRealClients';
@@ -22,6 +22,7 @@ import {
 } from '@/components/ui/dialog';
 import { formatNaira } from '@/lib/finance';
 import { pickPreferredImage } from '@/lib/xcapeMedia';
+import { useSignedMediaUrls } from '@/hooks/useSignedMediaUrls';
 
 
 /**
