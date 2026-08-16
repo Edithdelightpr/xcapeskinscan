@@ -70,3 +70,38 @@ export const mergeAssessmentMedia = (
 };
 
 export const mediaPath = (m: ClientMedia): string | null => m.storage_path ?? m.bucket_path ?? null;
+
+/**
+ * Library thumbnail choice for one client. A guided scan uploads Front, Left
+ * then Right, so "newest row" is usually the Right view. Scope to the client's
+ * LATEST accessible analysis, prefer that analysis's Front image, else its
+ * newest image — never fall back to an older analysis just because it has a
+ * front shot.
+ */
+export interface ThumbCandidate {
+  assessment_id?: string | null;
+  storage_path?: string | null;
+  bucket_path?: string | null;
+  file_type?: string | null;
+  caption?: string | null;
+  file_name?: string | null;
+  created_at?: string | null;
+}
+
+export const pickLibraryThumbPath = (
+  rows: readonly ThumbCandidate[],
+  latestAssessmentId: string | null | undefined,
+): string | null => {
+  const images = rows.filter((m) => !m.file_type || m.file_type === 'image');
+  const scoped = latestAssessmentId
+    ? images.filter((m) => m.assessment_id === latestAssessmentId)
+    : images.filter((m) => !m.assessment_id);
+  const pool = scoped.length > 0 ? scoped : [];
+  if (pool.length === 0) return null;
+  const newestFirst = [...pool].sort(
+    (a, b) => new Date(b.created_at ?? 0).getTime() - new Date(a.created_at ?? 0).getTime(),
+  );
+  const front = newestFirst.find((m) => /front/i.test(`${m.caption ?? ''} ${m.file_name ?? ''}`));
+  const chosen = front ?? newestFirst[0];
+  return chosen.storage_path ?? chosen.bucket_path ?? null;
+};
