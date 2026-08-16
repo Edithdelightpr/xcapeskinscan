@@ -58,26 +58,26 @@ const ConsentBody = ({
   setShowPrivacy: (v: boolean) => void;
 }) => {
   return (
-    <div className="space-y-4 px-4 pb-6 sm:px-0 sm:pb-0">
-      <label className="flex cursor-pointer gap-3 rounded-2xl border border-border p-3.5">
+    <div className="space-y-4 px-5 pb-6 sm:px-0 sm:pb-0">
+      <label className="flex cursor-pointer gap-3 rounded-2xl border border-border bg-background p-4 transition-colors hover:border-foreground/40">
         <Checkbox
           checked={consent}
           onCheckedChange={(v) => setConsent(v === true)}
-          className="mt-0.5"
+          className="mt-0.5 border-foreground/40 data-[state=checked]:border-foreground data-[state=checked]:bg-foreground data-[state=checked]:text-background"
           aria-describedby="xcape-consent-text"
         />
-        <span id="xcape-consent-text" className="text-sm text-foreground">
+        <span id="xcape-consent-text" className="text-sm leading-relaxed text-foreground">
           I agree to my photos being temporarily stored and processed by XCAPE and its third-party
           AI service to generate my skin analysis.
         </span>
       </label>
 
-      <div className="rounded-2xl border border-border">
+      <div className="rounded-2xl border border-border bg-background">
         <button
           type="button"
           onClick={() => setShowPrivacy(!showPrivacy)}
           aria-expanded={showPrivacy}
-          className="flex min-h-[44px] w-full items-center justify-between gap-2 px-3.5 text-left text-sm font-medium text-foreground"
+          className="flex min-h-[48px] w-full items-center justify-between gap-2 px-4 text-left text-sm font-medium text-foreground"
         >
           Privacy details
           <ChevronDown
@@ -86,22 +86,27 @@ const ConsentBody = ({
           />
         </button>
         {showPrivacy && (
-          <div className="space-y-3 px-3.5 pb-3.5 text-xs leading-relaxed text-muted-foreground">
+          <div className="space-y-3 px-4 pb-4 text-xs leading-relaxed text-muted-foreground">
             <p>{PRIVACY_TEXT}</p>
             <p>{DISCLAIMER_TEXT}</p>
           </div>
         )}
       </div>
 
-      <Button
-        size="lg"
-        className="min-h-[44px] w-full"
+      <button
+        type="button"
         disabled={!consent || starting}
         onClick={onContinue}
+        className="inline-flex min-h-[52px] w-full items-center justify-center rounded-full bg-foreground px-6 text-base font-medium text-background transition-opacity hover:opacity-85 disabled:opacity-40"
       >
         {starting && <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />}
         Agree and continue
-      </Button>
+      </button>
+
+      <p className="flex items-start gap-2 text-xs leading-relaxed text-muted-foreground">
+        <Lock className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
+        Encrypted in transit · deleted within 24 hours · no account created.
+      </p>
     </div>
   );
 };
@@ -286,11 +291,13 @@ const PublicScanIntro = ({ starting, error, onStart }: Props) => {
       {/* Progressive consent surface */}
       {isMobile ? (
         <Drawer open={pendingMethod !== null} onOpenChange={(o) => !o && closeConsent()}>
-          <DrawerContent>
-            <DrawerHeader className="text-left">
-              <DrawerTitle>Before we begin</DrawerTitle>
-              <DrawerDescription>
-                Allow XCAPE to temporarily process three photos for your skin analysis.
+          <DrawerContent className="xcape-public border-border bg-background text-foreground">
+            <DrawerHeader className="px-5 pb-2 pt-4 text-left">
+              <DrawerTitle className="text-2xl font-bold tracking-tight text-foreground">
+                Before we begin
+              </DrawerTitle>
+              <DrawerDescription className="text-base leading-relaxed text-muted-foreground">
+                Three photos, processed once, to generate your XCAPE skin analysis.
               </DrawerDescription>
             </DrawerHeader>
             {consentBody}
@@ -298,11 +305,13 @@ const PublicScanIntro = ({ starting, error, onStart }: Props) => {
         </Drawer>
       ) : (
         <Dialog open={pendingMethod !== null} onOpenChange={(o) => !o && closeConsent()}>
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle>Before we begin</DialogTitle>
-              <DialogDescription>
-                Allow XCAPE to temporarily process three photos for your skin analysis.
+          <DialogContent className="xcape-public rounded-3xl border-border bg-background p-6 text-foreground sm:max-w-md">
+            <DialogHeader className="text-left">
+              <DialogTitle className="text-2xl font-bold tracking-tight text-foreground">
+                Before we begin
+              </DialogTitle>
+              <DialogDescription className="text-base leading-relaxed text-muted-foreground">
+                Three photos, processed once, to generate your XCAPE skin analysis.
               </DialogDescription>
             </DialogHeader>
             {consentBody}
