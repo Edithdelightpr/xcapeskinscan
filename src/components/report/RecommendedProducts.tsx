@@ -1,14 +1,27 @@
 import { useState } from 'react';
 import { Check, Minus, Plus, ShoppingBag } from 'lucide-react';
 import { toast } from 'sonner';
-import { formatNaira } from '@/lib/serviceDiscount';
 import type { ReportProduct } from '@/hooks/useReportPayload';
 import { logReportEvent } from '@/hooks/useReportPayload';
 import { useCartStore } from '@/store/cartStore';
+import { formatFcfa } from '@/lib/xcapeRetail';
 
-interface Props { token: string; products: ReportProduct[] }
+interface Props {
+  token: string;
+  products: ReportProduct[];
+  /** False when the responsible merchant has not configured Mobile Money. */
+  orderingAvailable?: boolean;
+  merchantName?: string;
+  merchantContactPhone?: string | null;
+}
 
-const RecommendedProducts = ({ token, products }: Props) => {
+const RecommendedProducts = ({
+  token,
+  products,
+  orderingAvailable = true,
+  merchantName = 'XCAPE',
+  merchantContactPhone = null,
+}: Props) => {
   const cartItems = useCartStore((s) => s.items);
   const addItem = useCartStore((s) => s.addItem);
   const setQty = useCartStore((s) => s.setQty);
@@ -37,7 +50,7 @@ const RecommendedProducts = ({ token, products }: Props) => {
     setAdded((prev) => new Set(prev).add(p.id));
     logReportEvent(token, 'product_interest', { product_id: p.id, name: p.name, quantity });
     toast.success(`${p.name} added to your care plan`, {
-      description: `Quantity ${quantity} · ${formatNaira(p.selling_price * quantity)}`,
+      description: `Quantity ${quantity} · ${formatFcfa(p.selling_price * quantity)}`,
     });
   };
 
@@ -51,12 +64,19 @@ const RecommendedProducts = ({ token, products }: Props) => {
           Recommended products
         </h2>
       </div>
+      {!orderingAvailable && (
+        <p className="mb-5 rounded-xl border border-bronze/25 bg-white/70 px-4 py-3 text-[12.5px] text-cocoa/80">
+          Online ordering is not available for this report yet — {merchantName} has not set up
+          Mobile Money payments.
+          {merchantContactPhone ? ` Call ${merchantContactPhone} to order.` : ' Contact your practitioner to order.'}
+        </p>
+      )}
       <div className="grid gap-5 sm:grid-cols-2">
         {products.map((p) => {
           const q = getQty(p.id);
           const inCart = cartHas(p.id);
           const isAdded = added.has(p.id) || inCart;
-          const disabled = p.selling_price == null;
+          const disabled = p.selling_price == null || !orderingAvailable;
           return (
             <article
               key={p.id}
@@ -80,9 +100,9 @@ const RecommendedProducts = ({ token, products }: Props) => {
                 </div>
 
                 <div className="mt-auto pt-4 flex items-center justify-between gap-3 flex-wrap">
-                  {p.selling_price != null && (
-                    <span className="text-[15px] text-cocoa font-semibold tabular-nums">{formatNaira(p.selling_price)}</span>
-                  )}
+                  <span className="text-[15px] text-cocoa font-semibold tabular-nums">
+                    {p.selling_price != null ? formatFcfa(p.selling_price) : 'Price not configured'}
+                  </span>
                   <div className="flex items-center gap-2">
                     {!disabled && (
                       <div className="inline-flex items-center rounded-full border border-cocoa/15 bg-white">
@@ -119,7 +139,9 @@ const RecommendedProducts = ({ token, products }: Props) => {
                             : 'bg-cocoa text-white hover:bg-cocoa/90')
                       }
                     >
-                      {isAdded ? (
+                      {!orderingAvailable ? (
+                        <>Ordering unavailable</>
+                      ) : isAdded ? (
                         <>
                           <Check className="w-3.5 h-3.5" strokeWidth={2} />
                           In your plan

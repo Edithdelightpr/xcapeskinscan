@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Minus, Plus, Trash2, ShoppingBag } from 'lucide-react';
 import { useCartStore } from '@/store/cartStore';
 import { formatNaira } from '@/lib/finance';
+import { formatFcfa } from '@/lib/xcapeRetail';
 
 interface Props {
   open: boolean;
@@ -15,13 +16,18 @@ const CartSheet = ({ open, onOpenChange }: Props) => {
   const setQty = useCartStore((s) => s.setQty);
   const removeItem = useCartStore((s) => s.removeItem);
   const total = useCartStore((s) => s.total());
+  const report = useCartStore((s) => s.report);
+  // A report cart is priced and settled in FCFA with its own XCAPE checkout;
+  // the ordinary marketplace cart keeps the existing Naira/bank-transfer path.
+  const money = report ? formatFcfa : formatNaira;
+  const checkoutHref = report ? `/report/${report.token}/order` : '/checkout';
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-full sm:max-w-md flex flex-col">
         <SheetHeader>
           <SheetTitle className="font-display flex items-center gap-2">
-            <ShoppingBag className="w-5 h-5 text-accent" /> Your cart
+            <ShoppingBag className="w-5 h-5 text-accent" /> {report ? 'Your XCAPE order' : 'Your cart'}
           </SheetTitle>
         </SheetHeader>
 
@@ -45,7 +51,7 @@ const CartSheet = ({ open, onOpenChange }: Props) => {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold leading-tight line-clamp-2">{it.name}</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">{formatNaira(it.unit_price)}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">{money(it.unit_price)}</p>
                     <div className="flex items-center gap-1.5 mt-2">
                       <Button size="icon" variant="outline" className="h-7 w-7"
                         onClick={() => setQty(it.product_id, it.quantity - 1)}>
@@ -63,7 +69,7 @@ const CartSheet = ({ open, onOpenChange }: Props) => {
                     </div>
                   </div>
                   <div className="text-right text-sm font-semibold whitespace-nowrap">
-                    {formatNaira(it.unit_price * it.quantity)}
+                    {money(it.unit_price * it.quantity)}
                   </div>
                 </div>
               ))}
@@ -72,14 +78,14 @@ const CartSheet = ({ open, onOpenChange }: Props) => {
             <div className="border-t border-border/40 pt-4 space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-xs uppercase tracking-wider text-muted-foreground">Subtotal</span>
-                <span className="text-xl font-bold font-display">{formatNaira(total)}</span>
+                <span className="text-xl font-bold font-display">{money(total)}</span>
               </div>
               <div className="flex gap-2">
                 <Button variant="outline" className="flex-1" onClick={() => onOpenChange(false)}>
                   Continue shopping
                 </Button>
                 <Button asChild className="flex-1" onClick={() => onOpenChange(false)}>
-                  <Link to="/checkout">Checkout</Link>
+                  <Link to={checkoutHref}>Checkout</Link>
                 </Button>
               </div>
             </div>

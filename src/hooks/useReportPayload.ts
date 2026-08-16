@@ -23,6 +23,7 @@ export interface ReportProduct {
   short_description: string | null;
   selling_price: number | null;
   image_url: string | null;
+  currency?: string;
 }
 
 export interface ReportTreatmentPlanLine {
@@ -245,7 +246,20 @@ export interface ReportPayload {
   protocol_recommendation?: ReportProtocolRecommendation | null;
   /** Who sells and fulfils purchases made from this report. Resolved
    *  server-side from the share link's originating organisation. */
-  merchant?: { org_id: string | null; name: string; kind: string } | null;
+  merchant?: { org_id: string | null; name: string; kind: string; price_source?: 'cdp' | 'xcape' } | null;
+  /** Public order contact + Mobile Money details of the ROLE-RESOLVED
+   *  merchant only. Empty until that merchant configures commerce. */
+  merchant_contact?: {
+    commerce_enabled: boolean;
+    order_contact_phone: string | null;
+    whatsapp_number: string | null;
+    momo_provider: string | null;
+    momo_recipient_number: string | null;
+    momo_recipient_name: string | null;
+  } | null;
+  /** False when the merchant has not enabled/configured Mobile Money. */
+  ordering_available?: boolean;
+  currency?: string;
   link: { prefix: string; expires_at: string };
 }
 
