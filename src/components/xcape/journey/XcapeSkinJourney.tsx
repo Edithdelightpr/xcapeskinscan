@@ -428,7 +428,7 @@ const JourneyBody = ({ clientId, client }: { clientId: string; client: RealClien
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
                 {[from, to].map((a, i) => {
-                  const img = imageFor(mediaByAssessment.get(a?.id ?? '')?.[0]);
+                  const img = imageForAssessment(a?.id);
                   return (
                     <Card key={`${a?.id}-${i}`} className="space-y-3 p-0 overflow-hidden">
                       <div className="flex aspect-[4/3] items-center justify-center bg-muted">
