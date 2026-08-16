@@ -6,8 +6,10 @@ import { XcapeJoinPaths } from '@/components/xcape/landing/XcapeJoinPaths';
 import { XcapeFeaturesDark } from '@/components/xcape/landing/XcapeFeaturesDark';
 import { XcapeCredibilityStrip } from '@/components/xcape/landing/XcapeCredibilityStrip';
 import { XcapeClosingCta } from '@/components/xcape/landing/XcapeClosingCta';
+import { XcapeMemberNextSteps } from '@/components/xcape/landing/XcapeMemberNextSteps';
 import { XCAPE_DISCLAIMER } from '@/lib/xcapeMarketing';
 import InstallXcape from '@/components/pwa/InstallXcape';
+import { useAuth } from '@/hooks/useAuth';
 
 
 /**
