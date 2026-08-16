@@ -6,8 +6,10 @@ import { XcapeJoinPaths } from '@/components/xcape/landing/XcapeJoinPaths';
 import { XcapeFeaturesDark } from '@/components/xcape/landing/XcapeFeaturesDark';
 import { XcapeCredibilityStrip } from '@/components/xcape/landing/XcapeCredibilityStrip';
 import { XcapeClosingCta } from '@/components/xcape/landing/XcapeClosingCta';
+import { XcapeMemberNextSteps } from '@/components/xcape/landing/XcapeMemberNextSteps';
 import { XCAPE_DISCLAIMER } from '@/lib/xcapeMarketing';
 import InstallXcape from '@/components/pwa/InstallXcape';
+import { useAuth } from '@/hooks/useAuth';
 
 
 /**
@@ -17,6 +19,9 @@ import InstallXcape from '@/components/pwa/InstallXcape';
  * remains available at /medspa.
  */
 const XcapeLanding = () => {
+  const { user, loading } = useAuth();
+  const signedIn = !loading && !!user;
+
   return (
     <div className="xcape-public min-h-screen bg-background text-foreground antialiased">
       <Seo
@@ -39,10 +44,10 @@ const XcapeLanding = () => {
       <main id="main">
         <XcapeHero />
         <XcapeHowItWorks />
-        <XcapeJoinPaths />
+        {!signedIn && <XcapeJoinPaths />}
         <XcapeFeaturesDark />
         <XcapeCredibilityStrip />
-        <XcapeClosingCta />
+        {signedIn ? <XcapeMemberNextSteps /> : <XcapeClosingCta />}
       </main>
 
       <InstallXcape />

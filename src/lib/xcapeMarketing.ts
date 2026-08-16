@@ -1,20 +1,17 @@
 /**
  * XCAPE public marketing copy — single source of truth for landing claims.
  *
- * IMPORTANT: research figures and their phrasing are PENDING confirmation
- * from clinical leadership (formal research vs. professional observation vs.
- * analysed clients vs. collected profiles vs. published evidence). Until
- * confirmed, edit values and labels HERE ONLY — never hardcode them inside
- * components.
+ * Research figures are CONFIRMED by clinical leadership. Edit values and
+ * labels HERE ONLY — never hardcode them inside components.
  */
 
 export const XCAPE_RESEARCH_CLAIMS = {
-  /** Years behind the standard — classification pending confirmation. */
+  /** Years of professional skin practice behind the standard. */
   years: 17,
   yearsLabel: 'Years of professional skin practice',
-  /** Skin profiles behind the standard — classification pending confirmation. */
-  profiles: 10000,
-  profilesDisplay: '10,000+',
+  /** Confirmed: 100,000+ skin profiles collected across Africa. */
+  profiles: 100000,
+  profilesDisplay: '100,000+',
   profilesLabel: 'Skin profiles collected across Africa',
 } as const;
 

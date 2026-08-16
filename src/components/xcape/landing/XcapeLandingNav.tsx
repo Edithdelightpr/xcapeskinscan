@@ -7,9 +7,16 @@ import { homeCtaPath, XCAPE_CTA_OPERATOR } from '@/lib/xcapeExperience';
 import XcapeProfileMenu from '@/components/xcape/XcapeProfileMenu';
 
 
-const NAV_LINKS = [
+const GUEST_NAV_LINKS = [
   { label: 'How it works', href: '#how-it-works' },
   { label: 'Join', href: '#join' },
+  { label: 'Research', href: '#research' },
+];
+
+/** Signed-in members never see the guest join anchor. */
+const MEMBER_NAV_LINKS = [
+  { label: 'How it works', href: '#how-it-works' },
+  { label: 'Next steps', href: '#next-steps' },
   { label: 'Research', href: '#research' },
 ];
 
@@ -42,7 +49,7 @@ export function XcapeLandingNav() {
         </Link>
 
         <nav className="hidden items-center gap-6 md:flex" aria-label="Landing sections">
-          {NAV_LINKS.map((link) => (
+          {(user ? MEMBER_NAV_LINKS : GUEST_NAV_LINKS).map((link) => (
             <a
               key={link.href}
               href={link.href}
