@@ -127,10 +127,10 @@ describe("xcape_admin_customization_usage RPC", () => {
 
   it("returns grouped dose totals with an exclusive end date", () => {
     expect(SQL).toMatch(/count\(\*\)::bigint AS approved_formula_count/);
-    expect(SQL).toMatch(/sum\(COALESCE\(e\.dose_ml, 0\)\)\) AS total_dose_ml/);
-    expect(SQL).toMatch(/sum\(COALESCE\(e\.companion_dose_ml, 0\)\)\) AS total_companion_dose_ml/);
+    expect(SQL).toMatch(/sum\(COALESCE\(e\.dose_ml, 0\)\), 0\) AS total_dose_ml/);
+    expect(SQL).toMatch(/sum\(COALESCE\(e\.companion_dose_ml, 0\)\), 0\) AS total_companion_dose_ml/);
     expect(SQL).toMatch(
-      /sum\(COALESCE\(e\.dose_ml, 0\) \+ COALESCE\(e\.companion_dose_ml, 0\)\)\) AS total_combined_ml/,
+      /sum\(COALESCE\(e\.dose_ml, 0\) \+ COALESCE\(e\.companion_dose_ml, 0\)\), 0\) AS total_combined_ml/,
     );
     expect(SQL).toMatch(/min\(e\.approved_at\) AS first_approved_at/);
     expect(SQL).toMatch(/max\(e\.approved_at\) AS last_approved_at/);
