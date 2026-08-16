@@ -42,8 +42,11 @@ interface CartState {
   /** Non-null only while the cart belongs to a report. */
   report: CartReportContext | null;
   addItem: (item: Omit<CartItem, 'quantity'>, qty?: number) => void;
-  removeItem: (product_id: string) => void;
-  setQty: (product_id: string, qty: number) => void;
+  /** Targets the composite line (product + formula snapshot), never every
+   *  line that happens to share a product id. */
+  removeItem: (product_id: string, formula_snapshot_id?: string | null) => void;
+  setQty: (product_id: string, qty: number, formula_snapshot_id?: string | null) => void;
+
   clear: () => void;
   setAttribution: (a: Partial<CartAttribution>) => void;
   /** Enters (or switches to) a report cart, clearing incompatible items. */
