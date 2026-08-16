@@ -4,44 +4,57 @@ import {
   orgConfersAccess,
 } from '../../supabase/functions/_shared/archiveClientAccess';
 
-const noFacts = { directOwner: false, activeOrgManager: false };
+/** Affiliate-style client: no CDP location attached. */
+const soloClient = { directOwner: false, hasCdpOrigin: false, activeOrgManager: false };
+/** CDP-owned client: carries a CDP origin organization. */
+const cdpClient = { directOwner: false, hasCdpOrigin: true, activeOrgManager: false };
 
 describe('Remove client authorization', () => {
   it('allows an XCAPE admin for any client', () => {
-    expect(decideArchiveAccess(['admin'], noFacts)).toEqual({ allowed: true, scope: 'admin' });
+    expect(decideArchiveAccess(['admin'], soloClient)).toEqual({ allowed: true, scope: 'admin' });
+    expect(decideArchiveAccess(['admin'], cdpClient)).toEqual({ allowed: true, scope: 'admin' });
   });
 
-  it('allows the originating affiliate', () => {
-    expect(decideArchiveAccess(['affiliate'], { ...noFacts, directOwner: true })).toEqual({
+  it('allows the originating affiliate for their own non-CDP client', () => {
+    expect(decideArchiveAccess(['affiliate'], { ...soloClient, directOwner: true })).toEqual({
       allowed: true,
       scope: 'owner',
     });
   });
 
   it('allows an active member of the active CDP org that owns the client', () => {
-    expect(decideArchiveAccess(['cdp'], { ...noFacts, activeOrgManager: true })).toEqual({
+    expect(decideArchiveAccess(['cdp'], { ...cdpClient, activeOrgManager: true })).toEqual({
       allowed: true,
       scope: 'organization',
     });
   });
 
+  it('does NOT let direct origin bypass an inactive CDP org or inactive membership', () => {
+    // Captured the client themselves, but the org/membership is no longer active.
+    expect(
+      decideArchiveAccess(['cdp'], { ...cdpClient, directOwner: true, activeOrgManager: false }),
+    ).toEqual({ allowed: false, reason: 'org_not_active' });
+    expect(
+      decideArchiveAccess(['affiliate'], { ...cdpClient, directOwner: true }),
+    ).toEqual({ allowed: false, reason: 'org_not_active' });
+  });
+
   it("denies a partner for another partner's client", () => {
-    expect(decideArchiveAccess(['affiliate'], noFacts)).toEqual({
+    expect(decideArchiveAccess(['affiliate'], soloClient)).toEqual({
       allowed: false,
       reason: 'not_own_client',
     });
-    expect(decideArchiveAccess(['cdp'], noFacts)).toEqual({
+    expect(decideArchiveAccess(['cdp'], cdpClient)).toEqual({
       allowed: false,
-      reason: 'not_own_client',
+      reason: 'org_not_active',
     });
   });
 
   it('denies signed-in users with no partner or admin role, even if they touched the client', () => {
-    expect(decideArchiveAccess([], { directOwner: true, activeOrgManager: true })).toEqual({
-      allowed: false,
-      reason: 'no_role',
-    });
-    expect(decideArchiveAccess(['front_desk'], { ...noFacts, directOwner: true })).toEqual({
+    expect(
+      decideArchiveAccess([], { directOwner: true, hasCdpOrigin: false, activeOrgManager: true }),
+    ).toEqual({ allowed: false, reason: 'no_role' });
+    expect(decideArchiveAccess(['front_desk'], { ...soloClient, directOwner: true })).toEqual({
       allowed: false,
       reason: 'no_role',
     });
@@ -54,8 +67,10 @@ describe('organization scope gating', () => {
   it('requires an active CDP org and an active membership', () => {
     expect(orgConfersAccess(activeOrg, { status: 'active' })).toBe(true);
     expect(orgConfersAccess(activeOrg, { status: 'pending' })).toBe(false);
+    expect(orgConfersAccess(activeOrg, { status: 'suspended' })).toBe(false);
     expect(orgConfersAccess({ kind: 'cdp', status: 'pending' }, { status: 'active' })).toBe(false);
-    expect(orgConfersAccess({ kind: 'root', status: 'active' }, { status: 'active' })).toBe(false);
+    expect(orgConfersAccess({ kind: 'cdp', status: 'suspended' }, { status: 'active' })).toBe(false);
+    expect(orgConfersAccess({ kind: 'xcape_root', status: 'active' }, { status: 'active' })).toBe(false);
     expect(orgConfersAccess(null, { status: 'active' })).toBe(false);
     expect(orgConfersAccess(activeOrg, null)).toBe(false);
   });
