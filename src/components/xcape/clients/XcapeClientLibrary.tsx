@@ -115,6 +115,25 @@ const XcapeClientLibrary = () => {
         />
       </div>
 
+      {metaFailed && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border p-4">
+          <p className="text-sm text-muted-foreground">
+            Photos and analysis counts could not be loaded.
+          </p>
+          <button
+            type="button"
+            onClick={() => {
+              setBrokenThumbs({});
+              void refetchMeta();
+            }}
+            disabled={metaFetching}
+            className="min-h-[36px] rounded-full border border-border px-4 text-sm font-medium disabled:opacity-60"
+          >
+            {metaFetching ? 'Retrying…' : 'Retry'}
+          </button>
+        </div>
+      )}
+
       {isLoading ? (
         <p className="py-16 text-center text-sm text-muted-foreground">Loading your skin library…</p>
       ) : filtered.length === 0 ? (
@@ -140,16 +159,21 @@ const XcapeClientLibrary = () => {
                   className="group flex h-full flex-col overflow-hidden rounded-2xl border border-border bg-card transition-shadow hover:shadow-lg"
                 >
                   <div className="flex aspect-[4/3] items-center justify-center bg-muted">
-                    {m?.thumbUrl ? (
+                    {m?.thumbUrl && !brokenThumbs[c.id] ? (
                       <img
                         src={m.thumbUrl}
                         alt={`Latest captured skin image for ${c.full_name}`}
                         loading="lazy"
                         className="h-full w-full object-cover"
+                        onError={() => setBrokenThumbs((b) => ({ ...b, [c.id]: true }))}
                       />
                     ) : (
                       <span className="flex flex-col items-center gap-2 text-muted-foreground">
-                        <ImageIcon className="h-6 w-6" aria-hidden />
+                        {metaFailed || brokenThumbs[c.id] ? (
+                          <ImageOff className="h-6 w-6" aria-hidden />
+                        ) : (
+                          <ImageIcon className="h-6 w-6" aria-hidden />
+                        )}
                         <span className="text-2xl font-semibold">{initials(c.full_name ?? '?')}</span>
                       </span>
                     )}
@@ -157,8 +181,10 @@ const XcapeClientLibrary = () => {
                   <div className="flex flex-1 flex-col gap-1 p-4">
                     <p className="truncate text-base font-semibold">{c.full_name}</p>
                     <p className="text-sm text-muted-foreground">
-                      {m?.assessments ?? 0} analys{(m?.assessments ?? 0) === 1 ? 'is' : 'es'}
-                      {m?.lastAnalysis
+                      {metaFailed
+                        ? 'Details unavailable'
+                        : `${m?.assessments ?? 0} analys${(m?.assessments ?? 0) === 1 ? 'is' : 'es'}`}
+                      {!metaFailed && m?.lastAnalysis
                         ? ` · last ${new Date(m.lastAnalysis).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}`
                         : ''}
                     </p>
