@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { ArrowLeft, Eye, ImageIcon, Share2, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
-import { useRealClient } from '@/hooks/useRealClients';
+import { useRealClient, type RealClient } from '@/hooks/useRealClients';
 import { useArchiveXcapeClient } from '@/hooks/useArchiveXcapeClient';
 import { useClientAssessments, type VisitAssessment } from '@/hooks/useVisitAssessments';
 import { useClientMedia, type ClientMedia } from '@/hooks/useClientMedia';
