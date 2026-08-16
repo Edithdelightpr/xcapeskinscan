@@ -160,10 +160,12 @@ Deno.serve(async (req) => {
     });
 
     if (!aiResp.ok) {
-      const errText = await aiResp.text().catch(() => '');
+      // Never read or echo the provider body: it can carry prompts, signed
+      // URLs or internal detail. Only the status code is logged server-side.
+      console.error('analyze-skin-image gateway error', { status: aiResp.status });
       if (aiResp.status === 429) return json({ error: 'Rate limit — try again shortly.' }, 429);
       if (aiResp.status === 402) return json({ error: 'AI credits exhausted. Contact admin.' }, 402);
-      return json({ error: `AI gateway error: ${aiResp.status} ${errText.slice(0, 200)}` }, 502);
+      return json({ error: 'Image analysis is unavailable right now. Try again.' }, 502);
     }
 
     const aiJson = await aiResp.json();
@@ -172,7 +174,9 @@ Deno.serve(async (req) => {
     try {
       parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
     } catch {
-      return json({ error: 'AI returned non-JSON output', raw }, 502);
+      // Raw model output stays server-side.
+      console.error('analyze-skin-image non-JSON model output', { length: String(raw ?? '').length });
+      return json({ error: 'Image analysis is unavailable right now. Try again.' }, 502);
     }
 
     return json({
@@ -184,6 +188,8 @@ Deno.serve(async (req) => {
       result: parsed,
     });
   } catch (e) {
-    return json({ error: e instanceof Error ? e.message : 'Unknown error' }, 500);
+    // Exception text can contain storage paths / signed URLs — log only.
+    console.error('analyze-skin-image failed', e);
+    return json({ error: 'Server error' }, 500);
   }
 });

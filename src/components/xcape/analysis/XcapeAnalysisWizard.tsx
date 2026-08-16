@@ -98,6 +98,8 @@ const XcapeAnalysisWizard = () => {
     wip.clientId && wip.assessmentId ? wip.assessmentId : null,
   );
   const assessmentIdRef = useRef<string | null>(assessmentId);
+  /** In-flight ensureSaved promise — collapses concurrent save calls into one. */
+  const saveInFlightRef = useRef<Promise<VisitAssessment> | null>(null);
   const setAssessmentId = useCallback((id: string | null) => {
     assessmentIdRef.current = id;
     setAssessmentIdState(id);
@@ -236,6 +238,20 @@ const XcapeAnalysisWizard = () => {
    *  same assessment row. The saved engine payload is passed through
    *  untouched — never recomputed here. */
   const ensureSaved = async (): Promise<VisitAssessment> => {
+    // Concurrency lock: two same-tick callers (e.g. a double Continue click)
+    // must converge on ONE insert. React state cannot prevent this, so the
+    // in-flight promise itself is the lock.
+    if (saveInFlightRef.current) return saveInFlightRef.current;
+    const run = runSave();
+    saveInFlightRef.current = run;
+    try {
+      return await run;
+    } finally {
+      if (saveInFlightRef.current === run) saveInFlightRef.current = null;
+    }
+  };
+
+  const runSave = async (): Promise<VisitAssessment> => {
     if (!clientId) throw new Error('Select a client first');
     const currentId = assessmentIdRef.current;
     const saved = await saveMut.mutateAsync({

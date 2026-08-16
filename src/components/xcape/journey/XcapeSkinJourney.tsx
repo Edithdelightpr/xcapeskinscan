@@ -1,7 +1,7 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { ArrowLeft, Eye, ImageIcon, Share2, Trash2 } from 'lucide-react';
+import { ArrowLeft, Eye, ImageIcon, ImageOff, Share2, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useRealClient, type RealClient } from '@/hooks/useRealClients';
@@ -22,6 +22,7 @@ import {
 } from '@/components/ui/dialog';
 import { formatNaira } from '@/lib/finance';
 import { pickPreferredImage } from '@/lib/xcapeMedia';
+import { useSignedMediaUrls } from '@/hooks/useSignedMediaUrls';
 
 
 /**
@@ -59,17 +60,78 @@ const useSignedMedia = (media: ClientMedia[]) => {
         .filter(Boolean) as string[],
     [media],
   );
-  return useQuery({
-    queryKey: ['xcape-journey-signed', paths.join(',')],
-    enabled: paths.length > 0,
-    queryFn: async (): Promise<Record<string, string>> => {
-      const { data } = await supabase.storage.from('client-media').createSignedUrls(paths, 900);
-      const out: Record<string, string> = {};
-      for (const s of data ?? []) if (s.path && s.signedUrl) out[s.path] = s.signedUrl;
-      return out;
-    },
-  });
+  return useSignedMediaUrls(paths, 'xcape-journey-signed');
 };
+
+/**
+ * One analysis photo slot with honest states: loading, genuinely no photo,
+ * retrieval failure (with Retry) and a broken-image fallback. A signing or
+ * fetch failure is never rendered as "no photo".
+ */
+const PhotoFrame = ({
+  url,
+  hasStoredPhoto,
+  loading,
+  failed,
+  onRetry,
+  alt,
+  emptyLabel = 'No saved photo for this analysis',
+}: {
+  url?: string;
+  hasStoredPhoto: boolean;
+  loading: boolean;
+  failed: boolean;
+  onRetry: () => void;
+  alt: string;
+  emptyLabel?: string;
+}) => {
+  const [broken, setBroken] = useState(false);
+  useEffect(() => setBroken(false), [url]);
+
+  const retry = (
+    <button
+      type="button"
+      onClick={() => {
+        setBroken(false);
+        onRetry();
+      }}
+      className="min-h-[36px] rounded-full border border-border px-4 text-sm font-medium"
+    >
+      Retry
+    </button>
+  );
+
+  let body: React.ReactNode;
+  if (!hasStoredPhoto) {
+    body = (
+      <span className="flex flex-col items-center gap-2 px-4 text-center text-muted-foreground">
+        <ImageIcon className="h-8 w-8" aria-hidden />
+        <span className="text-sm">{emptyLabel}</span>
+      </span>
+    );
+  } else if (failed || broken) {
+    body = (
+      <span className="flex flex-col items-center gap-2 px-4 text-center text-muted-foreground">
+        <ImageOff className="h-8 w-8" aria-hidden />
+        <span className="text-sm">Photo unavailable</span>
+        {retry}
+      </span>
+    );
+  } else if (loading || !url) {
+    body = <span className="text-sm text-muted-foreground">Loading photo…</span>;
+  } else {
+    return (
+      <img
+        src={url}
+        alt={alt}
+        className="h-full w-full object-cover"
+        onError={() => setBroken(true)}
+      />
+    );
+  }
+  return body as React.ReactElement;
+};
+
 
 const scoreEntries = (a: VisitAssessment | undefined) =>
   a ? Object.entries(scoresFromSkin((a.skin_analysis ?? {}) as never)) : [];
@@ -236,14 +298,25 @@ const JourneyBody = ({ clientId, client }: { clientId: string; client: RealClien
   const [tab, setTab] = useState<Tab>('Overview');
 
   const { data: assessments = [] } = useClientAssessments(clientId);
-  const { data: media = [] } = useClientMedia(clientId);
-  const { data: signed = {} } = useSignedMedia(media);
+  const {
+    data: media = [],
+    isPending: mediaLoading,
+    isError: mediaFailed,
+    refetch: refetchMedia,
+  } = useClientMedia(clientId);
+  const {
+    data: signed = {},
+    isPending: signedLoading,
+    isError: signedFailed,
+    refetch: refetchSigned,
+  } = useSignedMedia(media);
   const [shareFor, setShareFor] = useState<string | null>(null);
 
-  const imageFor = (m: ClientMedia | undefined) => {
-    const p = m?.storage_path ?? m?.bucket_path;
-    return p ? signed[p] : undefined;
+  const retryPhotos = () => {
+    void refetchMedia();
+    void refetchSigned();
   };
+
   const mediaByAssessment = useMemo(() => {
     const map = new Map<string, ClientMedia[]>();
     for (const m of media) {
@@ -253,12 +326,26 @@ const JourneyBody = ({ clientId, client }: { clientId: string; client: RealClien
     }
     return map;
   }, [media]);
-  /** Front view where available; strictly scoped to the analysis it belongs to. */
-  const imageForAssessment = (assessmentId: string | null | undefined) =>
-    imageFor(pickPreferredImage(mediaByAssessment.get(assessmentId ?? '') ?? []));
+
+  /**
+   * Front view where available; strictly scoped to the analysis it belongs to.
+   * Returns the honest state so no-photo and retrieval-failure never blur.
+   */
+  const photoState = (assessmentId: string | null | undefined) => {
+    const preferred = pickPreferredImage(mediaByAssessment.get(assessmentId ?? '') ?? []);
+    const path = preferred?.storage_path ?? preferred?.bucket_path ?? null;
+    const hasStoredPhoto = !mediaFailed && !!path;
+    return {
+      url: path ? signed[path] : undefined,
+      hasStoredPhoto,
+      loading: mediaLoading || (hasStoredPhoto && signedLoading),
+      failed: mediaFailed || (hasStoredPhoto && signedFailed),
+    };
+  };
 
   const latest = assessments[0];
-  const latestImage = imageForAssessment(latest?.id);
+  const latestPhoto = photoState(latest?.id);
+
 
 
   const { data: reports = [] } = useQuery({
@@ -346,15 +433,13 @@ const JourneyBody = ({ clientId, client }: { clientId: string; client: RealClien
         <div className="grid gap-4 md:grid-cols-2">
           <Card className="p-0 overflow-hidden">
             <div className="flex aspect-[4/3] items-center justify-center bg-muted">
-              {latestImage ? (
-                <img
-                  src={latestImage}
-                  alt={`Most recent captured skin image for ${client?.full_name ?? 'this client'}`}
-                  className="h-full w-full object-cover"
-                />
-              ) : (
-                <ImageIcon className="h-8 w-8 text-muted-foreground" aria-hidden />
-              )}
+              <PhotoFrame
+                {...latestPhoto}
+                onRetry={retryPhotos}
+                alt={`Most recent captured skin image for ${client?.full_name ?? 'this client'}`}
+                emptyLabel="No saved photo for this analysis"
+              />
+
             </div>
           </Card>
           <Card className="space-y-4">
@@ -428,20 +513,17 @@ const JourneyBody = ({ clientId, client }: { clientId: string; client: RealClien
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
                 {[from, to].map((a, i) => {
-                  const img = imageForAssessment(a?.id);
+                  const photo = photoState(a?.id);
                   return (
                     <Card key={`${a?.id}-${i}`} className="space-y-3 p-0 overflow-hidden">
                       <div className="flex aspect-[4/3] items-center justify-center bg-muted">
-                        {img ? (
-                          <img
-                            src={img}
-                            alt={`${i === 0 ? 'Before' : 'After'} image from ${fmtDate(a?.created_at)}`}
-                            className="h-full w-full object-cover"
-                          />
-                        ) : (
-                          <ImageIcon className="h-8 w-8 text-muted-foreground" aria-hidden />
-                        )}
+                        <PhotoFrame
+                          {...photo}
+                          onRetry={retryPhotos}
+                          alt={`${i === 0 ? 'Before' : 'After'} image from ${fmtDate(a?.created_at)}`}
+                        />
                       </div>
+
                       <div className="p-4 pt-0">
                         <p className="text-sm font-medium">{i === 0 ? 'Before' : 'After'} · {fmtDate(a?.created_at)}</p>
                       </div>
