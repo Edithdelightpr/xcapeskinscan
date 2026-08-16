@@ -101,15 +101,11 @@ const PhotoFrame = ({
     </button>
   );
 
+  // State priority matters: a failed media/signing query also yields
+  // hasStoredPhoto=false, and an in-flight query has no rows yet. Neither may
+  // ever be presented as the confirmed "no photo" state.
   let body: React.ReactNode;
-  if (!hasStoredPhoto) {
-    body = (
-      <span className="flex flex-col items-center gap-2 px-4 text-center text-muted-foreground">
-        <ImageIcon className="h-8 w-8" aria-hidden />
-        <span className="text-sm">{emptyLabel}</span>
-      </span>
-    );
-  } else if (failed || broken) {
+  if (failed || broken) {
     body = (
       <span className="flex flex-col items-center gap-2 px-4 text-center text-muted-foreground">
         <ImageOff className="h-8 w-8" aria-hidden />
@@ -117,7 +113,16 @@ const PhotoFrame = ({
         {retry}
       </span>
     );
-  } else if (loading || !url) {
+  } else if (loading) {
+    body = <span className="text-sm text-muted-foreground">Loading photo…</span>;
+  } else if (!hasStoredPhoto) {
+    body = (
+      <span className="flex flex-col items-center gap-2 px-4 text-center text-muted-foreground">
+        <ImageIcon className="h-8 w-8" aria-hidden />
+        <span className="text-sm">{emptyLabel}</span>
+      </span>
+    );
+  } else if (!url) {
     body = <span className="text-sm text-muted-foreground">Loading photo…</span>;
   } else {
     return (
