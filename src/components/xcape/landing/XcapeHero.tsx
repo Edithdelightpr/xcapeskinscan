@@ -13,7 +13,7 @@ import { homeCtaLabel, homeCtaPath } from '@/lib/xcapeExperience';
  */
 
 export function XcapeHero() {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
   const signedIn = !!user;
 
   return (
@@ -37,6 +37,11 @@ export function XcapeHero() {
         </BlurFade>
 
         <BlurFade delay={0.3}>
+          {loading ? (
+            // Fixed-size placeholder: a returning member must never see the
+            // guest CTA labels or the #join anchor while the session loads.
+            <div className="mt-8 h-[48px]" aria-hidden />
+          ) : (
           <div className="mt-8 flex flex-wrap items-center gap-4">
             <Link
               to={homeCtaPath(signedIn)}
@@ -68,8 +73,11 @@ export function XcapeHero() {
               </>
             )}
           </div>
-          <p className="mt-3 text-sm text-muted-foreground">
-            {signedIn
+          )}
+          <p className="mt-3 h-10 text-sm text-muted-foreground">
+            {loading
+              ? ''
+              : signedIn
               ? 'Every analysis you run is saved to your XCAPE account with its client, images and report.'
               : XCAPE_DEMO_MICROCOPY}
           </p>
