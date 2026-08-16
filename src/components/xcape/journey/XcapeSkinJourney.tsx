@@ -137,8 +137,16 @@ const RemoveClientAction = ({
         <Trash2 className="mr-1 h-3.5 w-3.5" aria-hidden /> Remove client
       </Button>
 
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="sm:max-w-md">
+      {/* While the archive is in flight the dialog cannot be dismissed — no
+          escape, overlay click, close button, Keep, or typing. */}
+      <Dialog open={open} onOpenChange={(next) => { if (!archive.isPending) setOpen(next); }}>
+        <DialogContent
+          className="sm:max-w-md"
+          showCloseButton={!archive.isPending}
+          onEscapeKeyDown={(e) => { if (archive.isPending) e.preventDefault(); }}
+          onPointerDownOutside={(e) => { if (archive.isPending) e.preventDefault(); }}
+          onInteractOutside={(e) => { if (archive.isPending) e.preventDefault(); }}
+        >
           <DialogHeader>
             <DialogTitle>Remove {clientName ?? 'this client'}?</DialogTitle>
             <DialogDescription asChild>
@@ -164,11 +172,18 @@ const RemoveClientAction = ({
               placeholder="REMOVE"
               aria-label="Type REMOVE to confirm"
               autoComplete="off"
+              disabled={archive.isPending}
             />
           </label>
           {error && <p className="text-sm text-destructive">{error}</p>}
           <DialogFooter className="gap-2 sm:gap-2">
-            <Button type="button" variant="outline" className="rounded-full" onClick={() => setOpen(false)}>
+            <Button
+              type="button"
+              variant="outline"
+              className="rounded-full"
+              disabled={archive.isPending}
+              onClick={() => setOpen(false)}
+            >
               Keep client
             </Button>
             <Button
@@ -181,6 +196,9 @@ const RemoveClientAction = ({
               {archive.isPending ? 'Removing…' : 'Remove client'}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
         </DialogContent>
       </Dialog>
     </>
