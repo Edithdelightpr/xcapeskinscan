@@ -597,7 +597,7 @@ BEGIN
       origin_user_id, origin_role, origin_org_id, fulfilment_org_id, price_snapshot)
     VALUES (
       v_pid, v_qty, v_price, v_phone, v_name,
-      v_client, 'mobile_money',
+      v_client, 'online',
       LEFT(NULLIF(btrim(COALESCE(_payment_reference,'')), ''), 120),
       '[ref:' || v_ref || '] XCAPE report order (Mobile Money — awaiting verification)'
         || COALESCE(' — ' || NULLIF(btrim(COALESCE(_notes,'')), ''), ''),

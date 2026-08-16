@@ -173,7 +173,7 @@ BEGIN
       formula_snapshot_id, formula_summary, price_snapshot)
     VALUES (
       v_pid, v_qty, v_price, v_phone, v_name,
-      v_client, 'mobile_money',
+      v_client, 'online',
       LEFT(NULLIF(btrim(COALESCE(_payment_reference,'')), ''), 120),
       '[ref:' || v_ref || '] XCAPE report order (Mobile Money - awaiting verification)'
         || COALESCE(' - ' || NULLIF(btrim(COALESCE(_notes,'')), ''), ''),
