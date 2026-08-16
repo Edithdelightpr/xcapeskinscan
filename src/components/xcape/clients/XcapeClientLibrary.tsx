@@ -25,6 +25,7 @@ const useJourneyMeta = (clientIds: string[]) =>
     enabled: clientIds.length > 0,
     queryFn: async (): Promise<Record<string, JourneyMeta>> => {
       const meta: Record<string, JourneyMeta> = {};
+      const latestAssessmentId: Record<string, string> = {};
       const { data: assessments, error: assessmentsError } = await supabase
         .from('client_visit_assessments')
         .select('id, client_id, created_at')
@@ -35,25 +36,32 @@ const useJourneyMeta = (clientIds: string[]) =>
         const entry = (meta[a.client_id] ??= { assessments: 0, lastAnalysis: null, thumbUrl: null });
         entry.assessments += 1;
         entry.lastAnalysis ??= a.created_at;
+        latestAssessmentId[a.client_id] ??= a.id;
       }
 
-      // Latest non-archived captured image per client (consented storage only).
+      // Captured images (consented storage only). The thumbnail is chosen from
+      // the client's latest analysis, preferring its Front view.
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data: media, error: mediaError } = await (supabase as any)
         .from('client_media')
-        .select('client_id, storage_path, bucket_path, file_type, archived, created_at')
+        .select(
+          'client_id, assessment_id, storage_path, bucket_path, file_type, file_name, caption, archived, created_at',
+        )
         .in('client_id', clientIds)
         .eq('archived', false)
         .order('created_at', { ascending: false });
       if (mediaError) throw mediaError;
 
+      const byClient: Record<string, ThumbCandidate[]> = {};
+      for (const m of (media ?? []) as Array<ThumbCandidate & { client_id?: string }>) {
+        const cid = m.client_id;
+        if (!cid) continue;
+        (byClient[cid] ??= []).push(m);
+      }
       const firstPath: Record<string, string> = {};
-      for (const m of (media ?? []) as Array<Record<string, string | null>>) {
-        const cid = m.client_id as string;
-        const path = (m.storage_path ?? m.bucket_path) as string | null;
-        if (!cid || !path || firstPath[cid]) continue;
-        if (m.file_type && m.file_type !== 'image') continue;
-        firstPath[cid] = path;
+      for (const [cid, rows] of Object.entries(byClient)) {
+        const path = pickLibraryThumbPath(rows, latestAssessmentId[cid]);
+        if (path) firstPath[cid] = path;
       }
       const paths = Object.values(firstPath);
       if (paths.length) {
@@ -65,6 +73,7 @@ const useJourneyMeta = (clientIds: string[]) =>
           entry.thumbUrl = byPath[path] ?? null;
         }
       }
+
       return meta;
     },
     staleTime: (SIGNED_URL_TTL_SECONDS * 1000) / 3,
