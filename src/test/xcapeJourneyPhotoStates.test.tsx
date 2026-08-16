@@ -18,12 +18,17 @@ const MEDIA = [
   { id: 'm1', client_id: 'c1', assessment_id: 'a1', storage_path: 'p/a1.jpg', bucket_path: 'p/a1.jpg', file_type: 'image', archived: false, created_at: '2026-01-02T10:00:00Z' },
 ];
 
-const state = { media: MEDIA as unknown[], signFails: false };
+const state = { media: MEDIA as unknown[], signFails: false, mediaFails: false, mediaLoading: false };
 
 vi.mock('@/hooks/useRealClients', () => ({ useRealClient: () => ({ data: CLIENT, isLoading: false }) }));
 vi.mock('@/hooks/useVisitAssessments', () => ({ useClientAssessments: () => ({ data: ASSESSMENTS }) }));
 vi.mock('@/hooks/useClientMedia', () => ({
-  useClientMedia: () => ({ data: state.media, isPending: false, isError: false, refetch: vi.fn() }),
+  useClientMedia: () => ({
+    data: state.mediaFails || state.mediaLoading ? [] : state.media,
+    isPending: state.mediaLoading,
+    isError: state.mediaFails,
+    refetch: vi.fn(),
+  }),
 }));
 vi.mock('@/components/report/ShareReportPanel', () => ({ default: () => <p>share panel</p> }));
 vi.mock('@/integrations/supabase/client', () => ({
@@ -59,6 +64,8 @@ describe('XCAPE journey photo states', () => {
   beforeEach(() => {
     state.media = MEDIA;
     state.signFails = false;
+    state.mediaFails = false;
+    state.mediaLoading = false;
   });
 
   it('shows a true empty state when the analysis genuinely has no photo', async () => {
@@ -74,6 +81,23 @@ describe('XCAPE journey photo states', () => {
     expect(await screen.findByText('Photo unavailable', {}, { timeout: 5000 })).toBeInTheDocument();
     expect(screen.getAllByRole('button', { name: 'Retry' }).length).toBeGreaterThan(0);
     expect(screen.queryByText('No saved photo for this analysis')).toBeNull();
+  });
+
+  it('shows Photo unavailable when the client_media query itself fails', async () => {
+    // The failed query resolves to [] rows, so hasStoredPhoto is false too —
+    // the failure state must still win over the true-empty state.
+    state.mediaFails = true;
+    renderJourney();
+    expect(await screen.findByText('Photo unavailable')).toBeInTheDocument();
+    expect(screen.queryByText('No saved photo for this analysis')).toBeNull();
+  });
+
+  it('shows a loading state, not "no photo", while media is still loading', async () => {
+    state.mediaLoading = true;
+    renderJourney();
+    expect(await screen.findByText('Loading photo…')).toBeInTheDocument();
+    expect(screen.queryByText('No saved photo for this analysis')).toBeNull();
+    expect(screen.queryByText('Photo unavailable')).toBeNull();
   });
 
   it('prefers the front image and keeps each analysis isolated', async () => {
