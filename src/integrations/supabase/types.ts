@@ -13776,6 +13776,7 @@ export type Database = {
         Args: { _link_id: string }
         Returns: Json
       }
+      xcape_fulfil_report_order: { Args: { _claim_id: string }; Returns: Json }
       xcape_get_commerce_settings: { Args: never; Returns: Json }
       xcape_is_authorized: { Args: { _user?: string }; Returns: boolean }
       xcape_lookup_client_by_phone: {
@@ -13799,6 +13800,10 @@ export type Database = {
       }
       xcape_may_archive_client: {
         Args: { _actor: string; _client_id: string }
+        Returns: boolean
+      }
+      xcape_may_manage_pending_order: {
+        Args: { _pending_order_id: string }
         Returns: boolean
       }
       xcape_may_review_claim: { Args: { _claim_id: string }; Returns: boolean }
