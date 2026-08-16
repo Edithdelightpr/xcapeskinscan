@@ -75,24 +75,24 @@ describe('live price resolution', () => {
 
 describe('role-first merchant routing', () => {
   it('routes an affiliate report to XCAPE even when origin_org is a CDP', () => {
-    const r = resolveReportMerchant('affiliate', cdp, root);
+    const r = resolveReportMerchant({ origin_role: 'affiliate', origin_org: cdp, root_org: root });
     expect(r.merchant_org_id).toBe('root');
     expect(r.price_source).toBe('xcape');
   });
 
   it('routes an admin/unattributed report to XCAPE root', () => {
-    expect(resolveReportMerchant('admin', null, root).merchant_org_id).toBe('root');
-    expect(resolveReportMerchant(null, null, root).price_source).toBe('xcape');
+    expect(resolveReportMerchant({ origin_role: 'admin', origin_org: null, root_org: root }).merchant_org_id).toBe('root');
+    expect(resolveReportMerchant({ origin_role: null, origin_org: null, root_org: root }).price_source).toBe('xcape');
   });
 
   it('routes a CDP report to that active CDP', () => {
-    const r = resolveReportMerchant('cdp', cdp, root);
+    const r = resolveReportMerchant({ origin_role: 'cdp', origin_org: cdp, root_org: root });
     expect(r.merchant_org_id).toBe('cdp-1');
     expect(r.price_source).toBe('cdp');
   });
 
   it('falls back to XCAPE when the CDP org is not active', () => {
-    const r = resolveReportMerchant('cdp', inactiveCdp, root);
+    const r = resolveReportMerchant({ origin_role: 'cdp', origin_org: inactiveCdp, root_org: root });
     expect(r.merchant_org_id).toBe('root');
     expect(r.price_source).toBe('xcape');
   });
