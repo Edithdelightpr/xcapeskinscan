@@ -37,7 +37,7 @@ describe('signed-in next steps', () => {
       </MemoryRouter>,
     );
     expect(screen.getByText(/become a certified distribution partner/i)).toBeInTheDocument();
-    expect(screen.getByText(/client events/i)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /^client events$/i })).toBeInTheDocument();
     expect(screen.getByText(/what's new at xcape/i)).toBeInTheDocument();
     // /xcape/history links into admin client routes — never route partners there
     for (const link of screen.getAllByRole('link')) {
