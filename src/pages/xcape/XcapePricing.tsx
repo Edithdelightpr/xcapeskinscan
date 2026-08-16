@@ -28,10 +28,9 @@ interface PriceBookRow {
 }
 
 interface CommerceSettings {
-  organization_id: string | null;
-  org_name?: string | null;
-  org_kind?: string | null;
-  can_edit?: boolean;
+  editable?: boolean;
+  organization_id?: string | null;
+  organization_name?: string | null;
   commerce_enabled: boolean;
   order_contact_phone: string | null;
   whatsapp_number: string | null;
@@ -78,8 +77,8 @@ const XcapePricing = () => {
   const [overrideDraft, setOverrideDraft] = useState<Record<string, string>>({});
   const [form, setForm] = useState<CommerceSettings | null>(null);
 
-  const isCdpOrg = (rows?.[0]?.org_kind ?? settings?.org_kind) === 'cdp';
-  const canEditSettings = !!settings?.can_edit;
+  const isCdpOrg = rows?.[0]?.org_kind === 'cdp';
+  const canEditSettings = settings?.editable !== false;
 
   useEffect(() => {
     if (!rows) return;
@@ -92,7 +91,7 @@ const XcapePricing = () => {
   }, [rows]);
 
   useEffect(() => {
-    if (settings) setForm(settings);
+    if (settings?.editable) setForm(settings);
   }, [settings]);
 
   const saveDefault = useMutation({
