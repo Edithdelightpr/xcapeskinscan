@@ -18,7 +18,7 @@ import { GUEST_ONLY_PHRASES, nextStepsFor } from '@/lib/xcapeNextSteps';
 const KNOWN_ROUTES = [
   '/xcape/account',
   '/xcape/events',
-  '/xcape/history',
+  '/xcape/performance',
   '/xcape/pricing',
   '/xcape/orders',
   '/xcape/clients',
@@ -37,8 +37,18 @@ describe('signed-in next steps', () => {
       </MemoryRouter>,
     );
     expect(screen.getByText(/become a certified distribution partner/i)).toBeInTheDocument();
-    expect(screen.getByText(/upcoming events/i)).toBeInTheDocument();
+    expect(screen.getByText(/client events/i)).toBeInTheDocument();
     expect(screen.getByText(/what's new at xcape/i)).toBeInTheDocument();
+    // /xcape/history links into admin client routes — never route partners there
+    for (const link of screen.getAllByRole('link')) {
+      expect(link.getAttribute('href')).not.toBe('/xcape/history');
+    }
+    expect(screen.getByRole('link', { name: /view your activity/i })).toHaveAttribute(
+      'href',
+      '/xcape/performance',
+    );
+    // events copy must not promise a network activation directory or RSVP
+    expect(screen.queryByText(/rsvp|activations you can attend/i)).not.toBeInTheDocument();
     for (const phrase of GUEST_ONLY_PHRASES) {
       expect(screen.queryByText(new RegExp(phrase, 'i'))).not.toBeInTheDocument();
     }
@@ -62,6 +72,7 @@ describe('signed-in next steps', () => {
       'href',
       '/xcape/orders',
     );
+    expect(screen.getByText(/client events/i)).toBeInTheDocument();
     expect(screen.queryByText(/sign up as an affiliate/i)).not.toBeInTheDocument();
   });
 
