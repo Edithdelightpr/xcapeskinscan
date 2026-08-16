@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { ArrowLeft, Eye, ImageIcon, Share2, Trash2 } from 'lucide-react';
+import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useRealClient } from '@/hooks/useRealClients';
 import { useArchiveXcapeClient } from '@/hooks/useArchiveXcapeClient';
@@ -99,8 +100,13 @@ const RemoveClientAction = ({
     if (!ready || archive.isPending) return;
     setError(null);
     try {
-      await archive.mutateAsync(clientId);
+      const result = await archive.mutateAsync(clientId);
       setOpen(false);
+      toast.success(`${clientName ?? 'Client'} removed`, {
+        description: result.cleanup_pending
+          ? 'Shared links no longer work. Photo cleanup is still finishing — retry removal if it does not complete.'
+          : 'Shared report links no longer work and stored photos were cleared.',
+      });
       navigate('/xcape/clients', { replace: true });
     } catch (e) {
       setError(e instanceof Error ? e.message : 'We could not remove this client.');

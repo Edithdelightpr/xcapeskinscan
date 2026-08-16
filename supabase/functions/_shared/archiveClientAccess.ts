@@ -1,28 +1,40 @@
 // Who may archive ("Remove client") an XCAPE client record.
 //
 // Pure decision logic, mirrored by the database function
-// `public.xcape_may_archive_client` which re-checks it inside the archive
-// transaction. Nothing here trusts browser input: the caller id comes from a
-// verified bearer token and every fact below is loaded server-side.
+// `public.xcape_may_archive_client`, which re-checks the same rule inside the
+// archive transaction. Nothing here trusts browser input: the caller id comes
+// from a verified bearer token and every fact below is loaded server-side.
 
 export const ADMIN_ROLE = 'admin';
 export const PARTNER_ROLES = ['affiliate', 'cdp'] as const;
 
 export interface ArchiveOwnershipFacts {
-  /** The client's origin_user_id equals the caller. */
+  /** The caller originated the client record, or one of its analyses. */
   directOwner: boolean;
   /**
-   * The caller is an ACTIVE member of an ACTIVE CDP organization that owns the
-   * client (client origin org, or an assessment origin org).
+   * The client carries a CDP origin organization (its own, or one inherited
+   * from its earliest attributed analysis).
+   */
+  hasCdpOrigin: boolean;
+  /**
+   * The caller is an ACTIVE member of that ACTIVE CDP organization.
+   * Both the organization status and the membership status must be 'active'.
    */
   activeOrgManager: boolean;
 }
 
 export type ArchiveDecision =
   | { allowed: true; scope: 'admin' | 'owner' | 'organization' }
-  | { allowed: false; reason: 'no_role' | 'not_own_client' };
+  | { allowed: false; reason: 'no_role' | 'not_own_client' | 'org_not_active' };
 
-/** Pure authorization rule. */
+/**
+ * Pure authorization rule.
+ *
+ * Order matters: when a client belongs to a CDP location, the active
+ * organization + active membership check is REQUIRED. Direct origin is not a
+ * shortcut past a suspended or pending organization or membership — otherwise
+ * a deactivated CDP operator could still delete that location's client data.
+ */
 export const decideArchiveAccess = (
   roles: readonly string[],
   facts: ArchiveOwnershipFacts,
@@ -31,8 +43,12 @@ export const decideArchiveAccess = (
   if (!roles.some((r) => (PARTNER_ROLES as readonly string[]).includes(r))) {
     return { allowed: false, reason: 'no_role' };
   }
+  if (facts.hasCdpOrigin) {
+    return facts.activeOrgManager
+      ? { allowed: true, scope: 'organization' }
+      : { allowed: false, reason: 'org_not_active' };
+  }
   if (facts.directOwner) return { allowed: true, scope: 'owner' };
-  if (facts.activeOrgManager) return { allowed: true, scope: 'organization' };
   return { allowed: false, reason: 'not_own_client' };
 };
 
