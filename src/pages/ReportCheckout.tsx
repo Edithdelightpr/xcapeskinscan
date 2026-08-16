@@ -64,11 +64,18 @@ const ReportCheckout = () => {
   const merchantName = data?.merchant?.name ?? 'XCAPE';
   const orderingAvailable = data ? data.ordering_available !== false && canOrderFromMerchant(contact) : false;
 
+  // This checkout spends ONLY a cart that belongs to this exact report.
+  const scoped = !!token && report?.token === token;
+
   // Re-fetch and reconcile against THIS report: standard products must still
   // be recommended and priced live by the server, and a customized-kit line
   // must still match an approved, live-priced formula snapshot on the report.
   // Anything else silently drops out — the client never sets a price.
   const eligible = useMemo(() => {
+    // Until the cart is proven to belong to this report token, nothing is
+    // eligible — a marketplace item sharing a product id can never leak in,
+    // not even for one render.
+    if (!scoped) return [];
     const priced = new Map(
       (data?.recommended_products ?? [])
         .filter((p) => p.selling_price != null && Number(p.selling_price) > 0)
@@ -100,17 +107,25 @@ const ReportCheckout = () => {
         unit_price: Number(p.selling_price),
       }];
     });
-  }, [items, data]);
+  }, [items, data, scoped]);
 
-  const dropped = items.length - eligible.length;
+  const dropped = scoped ? items.length - eligible.length : 0;
   const total = eligible.reduce((n, l) => n + l.quantity * l.unit_price, 0);
 
-  // Guard: this checkout spends ONLY a cart that belongs to this report.
-  // Marketplace items, or another report's items, are never reused here.
+  // Once the report is fetched, establish its trusted context. Arriving here
+  // with a marketplace cart (or another report's cart) drops those items and
+  // locks the cart to this token / merchant / currency.
   useEffect(() => {
-    if (!token) return;
-    if (report?.token !== token) clear();
-  }, [report, token, clear]);
+    if (!token || !data) return;
+    if (report?.token === token) return;
+    setReportContext({
+      token,
+      merchant_org_id: data.merchant?.org_id ?? null,
+      merchant_name: data.merchant?.name ?? 'XCAPE',
+      currency: 'XAF',
+    });
+  }, [token, data, report, setReportContext]);
+
 
 
   const sentNumber = Number(amountSent);
