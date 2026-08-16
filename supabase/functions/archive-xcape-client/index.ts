@@ -101,28 +101,36 @@ Deno.serve(async (req) => {
       ),
     );
 
+    // A CDP-owned client is always gated on an ACTIVE org + ACTIVE membership,
+    // even for the person who captured it — so org status is resolved whenever
+    // an origin organization exists, not only when direct ownership is absent.
+    let hasCdpOrigin = false;
     let activeOrgManager = false;
-    if (!directOwner && orgIds.length > 0) {
+    if (orgIds.length > 0) {
       const { data: orgs } = await admin
         .from('organizations')
         .select('id, kind, status')
         .in('id', orgIds);
-      const { data: memberships } = await admin
-        .from('organization_members')
-        .select('organization_id, status')
-        .eq('user_id', caller.id)
-        .in('organization_id', orgIds);
-      activeOrgManager = (orgs ?? []).some((o: { id: string; kind: string; status: string }) =>
-        orgConfersAccess(
-          o,
-          (memberships ?? []).find(
-            (m: { organization_id: string }) => m.organization_id === o.id,
-          ) ?? null,
-        ),
-      );
+      const cdpOrgs = (orgs ?? []).filter((o: { kind: string }) => o.kind === 'cdp');
+      hasCdpOrigin = cdpOrgs.length > 0;
+      if (hasCdpOrigin) {
+        const { data: memberships } = await admin
+          .from('organization_members')
+          .select('organization_id, status')
+          .eq('user_id', caller.id)
+          .in('organization_id', cdpOrgs.map((o: { id: string }) => o.id));
+        activeOrgManager = cdpOrgs.some((o: { id: string; kind: string; status: string }) =>
+          orgConfersAccess(
+            o,
+            (memberships ?? []).find(
+              (m: { organization_id: string }) => m.organization_id === o.id,
+            ) ?? null,
+          ),
+        );
+      }
     }
 
-    const decision = decideArchiveAccess(roles, { directOwner, activeOrgManager });
+    const decision = decideArchiveAccess(roles, { directOwner, hasCdpOrigin, activeOrgManager });
     if (!decision.allowed) return json({ error: 'Not authorized' }, 403);
 
     // ---- transactional archive --------------------------------------------
