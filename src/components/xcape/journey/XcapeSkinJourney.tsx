@@ -141,8 +141,8 @@ const RemoveClientAction = ({
           escape, overlay click, close button, Keep, or typing. */}
       <Dialog open={open} onOpenChange={(next) => { if (!archive.isPending) setOpen(next); }}>
         <DialogContent
-          className="sm:max-w-md"
-          showCloseButton={!archive.isPending}
+          className={`sm:max-w-md ${archive.isPending ? '[&>button.absolute]:pointer-events-none [&>button.absolute]:opacity-40' : ''}`}
+
           onEscapeKeyDown={(e) => { if (archive.isPending) e.preventDefault(); }}
           onPointerDownOutside={(e) => { if (archive.isPending) e.preventDefault(); }}
           onInteractOutside={(e) => { if (archive.isPending) e.preventDefault(); }}
