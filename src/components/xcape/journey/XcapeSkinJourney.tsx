@@ -433,15 +433,13 @@ const JourneyBody = ({ clientId, client }: { clientId: string; client: RealClien
         <div className="grid gap-4 md:grid-cols-2">
           <Card className="p-0 overflow-hidden">
             <div className="flex aspect-[4/3] items-center justify-center bg-muted">
-              {latestImage ? (
-                <img
-                  src={latestImage}
-                  alt={`Most recent captured skin image for ${client?.full_name ?? 'this client'}`}
-                  className="h-full w-full object-cover"
-                />
-              ) : (
-                <ImageIcon className="h-8 w-8 text-muted-foreground" aria-hidden />
-              )}
+              <PhotoFrame
+                {...latestPhoto}
+                onRetry={retryPhotos}
+                alt={`Most recent captured skin image for ${client?.full_name ?? 'this client'}`}
+                emptyLabel="No saved photo for this analysis"
+              />
+
             </div>
           </Card>
           <Card className="space-y-4">
