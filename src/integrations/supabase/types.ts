@@ -13609,10 +13609,15 @@ export type Database = {
         Args: { _client_id: string; _error?: string; _status: string }
         Returns: undefined
       }
+      xcape_may_access_assessment_media: {
+        Args: { _actor: string; _assessment_id: string }
+        Returns: boolean
+      }
       xcape_may_archive_client: {
         Args: { _actor: string; _client_id: string }
         Returns: boolean
       }
+      xcape_media_path_parts: { Args: { _name: string }; Returns: string[] }
       xcape_normalise_phone: { Args: { _raw: string }; Returns: string }
       xcape_phone_key: {
         Args: { _default_dial?: string; _raw: string }

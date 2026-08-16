@@ -21,6 +21,8 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { formatNaira } from '@/lib/finance';
+import { pickPreferredImage } from '@/lib/xcapeMedia';
+
 
 /**
  * XCAPE Skin Journey — the product-facing client history for Affiliate / CDP
@@ -251,9 +253,13 @@ const JourneyBody = ({ clientId, client }: { clientId: string; client: RealClien
     }
     return map;
   }, [media]);
+  /** Front view where available; strictly scoped to the analysis it belongs to. */
+  const imageForAssessment = (assessmentId: string | null | undefined) =>
+    imageFor(pickPreferredImage(mediaByAssessment.get(assessmentId ?? '') ?? []));
 
   const latest = assessments[0];
-  const latestImage = imageFor(mediaByAssessment.get(latest?.id ?? '')?.[0] ?? media[0]);
+  const latestImage = imageForAssessment(latest?.id);
+
 
   const { data: reports = [] } = useQuery({
     queryKey: ['xcape-journey-reports', clientId],
@@ -422,7 +428,7 @@ const JourneyBody = ({ clientId, client }: { clientId: string; client: RealClien
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
                 {[from, to].map((a, i) => {
-                  const img = imageFor(mediaByAssessment.get(a?.id ?? '')?.[0]);
+                  const img = imageForAssessment(a?.id);
                   return (
                     <Card key={`${a?.id}-${i}`} className="space-y-3 p-0 overflow-hidden">
                       <div className="flex aspect-[4/3] items-center justify-center bg-muted">

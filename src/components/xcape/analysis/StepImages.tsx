@@ -41,6 +41,8 @@ interface PendingUpload {
 
 interface Props {
   client: RealClient;
+  /** The saved analysis every photo is attached to — created before this step. */
+  assessmentId: string;
   media: ClientMedia[];
   onAdd: (m: ClientMedia) => void;
   onRemove: (id: string) => void;
@@ -50,14 +52,18 @@ interface Props {
  * Step 2 — Images. Guides capture of the standard analysis views, performs
  * client-side quality checks (type, size, resolution warning), uploads to
  * the existing private `client-media` bucket with per-file state and retry.
+ *
+ * Every upload carries `assessmentId`: it is what links the photo to this
+ * analysis and what the partner storage policies authorize the write against.
  */
-const StepImages = ({ client, media, onAdd, onRemove }: Props) => {
+const StepImages = ({ client, assessmentId, media, onAdd, onRemove }: Props) => {
   const uploadMut = useUploadClientMedia();
   const deleteMut = useDeleteClientMedia();
   const [pending, setPending] = useState<PendingUpload[]>([]);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   /** Guided Facial Scan is the primary capture mode; upload is the fallback. */
   const [captureMode, setCaptureMode] = useState<'scan' | 'upload'>('scan');
+
 
   const remaining = MAX_IMAGES - media.length - pending.filter((p) => p.status === 'uploading').length;
   /** The scan needs three open slots for the Front / Left / Right views. */
@@ -86,10 +92,13 @@ const StepImages = ({ client, media, onAdd, onRemove }: Props) => {
     try {
       const row = await uploadMut.mutateAsync({
         clientId: client.id,
+        assessmentId,
+        requireAssessment: true,
         file: p.file,
         category: 'other',
         caption: 'XCAPE analysis image',
       });
+
       setPending((prev) => prev.filter((x) => x.tempId !== p.tempId));
       onAdd(row);
       toast.success(`"${p.name}" uploaded`);
@@ -182,6 +191,8 @@ const StepImages = ({ client, media, onAdd, onRemove }: Props) => {
       {captureMode === 'scan' && scanAvailable ? (
         <GuidedFacialScan
           client={client}
+          assessmentId={assessmentId}
+
           onUploaded={onAdd}
           onComplete={() => setCaptureMode('upload')}
           onFallback={() => setCaptureMode('upload')}

@@ -97,16 +97,27 @@ export const useUploadClientMedia = () => {
       category?: ClientMediaCategory;
       assessmentId?: string;
       caption?: string;
+      /**
+       * XCAPE capture paths set this. The photo MUST be attached to the saved
+       * assessment: partner RLS (table and storage) only accepts rows and
+       * objects carrying an assessment the caller may access, so uploading
+       * without one would silently produce unreachable media.
+       */
+      requireAssessment?: boolean;
       /** Optional extra columns (report_version, report_type, includes_sensitive_notes, visit_id, …). */
       extra?: Record<string, unknown>;
     }) => {
       const { clientId, file, caption, assessmentId, extra } = input;
+      if (input.requireAssessment && !assessmentId) {
+        throw new Error('This photo could not be linked to an analysis — reload and try again.');
+      }
       const category: ClientMediaCategory = input.category ?? input.kind ?? 'other';
       const kind: ClientMediaKind = (category === 'testimonial' ? 'other' : (category as ClientMediaKind));
       const fileType = deriveFileType(file.type);
       const { data: auth } = await supabase.auth.getUser();
       const userId = auth.user?.id;
       const path = buildStoragePath(clientId, category, assessmentId, file.name);
+
 
       const { error: upErr } = await supabase.storage
         .from(BUCKET)
