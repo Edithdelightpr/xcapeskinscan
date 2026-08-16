@@ -4,7 +4,7 @@ import {
   hasStaffRole,
   validatePartnerMedia,
   type MediaRowFacts,
-} from './aiMediaAccess';
+} from '../../supabase/functions/_shared/aiMediaAccess';
 
 const row = (over: Partial<MediaRowFacts> = {}): MediaRowFacts => ({
   id: 'm1',
