@@ -65,6 +65,104 @@ const Card = ({ children, className = '' }: { children: React.ReactNode; classNa
   <div className={`rounded-2xl border border-border bg-card p-5 ${className}`}>{children}</div>
 );
 
+/**
+ * "Remove client" — a safe archive, not a regulatory erase. Copy states
+ * exactly what happens: the client leaves your lists, shared report links stop
+ * working and stored photos are cleared, while analysis and order history is
+ * kept for records. Requires typing REMOVE to confirm.
+ */
+const RemoveClientAction = ({
+  clientId,
+  clientName,
+}: {
+  clientId: string;
+  clientName: string | null;
+}) => {
+  const [open, setOpen] = useState(false);
+  const [confirm, setConfirm] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const navigate = useNavigate();
+  const archive = useArchiveXcapeClient();
+  const ready = confirm.trim().toUpperCase() === 'REMOVE';
+
+  const submit = async () => {
+    if (!ready || archive.isPending) return;
+    setError(null);
+    try {
+      await archive.mutateAsync(clientId);
+      setOpen(false);
+      navigate('/xcape/clients', { replace: true });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'We could not remove this client.');
+    }
+  };
+
+  return (
+    <>
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        className="rounded-full text-destructive hover:text-destructive"
+        onClick={() => {
+          setConfirm('');
+          setError(null);
+          setOpen(true);
+        }}
+      >
+        <Trash2 className="mr-1 h-3.5 w-3.5" aria-hidden /> Remove client
+      </Button>
+
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Remove {clientName ?? 'this client'}?</DialogTitle>
+            <DialogDescription asChild>
+              <div className="space-y-2 text-left text-sm">
+                <p>This removes a bad or duplicate capture from your XCAPE clients. It will:</p>
+                <ul className="list-disc space-y-1 pl-5">
+                  <li>hide the client from your clients list and search</li>
+                  <li>stop every shared report link for them from working</li>
+                  <li>clear their stored skin photos</li>
+                </ul>
+                <p>
+                  Analysis records, orders and history are kept for your records. This is not a
+                  full personal-data erasure request.
+                </p>
+              </div>
+            </DialogDescription>
+          </DialogHeader>
+          <label className="block text-sm">
+            <span className="mb-1 block text-muted-foreground">Type REMOVE to confirm</span>
+            <Input
+              value={confirm}
+              onChange={(e) => setConfirm(e.target.value)}
+              placeholder="REMOVE"
+              aria-label="Type REMOVE to confirm"
+              autoComplete="off"
+            />
+          </label>
+          {error && <p className="text-sm text-destructive">{error}</p>}
+          <DialogFooter className="gap-2 sm:gap-2">
+            <Button type="button" variant="outline" className="rounded-full" onClick={() => setOpen(false)}>
+              Keep client
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              className="rounded-full"
+              disabled={!ready || archive.isPending}
+              onClick={submit}
+            >
+              {archive.isPending ? 'Removing…' : 'Remove client'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+};
+
 const XcapeSkinJourney = ({ clientId }: { clientId: string }) => {
   const [tab, setTab] = useState<Tab>('Overview');
   const { data: client, isLoading } = useRealClient(clientId);
@@ -138,19 +236,38 @@ const XcapeSkinJourney = ({ clientId }: { clientId: string }) => {
     return <p className="py-16 text-center text-sm text-muted-foreground">Loading skin journey…</p>;
   }
 
+  // Removed clients disappear from the product experience entirely.
+  if (!client) {
+    return (
+      <div className="space-y-4 py-12 text-center">
+        <h1 className="text-2xl font-semibold tracking-tight">Client no longer available</h1>
+        <p className="mx-auto max-w-md text-sm text-muted-foreground">
+          This client has been removed from your XCAPE clients. Their shared report links no longer
+          work and their photos have been cleared.
+        </p>
+        <Button asChild variant="outline" className="rounded-full">
+          <Link to="/xcape/clients">Back to clients</Link>
+        </Button>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
-      <div>
-        <Link
-          to="/xcape/clients"
-          className="inline-flex min-h-[44px] items-center gap-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-        >
-          <ArrowLeft className="h-4 w-4" aria-hidden /> Clients
-        </Link>
-        <h1 className="mt-1 text-3xl font-semibold tracking-tight">{client?.full_name ?? 'Skin Journey'}</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {assessments.length} analys{assessments.length === 1 ? 'is' : 'es'} · last {fmtDate(latest?.created_at)}
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <Link
+            to="/xcape/clients"
+            className="inline-flex min-h-[44px] items-center gap-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+          >
+            <ArrowLeft className="h-4 w-4" aria-hidden /> Clients
+          </Link>
+          <h1 className="mt-1 text-3xl font-semibold tracking-tight">{client?.full_name ?? 'Skin Journey'}</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {assessments.length} analys{assessments.length === 1 ? 'is' : 'es'} · last {fmtDate(latest?.created_at)}
+          </p>
+        </div>
+        <RemoveClientAction clientId={clientId} clientName={client?.full_name ?? null} />
       </div>
 
       <div className="flex gap-1 overflow-x-auto rounded-full border border-border p-1">

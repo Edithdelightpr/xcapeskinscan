@@ -10,27 +10,35 @@ export type ConversionRow = Database['public']['Tables']['client_conversions']['
 
 const KEY = ['real-clients'] as const;
 
-export const useRealClients = () =>
-  useQuery({
-    queryKey: KEY,
+/**
+ * Removed ("archived") clients are hidden from every normal list, search and
+ * picker. Pass `includeArchived` only for deliberate admin/audit surfaces.
+ */
+export const useRealClients = (options?: { includeArchived?: boolean }) => {
+  const includeArchived = options?.includeArchived === true;
+  return useQuery({
+    queryKey: [...KEY, includeArchived ? 'all' : 'active'] as const,
     queryFn: async (): Promise<RealClient[]> => {
-      const { data, error } = await supabase
-        .from('clients')
-        .select('*')
-        .order('created_at', { ascending: false });
+      let query = supabase.from('clients').select('*');
+      if (!includeArchived) query = query.or('archived.is.null,archived.eq.false');
+      const { data, error } = await query.order('created_at', { ascending: false });
       if (error) throw error;
       return data ?? [];
     },
   });
+};
 
-export const useRealClient = (id: string | undefined) =>
+export const useRealClient = (id: string | undefined, options?: { includeArchived?: boolean }) =>
   useQuery({
-    queryKey: ['real-client', id],
+    queryKey: ['real-client', id, options?.includeArchived === true ? 'all' : 'active'],
     enabled: !!id,
     queryFn: async () => {
       const { data, error } = await supabase.from('clients').select('*').eq('id', id!).maybeSingle();
       if (error) throw error;
-      return data as RealClient | null;
+      const row = data as (RealClient & { archived?: boolean | null }) | null;
+      if (!row) return null;
+      if (options?.includeArchived !== true && row.archived === true) return null;
+      return row as RealClient;
     },
   });
 

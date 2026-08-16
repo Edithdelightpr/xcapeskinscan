@@ -21,7 +21,7 @@ interface ReportRow {
   revoked_at: string | null;
   expires_at: string | null;
   token_prefix: string | null;
-  clients: { full_name: string; client_code: string } | null;
+  clients: { full_name: string; client_code: string; archived?: boolean | null } | null;
   client_visit_assessments: { created_at: string; main_concern: string | null } | null;
 }
 
@@ -43,11 +43,15 @@ const XcapeReports = () => {
     queryFn: async (): Promise<ReportRow[]> => {
       const { data, error } = await (supabase as any)
         .from('client_report_links')
-        .select('id, client_id, assessment_id, created_at, revoked_at, expires_at, token_prefix, clients(full_name, client_code), client_visit_assessments(created_at, main_concern)')
+        .select('id, client_id, assessment_id, created_at, revoked_at, expires_at, token_prefix, clients(full_name, client_code, archived), client_visit_assessments(created_at, main_concern)')
         .order('created_at', { ascending: false })
         .limit(200);
       if (error) throw error;
-      return (data ?? []) as unknown as ReportRow[];
+      // Removed (archived) clients drop out of the reports surface; their
+      // links are already revoked server-side by the archive transaction.
+      return ((data ?? []) as unknown as ReportRow[]).filter(
+        (r) => (r.clients as { archived?: boolean | null } | null)?.archived !== true,
+      );
     },
   });
 
