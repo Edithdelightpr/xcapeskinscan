@@ -513,20 +513,17 @@ const JourneyBody = ({ clientId, client }: { clientId: string; client: RealClien
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
                 {[from, to].map((a, i) => {
-                  const img = imageForAssessment(a?.id);
+                  const photo = photoState(a?.id);
                   return (
                     <Card key={`${a?.id}-${i}`} className="space-y-3 p-0 overflow-hidden">
                       <div className="flex aspect-[4/3] items-center justify-center bg-muted">
-                        {img ? (
-                          <img
-                            src={img}
-                            alt={`${i === 0 ? 'Before' : 'After'} image from ${fmtDate(a?.created_at)}`}
-                            className="h-full w-full object-cover"
-                          />
-                        ) : (
-                          <ImageIcon className="h-8 w-8 text-muted-foreground" aria-hidden />
-                        )}
+                        <PhotoFrame
+                          {...photo}
+                          onRetry={retryPhotos}
+                          alt={`${i === 0 ? 'Before' : 'After'} image from ${fmtDate(a?.created_at)}`}
+                        />
                       </div>
+
                       <div className="p-4 pt-0">
                         <p className="text-sm font-medium">{i === 0 ? 'Before' : 'After'} · {fmtDate(a?.created_at)}</p>
                       </div>
