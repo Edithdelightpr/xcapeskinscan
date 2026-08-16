@@ -10541,6 +10541,107 @@ export type Database = {
         }
         Relationships: []
       }
+      xcape_customization_usage_events: {
+        Row: {
+          active_name: string | null
+          active_product_id: string | null
+          approved_at: string | null
+          approved_by: string | null
+          assessment_id: string
+          base_product_id: string | null
+          base_product_name: string | null
+          captured_by: string | null
+          category: string
+          cdp_org_id: string
+          cdp_org_name: string | null
+          client_id: string
+          companion_dose_ml: number | null
+          companion_name: string | null
+          companion_product_id: string | null
+          dose_ml: number | null
+          formula_lines: Json
+          formula_snapshot_id: string
+          id: string
+          kit_name: string | null
+          kit_product_id: string | null
+          product_catalogue_version: string | null
+          protocol_version: string | null
+          recommendation_rule_version: number | null
+          recorded_at: string
+          rule_id: string | null
+          rule_version: number | null
+          rule_version_id: string | null
+        }
+        Insert: {
+          active_name?: string | null
+          active_product_id?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          assessment_id: string
+          base_product_id?: string | null
+          base_product_name?: string | null
+          captured_by?: string | null
+          category: string
+          cdp_org_id: string
+          cdp_org_name?: string | null
+          client_id: string
+          companion_dose_ml?: number | null
+          companion_name?: string | null
+          companion_product_id?: string | null
+          dose_ml?: number | null
+          formula_lines?: Json
+          formula_snapshot_id: string
+          id?: string
+          kit_name?: string | null
+          kit_product_id?: string | null
+          product_catalogue_version?: string | null
+          protocol_version?: string | null
+          recommendation_rule_version?: number | null
+          recorded_at?: string
+          rule_id?: string | null
+          rule_version?: number | null
+          rule_version_id?: string | null
+        }
+        Update: {
+          active_name?: string | null
+          active_product_id?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          assessment_id?: string
+          base_product_id?: string | null
+          base_product_name?: string | null
+          captured_by?: string | null
+          category?: string
+          cdp_org_id?: string
+          cdp_org_name?: string | null
+          client_id?: string
+          companion_dose_ml?: number | null
+          companion_name?: string | null
+          companion_product_id?: string | null
+          dose_ml?: number | null
+          formula_lines?: Json
+          formula_snapshot_id?: string
+          id?: string
+          kit_name?: string | null
+          kit_product_id?: string | null
+          product_catalogue_version?: string | null
+          protocol_version?: string | null
+          recommendation_rule_version?: number | null
+          recorded_at?: string
+          rule_id?: string | null
+          rule_version?: number | null
+          rule_version_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "xcape_customization_usage_events_formula_snapshot_id_fkey"
+            columns: ["formula_snapshot_id"]
+            isOneToOne: true
+            referencedRelation: "xcape_formula_snapshots"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       xcape_formula_snapshots: {
         Row: {
           active_name: string | null
@@ -13766,6 +13867,26 @@ export type Database = {
       }
       verify_cron_secret: { Args: { candidate: string }; Returns: boolean }
       visit_finance_netting: { Args: { p_visit_id: string }; Returns: Json }
+      xcape_admin_customization_usage: {
+        Args: { _from?: string; _org_id?: string; _to?: string }
+        Returns: {
+          active_name: string
+          active_product_id: string
+          approved_formula_count: number
+          category: string
+          cdp_org_id: string
+          cdp_org_name: string
+          companion_name: string
+          companion_product_id: string
+          first_approved_at: string
+          kit_name: string
+          kit_product_id: string
+          last_approved_at: string
+          total_combined_ml: number
+          total_companion_dose_ml: number
+          total_dose_ml: number
+        }[]
+      }
       xcape_affiliate_split_pct: { Args: never; Returns: number }
       xcape_archive_client: {
         Args: { _actor: string; _client_id: string }
