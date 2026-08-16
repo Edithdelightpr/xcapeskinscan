@@ -298,14 +298,25 @@ const JourneyBody = ({ clientId, client }: { clientId: string; client: RealClien
   const [tab, setTab] = useState<Tab>('Overview');
 
   const { data: assessments = [] } = useClientAssessments(clientId);
-  const { data: media = [] } = useClientMedia(clientId);
-  const { data: signed = {} } = useSignedMedia(media);
+  const {
+    data: media = [],
+    isPending: mediaLoading,
+    isError: mediaFailed,
+    refetch: refetchMedia,
+  } = useClientMedia(clientId);
+  const {
+    data: signed = {},
+    isPending: signedLoading,
+    isError: signedFailed,
+    refetch: refetchSigned,
+  } = useSignedMedia(media);
   const [shareFor, setShareFor] = useState<string | null>(null);
 
-  const imageFor = (m: ClientMedia | undefined) => {
-    const p = m?.storage_path ?? m?.bucket_path;
-    return p ? signed[p] : undefined;
+  const retryPhotos = () => {
+    void refetchMedia();
+    void refetchSigned();
   };
+
   const mediaByAssessment = useMemo(() => {
     const map = new Map<string, ClientMedia[]>();
     for (const m of media) {
@@ -315,12 +326,26 @@ const JourneyBody = ({ clientId, client }: { clientId: string; client: RealClien
     }
     return map;
   }, [media]);
-  /** Front view where available; strictly scoped to the analysis it belongs to. */
-  const imageForAssessment = (assessmentId: string | null | undefined) =>
-    imageFor(pickPreferredImage(mediaByAssessment.get(assessmentId ?? '') ?? []));
+
+  /**
+   * Front view where available; strictly scoped to the analysis it belongs to.
+   * Returns the honest state so no-photo and retrieval-failure never blur.
+   */
+  const photoState = (assessmentId: string | null | undefined) => {
+    const preferred = pickPreferredImage(mediaByAssessment.get(assessmentId ?? '') ?? []);
+    const path = preferred?.storage_path ?? preferred?.bucket_path ?? null;
+    const hasStoredPhoto = !mediaFailed && !!path;
+    return {
+      url: path ? signed[path] : undefined,
+      hasStoredPhoto,
+      loading: mediaLoading || (hasStoredPhoto && signedLoading),
+      failed: mediaFailed || (hasStoredPhoto && signedFailed),
+    };
+  };
 
   const latest = assessments[0];
-  const latestImage = imageForAssessment(latest?.id);
+  const latestPhoto = photoState(latest?.id);
+
 
 
   const { data: reports = [] } = useQuery({
