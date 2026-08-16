@@ -102,16 +102,24 @@ const RemoveClientAction = ({
     try {
       const result = await archive.mutateAsync(clientId);
       setOpen(false);
-      toast.success(`${clientName ?? 'Client'} removed`, {
-        description: result.cleanup_pending
-          ? 'Shared links no longer work. Photo cleanup is still finishing — retry removal if it does not complete.'
-          : 'Shared report links no longer work and stored photos were cleared.',
-      });
+      if (result.cleanup_pending) {
+        // Links are dead and the client is hidden, but the photo purge did not
+        // finish — never report that as a success.
+        toast.warning(`${clientName ?? 'Client'} removed — photo cleanup unfinished`, {
+          description:
+            'Shared report links no longer work. Some stored photos were not cleared yet — run Remove client again to finish the cleanup.',
+        });
+      } else {
+        toast.success(`${clientName ?? 'Client'} removed`, {
+          description: 'Shared report links no longer work and stored photos were cleared.',
+        });
+      }
       navigate('/xcape/clients', { replace: true });
     } catch (e) {
       setError(e instanceof Error ? e.message : 'We could not remove this client.');
     }
   };
+
 
   return (
     <>
