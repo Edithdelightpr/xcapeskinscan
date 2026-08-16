@@ -179,9 +179,37 @@ const RemoveClientAction = ({
   );
 };
 
+/** Shown when the client was removed, or never visible to this account. */
+const ClientUnavailable = () => (
+  <div className="space-y-4 py-12 text-center">
+    <h1 className="text-2xl font-semibold tracking-tight">Client no longer available</h1>
+    <p className="mx-auto max-w-md text-sm text-muted-foreground">
+      This client has been removed from your XCAPE clients. Their shared report links no longer
+      work and their photos have been cleared.
+    </p>
+    <Button asChild variant="outline" className="rounded-full">
+      <Link to="/xcape/clients">Back to clients</Link>
+    </Button>
+  </div>
+);
+
+/**
+ * Gate: no assessment, media, report-link or purchase query is started until
+ * the client query has resolved to a live (non-archived) client. A removed
+ * client therefore never triggers reads of their remaining records.
+ */
 const XcapeSkinJourney = ({ clientId }: { clientId: string }) => {
-  const [tab, setTab] = useState<Tab>('Overview');
   const { data: client, isLoading } = useRealClient(clientId);
+  if (isLoading) {
+    return <p className="py-16 text-center text-sm text-muted-foreground">Loading skin journey…</p>;
+  }
+  if (!client) return <ClientUnavailable />;
+  return <JourneyBody clientId={clientId} client={client} />;
+};
+
+const JourneyBody = ({ clientId, client }: { clientId: string; client: RealClient }) => {
+  const [tab, setTab] = useState<Tab>('Overview');
+
   const { data: assessments = [] } = useClientAssessments(clientId);
   const { data: media = [] } = useClientMedia(clientId);
   const { data: signed = {} } = useSignedMedia(media);
