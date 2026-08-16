@@ -35,6 +35,7 @@ import OutreachIntake from "./pages/OutreachIntake.tsx";
 import OutreachPortal from "./pages/OutreachPortal.tsx";
 import Unsubscribe from "./pages/Unsubscribe.tsx";
 import ManageBooking from "./pages/ManageBooking.tsx";
+import ReportCheckout from './pages/ReportCheckout';
 import PersonalReport from "./pages/PersonalReport.tsx";
 import { AuthProvider } from "./hooks/useAuth";
 import { ImpersonationProvider } from "./hooks/useImpersonation";
@@ -138,6 +139,7 @@ const App = () => (
             <Route path="/manage-booking" element={<ManageBooking />} />
             {/* Personal Report — token-only public link. Never indexed. */}
             <Route path="/report/:token" element={<PersonalReport />} />
+            <Route path="/report/:token/order" element={<ReportCheckout />} />
             {/* Client event invitation — token-only public RSVP link. */}
             <Route path="/invite/:token" element={<EventInvite />} />
             <Route path="/admin" element={<AuthGuard><MedSpaGuard><Admin /></MedSpaGuard></AuthGuard>} />
