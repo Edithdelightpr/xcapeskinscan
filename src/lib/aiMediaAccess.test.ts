@@ -52,7 +52,7 @@ describe('validatePartnerMedia', () => {
       ok: false,
       reason: 'archived_media',
     });
-    expect(validatePartnerMedia(['m1'], [row({ file_type: 'document' })], 'c1', 'a1')).toEqual({
+    expect(validatePartnerMedia(['m1'], [row({ file_type: 'pdf' })], 'c1', 'a1')).toEqual({
       ok: false,
       reason: 'not_image',
     });

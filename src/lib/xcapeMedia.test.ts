@@ -48,7 +48,7 @@ describe('pickPreferredImage', () => {
     const picked = pickPreferredImage([
       m({ id: '1', created_at: '2026-01-01T00:00:00Z' }),
       m({ id: '2', created_at: '2026-01-05T00:00:00Z' }),
-      m({ id: '3', file_type: 'document', created_at: '2026-02-01T00:00:00Z' }),
+      m({ id: '3', file_type: 'pdf', created_at: '2026-02-01T00:00:00Z' }),
     ]);
     expect(picked?.id).toBe('2');
   });
