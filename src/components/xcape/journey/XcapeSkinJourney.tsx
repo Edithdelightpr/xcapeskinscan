@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { ArrowLeft, Eye, ImageIcon, Share2, Trash2 } from 'lucide-react';
+import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useRealClient } from '@/hooks/useRealClients';
 import { useArchiveXcapeClient } from '@/hooks/useArchiveXcapeClient';
