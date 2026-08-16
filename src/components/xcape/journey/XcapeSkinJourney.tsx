@@ -198,9 +198,6 @@ const RemoveClientAction = ({
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-        </DialogContent>
-      </Dialog>
     </>
   );
 };
