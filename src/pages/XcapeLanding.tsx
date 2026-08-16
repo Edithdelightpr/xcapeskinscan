@@ -18,9 +18,20 @@ import { useAuth } from '@/hooks/useAuth';
  * keeps the existing Tropics theme untouched. The previous MedSpa landing
  * remains available at /medspa.
  */
+/**
+ * Restrained fixed-height neutral placeholder held while the session resolves,
+ * so neither guest onboarding nor member next steps flash, and the page does
+ * not shift when the real section mounts.
+ */
+const AuthResolvingBlock = () => (
+  <div className="mx-auto h-[420px] max-w-6xl px-6 py-16 lg:py-24" aria-hidden />
+);
+
 const XcapeLanding = () => {
   const { user, loading } = useAuth();
-  const signedIn = !loading && !!user;
+  // Never guess while the session is resolving: a returning member must not
+  // see guest onboarding flash before their next steps appear.
+  const signedIn = !!user;
 
   return (
     <div className="xcape-public min-h-screen bg-background text-foreground antialiased">
@@ -44,10 +55,16 @@ const XcapeLanding = () => {
       <main id="main">
         <XcapeHero />
         <XcapeHowItWorks />
-        {!signedIn && <XcapeJoinPaths />}
+        {loading ? <AuthResolvingBlock /> : !signedIn && <XcapeJoinPaths />}
         <XcapeFeaturesDark />
         <XcapeCredibilityStrip />
-        {signedIn ? <XcapeMemberNextSteps /> : <XcapeClosingCta />}
+        {loading ? (
+          <AuthResolvingBlock />
+        ) : signedIn ? (
+          <XcapeMemberNextSteps />
+        ) : (
+          <XcapeClosingCta />
+        )}
       </main>
 
       <InstallXcape />

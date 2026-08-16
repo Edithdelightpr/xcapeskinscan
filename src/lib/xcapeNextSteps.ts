@@ -40,17 +40,19 @@ const AFFILIATE: XcapeNextStepsSurface = {
     },
     {
       id: 'events',
-      title: 'Upcoming events',
-      description: 'See XCAPE activations and client events you can attend or RSVP to.',
+      title: 'Client events',
+      description:
+        'Create a client-facing event and issue private invitation links. An XCAPE network event directory is a later feature.',
       to: '/xcape/events',
-      cta: 'View events',
+      cta: 'Open client events',
     },
     {
       id: 'whats-new',
       title: "What's new at XCAPE",
-      description: 'Your latest analyses, reports and XCAPE activity in one place.',
-      to: '/xcape/history',
-      cta: 'View activity',
+      description:
+        'Shows your latest XCAPE activity and performance while network announcements are being prepared.',
+      to: '/xcape/performance',
+      cta: 'View your activity',
       pendingBackend: true,
     },
   ],
@@ -76,8 +78,8 @@ const CDP: XcapeNextStepsSurface = {
     },
     {
       id: 'events',
-      title: 'Upcoming events',
-      description: 'Plan client events and activations for your location.',
+      title: 'Client events',
+      description: 'Create client-facing events for your location and issue private invitation links.',
       to: '/xcape/events',
       cta: 'View events',
     },
@@ -132,8 +134,8 @@ const MEMBER: XcapeNextStepsSurface = {
     },
     {
       id: 'events',
-      title: 'Upcoming events',
-      description: 'XCAPE activations and client events.',
+      title: 'Client events',
+      description: 'Create client-facing events and issue private invitation links.',
       to: '/xcape/events',
       cta: 'View events',
     },
