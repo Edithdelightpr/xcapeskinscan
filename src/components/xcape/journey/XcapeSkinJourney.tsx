@@ -59,17 +59,78 @@ const useSignedMedia = (media: ClientMedia[]) => {
         .filter(Boolean) as string[],
     [media],
   );
-  return useQuery({
-    queryKey: ['xcape-journey-signed', paths.join(',')],
-    enabled: paths.length > 0,
-    queryFn: async (): Promise<Record<string, string>> => {
-      const { data } = await supabase.storage.from('client-media').createSignedUrls(paths, 900);
-      const out: Record<string, string> = {};
-      for (const s of data ?? []) if (s.path && s.signedUrl) out[s.path] = s.signedUrl;
-      return out;
-    },
-  });
+  return useSignedMediaUrls(paths, 'xcape-journey-signed');
 };
+
+/**
+ * One analysis photo slot with honest states: loading, genuinely no photo,
+ * retrieval failure (with Retry) and a broken-image fallback. A signing or
+ * fetch failure is never rendered as "no photo".
+ */
+const PhotoFrame = ({
+  url,
+  hasStoredPhoto,
+  loading,
+  failed,
+  onRetry,
+  alt,
+  emptyLabel = 'No saved photo for this analysis',
+}: {
+  url?: string;
+  hasStoredPhoto: boolean;
+  loading: boolean;
+  failed: boolean;
+  onRetry: () => void;
+  alt: string;
+  emptyLabel?: string;
+}) => {
+  const [broken, setBroken] = useState(false);
+  useEffect(() => setBroken(false), [url]);
+
+  const retry = (
+    <button
+      type="button"
+      onClick={() => {
+        setBroken(false);
+        onRetry();
+      }}
+      className="min-h-[36px] rounded-full border border-border px-4 text-sm font-medium"
+    >
+      Retry
+    </button>
+  );
+
+  let body: React.ReactNode;
+  if (!hasStoredPhoto) {
+    body = (
+      <span className="flex flex-col items-center gap-2 px-4 text-center text-muted-foreground">
+        <ImageIcon className="h-8 w-8" aria-hidden />
+        <span className="text-sm">{emptyLabel}</span>
+      </span>
+    );
+  } else if (failed || broken) {
+    body = (
+      <span className="flex flex-col items-center gap-2 px-4 text-center text-muted-foreground">
+        <ImageOff className="h-8 w-8" aria-hidden />
+        <span className="text-sm">Photo unavailable</span>
+        {retry}
+      </span>
+    );
+  } else if (loading || !url) {
+    body = <span className="text-sm text-muted-foreground">Loading photo…</span>;
+  } else {
+    return (
+      <img
+        src={url}
+        alt={alt}
+        className="h-full w-full object-cover"
+        onError={() => setBroken(true)}
+      />
+    );
+  }
+  return body as React.ReactElement;
+};
+
 
 const scoreEntries = (a: VisitAssessment | undefined) =>
   a ? Object.entries(scoresFromSkin((a.skin_analysis ?? {}) as never)) : [];
