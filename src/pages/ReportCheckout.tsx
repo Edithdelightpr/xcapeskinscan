@@ -133,7 +133,11 @@ const ReportCheckout = () => {
     try {
       const { data: res, error } = await (supabase.rpc as any)('submit_report_momo_order', {
         _report_token: token,
-        _items: eligible.map((l) => ({ product_id: l.product_id, quantity: l.quantity })),
+        _items: eligible.map((l) => ({
+          product_id: l.product_id,
+          quantity: l.quantity,
+          formula_snapshot_id: l.formula_snapshot_id,
+        })),
         _buyer_name: buyerName.trim(),
         _buyer_phone: buyerPhone.trim(),
         _sender_phone: senderPhone.trim(),
@@ -224,9 +228,13 @@ const ReportCheckout = () => {
           ) : (
             <div className="divide-y divide-bronze/10">
               {eligible.map((l) => (
-                <div key={l.product_id} className="py-2.5 flex items-center gap-3">
+                <div
+                  key={`${l.product_id}:${l.formula_snapshot_id ?? 'plain'}`}
+                  className="py-2.5 flex items-center gap-3"
+                >
                   <div className="min-w-0 flex-1">
                     <p className="text-sm text-cocoa truncate">{l.name}</p>
+                    {l.detail && <p className="text-[11.5px] text-bronze truncate">{l.detail}</p>}
                     <p className="text-xs text-cocoa/60">{formatFcfa(l.unit_price)} each</p>
                   </div>
                   <Input
@@ -235,7 +243,9 @@ const ReportCheckout = () => {
                     aria-label={`Quantity for ${l.name}`}
                     className="w-16 h-9"
                     value={l.quantity}
-                    onChange={(e) => setQty(l.product_id, Math.max(1, Number(e.target.value) || 1))}
+                    onChange={(e) =>
+                      setQty(l.product_id, Math.max(1, Number(e.target.value) || 1), l.formula_snapshot_id)
+                    }
                   />
                   <span className="text-sm font-semibold text-cocoa tabular-nums w-24 text-right">
                     {formatFcfa(l.unit_price * l.quantity)}
@@ -243,7 +253,7 @@ const ReportCheckout = () => {
                   <button
                     type="button"
                     aria-label={`Remove ${l.name}`}
-                    onClick={() => removeItem(l.product_id)}
+                    onClick={() => removeItem(l.product_id, l.formula_snapshot_id)}
                     className="text-cocoa/40 hover:text-cocoa"
                   >
                     <Trash2 className="w-4 h-4" />
