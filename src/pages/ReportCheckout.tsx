@@ -48,6 +48,8 @@ const ReportCheckout = () => {
   const removeItem = useCartStore((s) => s.removeItem);
   const clear = useCartStore((s) => s.clear);
   const report = useCartStore((s) => s.report);
+  const setReportContext = useCartStore((s) => s.setReportContext);
+
 
   const [buyerName, setBuyerName] = useState('');
   const [buyerPhone, setBuyerPhone] = useState('');
