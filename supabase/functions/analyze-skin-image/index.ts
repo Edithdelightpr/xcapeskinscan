@@ -33,7 +33,16 @@ interface Body {
   model?: string;
 }
 
-Deno.serve(async (req) => {
+Deno./**
+ * Postgres/Supabase errors carry query text, row values and storage paths.
+ * Only the structured, non-content fields are safe to log.
+ */
+const safePgError = (err: { code?: string | null; status?: number | null } | null) => ({
+  code: err?.code ?? null,
+  status: (err as { status?: number } | null)?.status ?? null,
+});
+
+serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
   if (req.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
 
@@ -79,7 +88,7 @@ Deno.serve(async (req) => {
       .select('id, client_id, assessment_id, archived, file_type, storage_path, bucket_path, mime_type')
       .in('id', body.media_ids);
     if (mediaErr) {
-      console.error('analyze-skin-image media lookup failed', mediaErr);
+      console.error('analyze-skin-image media lookup failed', safePgError(mediaErr));
       return json({ error: 'Could not load media' }, 500);
     }
     let rows = (mediaRows ?? []).filter((r) => r.client_id === body.client_id);
@@ -111,7 +120,7 @@ Deno.serve(async (req) => {
         { _assessment_id: body.assessment_id, _actor: caller.id },
       );
       if (accessErr) {
-        console.error('analyze-skin-image access check failed', accessErr);
+        console.error('analyze-skin-image access check failed', safePgError(accessErr));
         return json({ error: 'Server error' }, 500);
       }
       if (allowed !== true) return json({ error: 'Not authorized for this media' }, 403);
@@ -188,8 +197,11 @@ Deno.serve(async (req) => {
       result: parsed,
     });
   } catch (e) {
-    // Exception text can contain storage paths / signed URLs — log only.
-    console.error('analyze-skin-image failed', e);
+    // Exception text can contain storage paths / signed URLs / provider
+    // content — never log it, not even server-side. Only the error class name.
+    console.error('analyze-skin-image failed', {
+      name: e instanceof Error ? e.name : typeof e,
+    });
     return json({ error: 'Server error' }, 500);
   }
 });
