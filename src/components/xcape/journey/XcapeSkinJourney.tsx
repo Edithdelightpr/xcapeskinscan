@@ -276,25 +276,8 @@ const JourneyBody = ({ clientId, client }: { clientId: string; client: RealClien
   const from = assessments.find((a) => a.id === fromId) ?? assessments[assessments.length - 1];
   const to = assessments.find((a) => a.id === toId) ?? assessments[0];
 
-  if (isLoading) {
-    return <p className="py-16 text-center text-sm text-muted-foreground">Loading skin journey…</p>;
-  }
 
-  // Removed clients disappear from the product experience entirely.
-  if (!client) {
-    return (
-      <div className="space-y-4 py-12 text-center">
-        <h1 className="text-2xl font-semibold tracking-tight">Client no longer available</h1>
-        <p className="mx-auto max-w-md text-sm text-muted-foreground">
-          This client has been removed from your XCAPE clients. Their shared report links no longer
-          work and their photos have been cleared.
-        </p>
-        <Button asChild variant="outline" className="rounded-full">
-          <Link to="/xcape/clients">Back to clients</Link>
-        </Button>
-      </div>
-    );
-  }
+
 
   return (
     <div className="space-y-6">
