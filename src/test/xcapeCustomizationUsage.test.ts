@@ -19,8 +19,25 @@ const SQL = migrationSql();
 describe("xcape customization usage ledger — schema contract", () => {
   it("creates the ledger with one unique row per formula snapshot", () => {
     expect(SQL).toMatch(/CREATE TABLE IF NOT EXISTS public\.xcape_customization_usage_events/);
-    expect(SQL).toMatch(/formula_snapshot_id uuid NOT NULL UNIQUE/);
+    expect(SQL).toMatch(/formula_snapshot_id uuid NOT NULL UNIQUE,/);
   });
+
+  it("never cascades: formula_snapshot_id carries no foreign key to the source snapshots", () => {
+    expect(SQL).not.toMatch(
+      /formula_snapshot_id uuid NOT NULL UNIQUE REFERENCES public\.xcape_formula_snapshots/,
+    );
+    // no reference from the ledger to the mutable snapshot table at all
+    const ledgerCreate = SQL.slice(
+      SQL.indexOf("CREATE TABLE IF NOT EXISTS public.xcape_customization_usage_events"),
+    ).split(");")[0];
+    expect(ledgerCreate).not.toMatch(/REFERENCES/);
+    expect(ledgerCreate).not.toMatch(/ON DELETE CASCADE/);
+    // and the follow-up migration drops the constraint where it was already created
+    expect(SQL).toMatch(
+      /DROP CONSTRAINT IF EXISTS xcape_customization_usage_events_formula_snapshot_id_fkey/,
+    );
+  });
+
 
   it("captures the required audit fields", () => {
     for (const col of [
