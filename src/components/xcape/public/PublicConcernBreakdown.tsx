@@ -110,6 +110,10 @@ const PublicConcernBreakdown = ({ concerns, report, className }: Props) => {
                 </span>
               </AccordionTrigger>
               <AccordionContent className="space-y-4 border-t border-slate-800 px-3.5 pb-4 pt-4 sm:px-4">
+                <Field label="What XCAPE detected" value={c.detected} />
+                <Field label="Why it matters" value={c.whyItMatters} />
+                <Field label="If left unsupported" value={c.ifLeftUnsupported} />
+                <Field label="XCAPE response" value={c.xcapeResponse} />
                 {observation && (
                   <div className="rounded-xl border border-slate-700/70 bg-slate-800/40 p-3">
                     <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
@@ -118,10 +122,6 @@ const PublicConcernBreakdown = ({ concerns, report, className }: Props) => {
                     <p className="mt-1 text-sm leading-relaxed text-slate-200">{observation}</p>
                   </div>
                 )}
-                <Field label="What XCAPE detected" value={c.detected} />
-                <Field label="Why it matters" value={c.whyItMatters} />
-                <Field label="If left unsupported" value={c.ifLeftUnsupported} />
-                <Field label="XCAPE response" value={c.xcapeResponse} />
                 {c.reassurance && (
                   <p className="text-xs leading-relaxed text-slate-400">{c.reassurance}</p>
                 )}
