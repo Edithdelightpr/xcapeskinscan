@@ -230,7 +230,7 @@ const PublicReportStage = ({
 
           <p className="flex items-start gap-2 text-xs text-slate-500">
             <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
-            Your photos are stored privately and deleted within 24 hours. XCAPE provides cosmetic
+            Your photos are stored privately. Side views are deleted within 24 hours; your front photo is kept on your record when you request your report. XCAPE provides cosmetic
             skin-health guidance only and does not diagnose or treat any condition.
           </p>
         </div>
