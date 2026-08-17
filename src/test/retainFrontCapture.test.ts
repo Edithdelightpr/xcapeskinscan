@@ -22,7 +22,7 @@ const makeAdmin = (opts: { existing?: unknown[] } = {}) => {
     }),
     storage: {
       from: (bucket: string) => ({
-        download: async () => ({ data: new Blob([new Uint8Array([1, 2, 3])]), error: null }),
+        download: async () => ({ data: { arrayBuffer: async () => new Uint8Array([1, 2, 3]).buffer }, error: null }),
         upload: async (path: string) => {
           uploads.push({ bucket, path });
           return { error: null };
