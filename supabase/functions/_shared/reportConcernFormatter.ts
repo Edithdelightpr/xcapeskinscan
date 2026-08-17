@@ -139,7 +139,7 @@ export function greetingFor(firstName: string | null | undefined): string {
 export function pdfHeadlineFor(firstName: string | null | undefined): string {
   const name = sanitizeFirstName(firstName ?? null);
   return name
-    ? `Personal Skin Assessment — Prepared for ${name}`
+    ? `Personal Skin Assessment: Prepared for ${name}`
     : 'Personal Skin Assessment';
 }
 

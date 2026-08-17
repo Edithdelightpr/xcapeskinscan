@@ -54,7 +54,7 @@ const PublicShareReportForm = ({ token, onShared }: Props) => {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      setError('Copying failed — long-press the link to copy it.');
+      setError('Copying failed. Long-press the link to copy it.');
     }
   };
 

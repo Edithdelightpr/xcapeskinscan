@@ -45,7 +45,7 @@ describe('sanitizeFirstName / greetingFor / pdfHeadlineFor', () => {
   it('accepts a normal first name', () => {
     expect(sanitizeFirstName('Ada')).toBe('Ada');
     expect(greetingFor('Ada')).toBe('Welcome, Ada');
-    expect(pdfHeadlineFor('Ada')).toBe('Personal Skin Assessment — Prepared for Ada');
+    expect(pdfHeadlineFor('Ada')).toBe('Personal Skin Assessment: Prepared for Ada');
   });
 
   it('takes only the first token from a full name', () => {
@@ -267,7 +267,7 @@ describe('formatReport', () => {
       assessment: { ...baseAssessment, skin_analysis: buildSkinAnalysis() },
     });
     expect(report.client.greeting).toBe('Welcome, Ada');
-    expect(report.client.pdfHeadline).toBe('Personal Skin Assessment — Prepared for Ada');
+    expect(report.client.pdfHeadline).toBe('Personal Skin Assessment: Prepared for Ada');
     const hydration = report.concerns.find((c) => c.key === 'barrier_surface_hydration')!;
     expect(hydration.clinicalName).toBe('Surface Dehydration');
     expect(hydration.score).toBe(72);

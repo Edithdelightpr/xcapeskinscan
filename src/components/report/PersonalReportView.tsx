@@ -147,7 +147,7 @@ const PersonalReportView = ({ data, token, onDownloadPdf, downloadDisabled }: Pr
         )}
         {data.merchant && data.merchant.kind === 'cdp' && (
           <p className="rounded-xl border border-bronze/25 bg-white/70 px-4 py-3 text-sm text-cocoa/80">
-            Available through <span className="font-medium text-cocoa">{data.merchant.name}</span> — your
+            Available through <span className="font-medium text-cocoa">{data.merchant.name}</span>. Your
             XCAPE partner location handles pricing, payment and collection for anything you order here.
           </p>
         )}

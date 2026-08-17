@@ -20,7 +20,7 @@ const EngineOverviewCard = ({ skinAnalysis }: Props) => {
   const mainVisible = sa.main_visible_concern?.trim() || null;
   const disclaimer = sa.ai_assist?.disclaimer?.trim() || null;
   const imageUnusable = sa.ai_assist?.image_quality?.usable === false
-    ? sa.ai_assist?.image_quality?.notes?.trim() || 'Image quality was limited — findings are directional only.'
+    ? sa.ai_assist?.image_quality?.notes?.trim() || 'Image quality was limited, so findings are directional only.'
     : null;
 
   if (!combined && !summary && !skinType && !mainVisible) return null;

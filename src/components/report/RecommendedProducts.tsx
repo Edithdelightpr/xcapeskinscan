@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 import type { ReportProduct } from '@/hooks/useReportPayload';
 import { logReportEvent } from '@/hooks/useReportPayload';
 import { useCartStore } from '@/store/cartStore';
-import { formatFcfa } from '@/lib/xcapeRetail';
+import { formatMoney } from '@/lib/xcapeRetail';
 
 interface Props {
   token: string;
@@ -50,7 +50,7 @@ const RecommendedProducts = ({
     setAdded((prev) => new Set(prev).add(p.id));
     logReportEvent(token, 'product_interest', { product_id: p.id, name: p.name, quantity });
     toast.success(`${p.name} added to your care plan`, {
-      description: `Quantity ${quantity} · ${formatFcfa(p.selling_price * quantity)}`,
+      description: `Quantity ${quantity} · ${formatMoney(p.selling_price * quantity, p.currency)}`,
     });
   };
 
@@ -66,7 +66,7 @@ const RecommendedProducts = ({
       </div>
       {!orderingAvailable && (
         <p className="mb-5 rounded-xl border border-bronze/25 bg-white/70 px-4 py-3 text-[12.5px] text-cocoa/80">
-          Online ordering is not available for this report yet — {merchantName} has not set up
+          Online ordering is not available for this report yet. {merchantName} has not set up
           Mobile Money payments.
           {merchantContactPhone ? ` Call ${merchantContactPhone} to order.` : ' Contact your practitioner to order.'}
         </p>
@@ -101,7 +101,7 @@ const RecommendedProducts = ({
 
                 <div className="mt-auto pt-4 flex items-center justify-between gap-3 flex-wrap">
                   <span className="text-[15px] text-cocoa font-semibold tabular-nums">
-                    {p.selling_price != null ? formatFcfa(p.selling_price) : 'Price not configured'}
+                    {p.selling_price != null ? formatMoney(p.selling_price, p.currency) : 'Price not configured'}
                   </span>
                   <div className="flex items-center gap-2">
                     {!disabled && (

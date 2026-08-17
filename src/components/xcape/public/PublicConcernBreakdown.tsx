@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 
 import {
@@ -42,21 +42,21 @@ const Field = ({ label, value }: { label: string; value: string }) => (
  * page, and no product, kit, dose or price is shown.
  */
 const PublicConcernBreakdown = ({ concerns, report, className }: Props) => {
-  // Every ACTIVE concern opens in full by default; stable findings stay
-  // collapsed. Controlled multi-value state, so opening one item can never
-  // close another active concern the client still needs to read.
-  const activeKeys = concerns.filter((c) => c.isActive).map((c) => c.key);
-  const initialOpen = activeKeys.length > 0
-    ? activeKeys
-    : (concerns[0] ? [concerns[0].key] : []);
-  const [open, setOpen] = useState<string[]>(initialOpen);
+  // Every ACTIVE concern opens in full by default. When every finding is
+  // stable, nothing is forced open. Controlled multi-value state, updated in
+  // an effect (never during render), so opening one item can never close
+  // another active concern the client still needs to read.
   const signature = concerns.map((c) => `${c.key}:${c.isActive ? 1 : 0}`).join('|');
-  const lastSignature = useRef(signature);
-  if (lastSignature.current !== signature) {
-    // New reading arrived: re-open the freshly active concerns.
-    lastSignature.current = signature;
+  const initialOpen = useMemo(
+    () => concerns.filter((c) => c.isActive).map((c) => c.key),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [signature],
+  );
+  const [open, setOpen] = useState<string[]>(initialOpen);
+  useEffect(() => {
+    // New reading arrived: re-open exactly the freshly active concerns.
     setOpen(initialOpen);
-  }
+  }, [initialOpen]);
 
   if (concerns.length === 0) return null;
 

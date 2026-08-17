@@ -34,7 +34,7 @@ describe('XCAPE retail catalogue', () => {
   it('formats money as FCFA, never Naira', () => {
     expect(formatFcfa(15000)).toBe('15,000 FCFA');
     expect(formatFcfa(25000)).toBe('25,000 FCFA');
-    expect(formatFcfa(null)).toBe('—');
+    expect(formatFcfa(null)).toBe('Not available');
     expect(formatFcfa(15000)).not.toContain('₦');
   });
 });

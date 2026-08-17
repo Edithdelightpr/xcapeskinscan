@@ -55,8 +55,8 @@ describe('CustomizationFormulaCard mock mode', () => {
     );
     const button = screen.getByRole('button', { name: /add customized kit to cart/i });
     expect(button).toBeDisabled();
-    expect(button).toHaveAttribute('title', 'Mockup only — not purchasable');
-    expect(screen.getByText('Mockup only — not purchasable')).toBeInTheDocument();
+    expect(button).toHaveAttribute('title', 'Mockup only, not purchasable');
+    expect(screen.getByText('Mockup only, not purchasable')).toBeInTheDocument();
   });
 
   it('clicking the mock CTA never calls cart addItem and logs no event', () => {

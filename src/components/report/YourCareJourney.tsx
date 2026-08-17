@@ -53,7 +53,7 @@ const YourCareJourney = ({ data }: Props) => {
         ? new Date(cj.next_treatment.planned_date).toLocaleDateString(undefined, {
             month: 'short', day: 'numeric',
           })
-        : (cj.next_treatment.service_name ?? '—'),
+        : (cj.next_treatment.service_name ?? 'Not scheduled'),
     });
   }
 
@@ -142,7 +142,7 @@ const YourCareJourney = ({ data }: Props) => {
             <span className="font-semibold">Next up:</span>{' '}
             {cj.next_treatment?.service_name ?? 'Your next treatment'}
             {cj.next_treatment?.planned_date && (
-              <> — {new Date(cj.next_treatment.planned_date).toLocaleDateString(undefined, {
+              <>, {new Date(cj.next_treatment.planned_date).toLocaleDateString(undefined, {
                 weekday: 'short', month: 'short', day: 'numeric',
               })}</>
             )}

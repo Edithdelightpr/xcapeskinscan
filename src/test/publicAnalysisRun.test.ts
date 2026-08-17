@@ -66,6 +66,22 @@ describe('public prompt', () => {
     expect(p).toContain('never promise or imply an outcome');
   });
 
+  it('demands the visible shortcoming first', () => {
+    const p = PUBLIC_ANALYSIS_SYSTEM_PROMPT.toLowerCase();
+    expect(p).toContain('name the visible shortcoming first');
+    expect(p).toContain('before any stable or positive feature');
+  });
+
+  it('explicitly forbids product, formula, ingredient, dose and price talk', () => {
+    const p = PUBLIC_ANALYSIS_SYSTEM_PROMPT.toLowerCase();
+    for (const forbidden of ['product', 'kit', 'ingredient', 'active', 'dose', 'formula', 'price']) {
+      expect(p).toContain(forbidden);
+    }
+    expect(p).toMatch(
+      /never name, suggest or imply any product, kit, ingredient, active, dose, formula, contraindication or price/i,
+    );
+  });
+
   it('uses the exact required disclaimer', () => {
     expect(PUBLIC_ANALYSIS_DISCLAIMER).toBe(
       'XCAPE provides AI-assisted cosmetic skin-pattern insights for education and personal care planning. It is not a medical diagnosis or a substitute for professional medical advice.',
