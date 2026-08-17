@@ -168,7 +168,8 @@ describe('priority synthesis', () => {
       oil_congestion_balance: 93,
     });
     expect(syn.allStable).toBe(true);
-    expect(syn.headline.toLowerCase()).toContain('maintain');
+    expect(syn.headline.toLowerCase().includes('maintenance focus')).toBe(true);
+    expect(syn.headline.toLowerCase()).not.toContain('needs attention');
     // Even when stable it must still name a focus area, never claim perfection.
     expect(syn.weakest.length).toBeGreaterThan(0);
   });
