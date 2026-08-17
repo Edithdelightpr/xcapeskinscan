@@ -71,6 +71,41 @@ describe('PublicConcernBreakdown hierarchy', () => {
     expect(screen.queryByText('detected pigmentation_stability')).toBeNull();
     expect(screen.queryByText('detected firmness_skin_support')).toBeNull();
   });
+
+  it('renders Visible observation after XCAPE response for an active concern', () => {
+    const { container } = render(
+      <PublicConcernBreakdown
+        concerns={[concern('pigmentation_stability', true, 30)]}
+        report={
+          {
+            concerns: [
+              { key: 'pigmentation_stability', observation: 'observed surface pattern' },
+            ],
+          } as never
+        }
+      />,
+    );
+    const text = container.textContent ?? '';
+    const responseIdx = text.indexOf('response pigmentation_stability');
+    const obsIdx = text.indexOf('Visible observation');
+    expect(responseIdx).toBeGreaterThan(-1);
+    if (obsIdx > -1) expect(obsIdx).toBeGreaterThan(responseIdx);
+    // order of controlled fields is canonical
+    expect(text.indexOf('detected pigmentation_stability')).toBeLessThan(
+      text.indexOf('why pigmentation_stability'),
+    );
+    expect(text.indexOf('risk pigmentation_stability')).toBeLessThan(responseIdx);
+  });
+});
+
+describe('secure report protocol copy', () => {
+  it('states pending practitioner confirmation and not purchasable', () => {
+    const src = readFileSync('src/components/report/PersonalReportView.tsx', 'utf8');
+    expect(src).toContain(
+      'Pending practitioner confirmation. This protocol is not yet purchasable.',
+    );
+    expect(src).not.toMatch(/footnote="[^"]*\u2014/);
+  });
 });
 
 describe('public report stage contract', () => {
