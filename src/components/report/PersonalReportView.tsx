@@ -55,7 +55,11 @@ const PersonalReportView = ({ data, token, onDownloadPdf, downloadDisabled }: Pr
       <main className="max-w-5xl mx-auto px-4 sm:px-6 pb-24 sm:pb-32 space-y-8 sm:space-y-16">
         {/* Priority synthesis leads the report — before the care journey,
             promotions or any long positive copy. */}
-        <PriorityFindings priority={report.priority} concerns={report.concerns} />
+        <PriorityFindings
+          priority={report.priority}
+          concerns={report.concerns}
+          capturedImageUrl={data.captured_image?.url ?? null}
+        />
         <YourCareJourney data={data} />
         <MainConcernCard
           mainConcern={report.assessment.mainConcern}
