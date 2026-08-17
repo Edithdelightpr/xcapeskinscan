@@ -11,6 +11,8 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
 import { corsHeaders, json, sha256Hex } from '../_shared/publicAnalysis.ts';
 import { deriveToken, reportUrl, sha256Hex as tokenHash } from '../_shared/reportLinkToken.ts';
+import { retainFrontCapture } from '../_shared/retainScanPhoto.ts';
+
 import { publicAppUrl } from '../_shared/publicAppUrl.ts';
 import { buildReportShareMessage, whatsAppShareUrl } from '../_shared/reportShareMessage.ts';
 import {
