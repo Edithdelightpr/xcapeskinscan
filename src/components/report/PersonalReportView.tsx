@@ -9,6 +9,7 @@ import { formulasByCategory } from '@/lib/reportFormulas';
 import ReportHeader from '@/components/report/ReportHeader';
 import MainConcernCard from '@/components/report/MainConcernCard';
 import ConcernCard from '@/components/report/ConcernCard';
+import PriorityFindings from '@/components/report/PriorityFindings';
 import ClientProtocolPlan from '@/components/xcape/protocol/ClientProtocolPlan';
 import HomeCareRoutine from '@/components/report/HomeCareRoutine';
 import RecommendedTreatments from '@/components/report/RecommendedTreatments';
@@ -52,6 +53,9 @@ const PersonalReportView = ({ data, token, onDownloadPdf, downloadDisabled }: Pr
         downloadDisabled={downloadDisabled ?? !onDownloadPdf}
       />
       <main className="max-w-5xl mx-auto px-4 sm:px-6 pb-24 sm:pb-32 space-y-8 sm:space-y-16">
+        {/* Priority synthesis leads the report — before the care journey,
+            promotions or any long positive copy. */}
+        <PriorityFindings priority={report.priority} concerns={report.concerns} />
         <YourCareJourney data={data} />
         <MainConcernCard
           mainConcern={report.assessment.mainConcern}
@@ -66,6 +70,10 @@ const PersonalReportView = ({ data, token, onDownloadPdf, downloadDisabled }: Pr
               <h2 id="concerns" className="mt-1 font-display text-xl sm:text-3xl text-cocoa tracking-tight">
                 A closer look at each finding
               </h2>
+              <p className="mt-1 text-[13px] text-cocoa/65">
+                Ordered from the area that needs the most support to the area doing best. Stable
+                findings stay collapsed, with their scores visible.
+              </p>
             </div>
             <div className="space-y-4 sm:space-y-5">
               {report.concerns.map((c) => (
