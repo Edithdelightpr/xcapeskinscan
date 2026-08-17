@@ -36,31 +36,42 @@ describe('communication bands', () => {
       [21, 'active'], [40, 'active'],
       [41, 'correction'], [60, 'correction'],
       [61, 'watch'], [80, 'watch'],
-      [81, 'maintenance'], [90, 'maintenance'],
-      [91, 'preventive'], [100, 'preventive'],
+      [81, 'maintenance'], [89, 'maintenance'],
+      [90, 'healthy'], [100, 'healthy'],
     ];
     for (const [score, band] of cases) {
       expect(communicationBandFor(score).band, `score ${score}`).toBe(band);
     }
   });
 
-  it('treats 80 as active and 81 as stable', () => {
-    expect(isActiveConcern(80)).toBe(true);
-    expect(isActiveConcern(81)).toBe(false);
+  it('is Healthy if and only if the score is 90 or above, for every integer 0-100', () => {
+    for (let s = 0; s <= 100; s++) {
+      const label = communicationBandFor(s).label;
+      expect(label === 'Healthy', `score ${s} label ${label}`).toBe(s >= 90);
+      expect(isActiveConcern(s), `active at ${s}`).toBe(s < 90);
+    }
   });
 
-  it('never labels anything below 91 as Optimal and never says Improving', () => {
-    for (let s = 0; s <= 90; s++) {
-      expect(communicationBandFor(s).label.toLowerCase()).not.toContain('optimal');
-    }
-    for (const band of COMM_BANDS) {
-      expect(band.label.toLowerCase()).not.toContain('improving');
+  it('pins 89 as a maintenance concern and 90 as the first Healthy score', () => {
+    expect(communicationBandFor(89).label).toBe('Maintenance concern');
+    expect(isActiveConcern(89)).toBe(true);
+    expect(communicationBandFor(90).label).toBe('Healthy');
+    expect(isActiveConcern(90)).toBe(false);
+  });
+
+  it('uses no minimising or healthy-sounding status label below 90', () => {
+    const banned = ['minimal concern', 'mild concern', 'improving', 'optimal', 'stable', 'strong', 'healthy'];
+    for (let s = 0; s < 90; s++) {
+      const label = communicationBandFor(s).label.toLowerCase();
+      for (const word of banned) {
+        expect(label.includes(word), `score ${s} label "${label}" contains "${word}"`).toBe(false);
+      }
     }
   });
 
   it('clamps out-of-range scores instead of throwing', () => {
     expect(communicationBandFor(-40).band).toBe('priority');
-    expect(communicationBandFor(400).band).toBe('preventive');
+    expect(communicationBandFor(400).band).toBe('healthy');
   });
 });
 
@@ -164,7 +175,7 @@ describe('priority synthesis', () => {
     const syn = prioritySynthesis({
       pigmentation_stability: 92,
       barrier_surface_hydration: 95,
-      firmness_skin_support: 88,
+      firmness_skin_support: 90,
       oil_congestion_balance: 93,
     });
     expect(syn.allStable).toBe(true);
@@ -172,6 +183,26 @@ describe('priority synthesis', () => {
     expect(syn.headline.toLowerCase()).not.toContain('needs attention');
     // Even when stable it must still name a focus area, never claim perfection.
     expect(syn.weakest.length).toBeGreaterThan(0);
+  });
+
+  it('treats an 81-89 reading as needing attention, never as all stable', () => {
+    const syn = prioritySynthesis({
+      pigmentation_stability: 89,
+      barrier_surface_hydration: 95,
+      firmness_skin_support: 96,
+      oil_congestion_balance: 97,
+    });
+    expect(syn.allStable).toBe(false);
+    expect(syn.weakest[0]).toBe('pigmentation_stability');
+    expect(syn.headline.toLowerCase()).toContain('needs attention');
+  });
+
+  it('leads every 81-89 detected line with the remaining visible shortcoming', () => {
+    for (const key of LANGUAGE_VARIABLE_KEYS) {
+      const detected = clientCopyFor(key, 85).detected.toLowerCase();
+      expect(/still visible|still be seen/.test(detected), `${key}: ${detected}`).toBe(true);
+      expect(/nothing in this capture|no visible|no meaningful/.test(detected), key).toBe(false);
+    }
   });
 
   it('returns a safe empty synthesis with no scores', () => {

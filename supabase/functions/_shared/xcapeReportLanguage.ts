@@ -305,7 +305,7 @@ const RESPONSE: Record<LanguageVariableKey, Record<Tier, string>> = {
     early:
       `XCAPE applies its exfoliating and melanin-control direction with the required anti-inflammatory companion, at the lighter dose your score calls for. ${PRACTITIONER_NOTE}`,
     maintenance:
-      'XCAPE treats this as a maintenance concern: tone support is kept light and consistent rather than corrective, and your practitioner confirms whether any customization is prepared.',
+      'XCAPE holds this at maintenance support: tone support is kept light and consistent rather than corrective, and your practitioner confirms whether any customization is prepared.',
     stable:
       'XCAPE keeps this in preventive care. No pigmentation customization is called for by this score alone.',
   },
@@ -317,7 +317,7 @@ const RESPONSE: Record<LanguageVariableKey, Record<Tier, string>> = {
     early:
       `XCAPE customizes your facial moisturizer at the lighter dose your score calls for. ${PRACTITIONER_NOTE}`,
     maintenance:
-      'XCAPE treats this as a maintenance concern: hydration support is kept light and consistent, and your practitioner confirms whether any customization is prepared.',
+      'XCAPE holds this at maintenance support: hydration support is kept light and consistent, and your practitioner confirms whether any customization is prepared.',
     stable:
       'XCAPE keeps this in maintenance. No hydration customization is called for by this score alone.',
   },
@@ -329,7 +329,7 @@ const RESPONSE: Record<LanguageVariableKey, Record<Tier, string>> = {
     early:
       `XCAPE applies its anti-aging and elasticity direction at the lighter dose your score calls for. ${PRACTITIONER_NOTE}`,
     maintenance:
-      'XCAPE treats this as a maintenance concern: firmness support is kept steady and light, and your practitioner confirms whether any customization is prepared.',
+      'XCAPE holds this at maintenance support: firmness support is kept steady and light, and your practitioner confirms whether any customization is prepared.',
     stable:
       'XCAPE keeps this in preventive care. No elasticity customization is called for by this score alone.',
   },
@@ -341,7 +341,7 @@ const RESPONSE: Record<LanguageVariableKey, Record<Tier, string>> = {
     early:
       `XCAPE applies the overactive-sebaceous direction with its required companion at the lighter dose your score calls for. ${PRACTITIONER_NOTE}`,
     maintenance:
-      'XCAPE treats this as a maintenance concern: oil and congestion support is kept light and consistent, and your practitioner confirms whether any customization is prepared.',
+      'XCAPE holds this at maintenance support: oil and congestion support is kept light and consistent, and your practitioner confirms whether any customization is prepared.',
     stable:
       'XCAPE keeps this in maintenance. No sebaceous customization is called for by this score alone.',
   },
