@@ -33,11 +33,46 @@ export const XCAPE_RETAIL_DEFAULT_PRICES: Record<XcapeRetailSku, number> = {
 export const isXcapeRetailSku = (sku: string | null | undefined): sku is XcapeRetailSku =>
   !!sku && (XCAPE_RETAIL_SKUS as readonly string[]).includes(sku);
 
-/** "15,000 FCFA" — never a currency symbol, never NGN. */
-export const formatFcfa = (amount: number | null | undefined): string => {
-  if (amount == null || !Number.isFinite(Number(amount))) return '—';
-  return `${new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(Math.round(Number(amount)))} FCFA`;
+/**
+ * The single platform default report currency. There is no per-organization
+ * currency column today, so every surface (public-report-fetch, staff preview
+ * and the PDF) resolves through `resolveReportCurrency` instead of hard-coding
+ * a code of its own. When per-org currency lands, only this helper changes.
+ */
+export const PLATFORM_REPORT_CURRENCY = XCAPE_CURRENCY;
+
+/** Role-resolved report currency. Falls back to the platform default. */
+export const resolveReportCurrency = (
+  orgCurrency?: string | null,
+): string => {
+  const code = (orgCurrency ?? '').trim().toUpperCase();
+  return /^[A-Z]{3}$/.test(code) ? code : PLATFORM_REPORT_CURRENCY;
 };
+
+/**
+ * Pure money formatter. XAF renders as "15,000 FCFA", NGN as "₦15,000"
+ * (or "NGN 15,000" in ascii mode, for PDF standard fonts), and any other
+ * ISO code falls back to "15,000 <CODE>".
+ */
+export const formatMoney = (
+  amount: number | null | undefined,
+  currency: string | null | undefined = PLATFORM_REPORT_CURRENCY,
+  opts: { ascii?: boolean; placeholder?: string } = {},
+): string => {
+  const placeholder = opts.placeholder ?? '—';
+  if (amount == null || !Number.isFinite(Number(amount))) return placeholder;
+  const nice = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 })
+    .format(Math.round(Number(amount)));
+  const code = resolveReportCurrency(currency);
+  if (code === 'XAF') return `${nice} FCFA`;
+  if (code === 'NGN') return opts.ascii ? `NGN ${nice}` : `₦${nice}`;
+  return `${nice} ${code}`;
+};
+
+/** "15,000 FCFA" — never a currency symbol, never NGN. */
+export const formatFcfa = (amount: number | null | undefined): string =>
+  formatMoney(amount, XCAPE_CURRENCY);
+
 
 /**
  * A price of 0/blank/absent is an unconfigured row, never a free product.

@@ -10,7 +10,7 @@ import { buildCareJourneyBlock } from '../_shared/reportCareJourney.ts';
 import { sanitizeSnapshotLines } from '../_shared/xcapeProtocol.ts';
 import { sanitizePublicProtocolSnapshot } from '../_shared/publicProtocolSnapshot.ts';
 import { sanitizeReportSkinAnalysis } from '../_shared/reportSkinAnalysis.ts';
-import { resolveReportMerchant, usablePrice } from '../_shared/xcapeMerchant.ts';
+import { resolveReportMerchant, usablePrice, resolveReportCurrency } from '../_shared/xcapeMerchant.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -183,17 +183,70 @@ Deno.serve(async (req) => {
     }
 
     // ---- Commercial routing parity with public-report-fetch ----
-    // A preview has no report link, so it resolves to the XCAPE-root
-    // fallback, using the same helper and the same live price rules.
+    // The preview must show the SAME merchant and the SAME live prices the
+    // client will see, so resolve the relevant report link for this
+    // assessment (latest non-revoked) to recover origin_role / origin_org.
+    // With no link yet, routing falls back to XCAPE root.
+    const { data: previewLink } = await admin
+      .from('client_report_links')
+      .select('origin_role, origin_org_id, revoked_at, created_at')
+      .eq('assessment_id', assessment.id)
+      .is('revoked_at', null)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    // deno-lint-ignore no-explicit-any
+    let originOrg: any = null;
+    if (previewLink?.origin_org_id) {
+      const { data: org } = await admin
+        .from('organizations')
+        .select('id, name, kind, status')
+        .eq('id', previewLink.origin_org_id)
+        .maybeSingle();
+      originOrg = org ?? null;
+    }
     const { data: rootOrg } = await admin
       .from('organizations').select('id, name').eq('kind', 'xcape_root').maybeSingle();
-    const routed = resolveReportMerchant(null, null, rootOrg);
+    const routed = resolveReportMerchant(
+      previewLink?.origin_role ?? null,
+      originOrg,
+      rootOrg,
+    );
+    // Centralised platform currency, shared with fetch and the PDF.
+    const currency = resolveReportCurrency(
+      originOrg?.currency ?? (rootOrg as any)?.currency ?? null,
+    );
+
+    // Live price book for the resolved merchant (never a frozen snapshot).
+    const priceOverrides: Record<string, number> = {};
+    if (routed.price_source === 'cdp' && routed.org_id) {
+      const priceIds = [...new Set([
+        ...kitIds,
+        // deno-lint-ignore no-explicit-any
+        ...((products ?? []) as any[]).map((p) => p.id),
+      ])].filter(Boolean) as string[];
+      if (priceIds.length > 0) {
+        const { data: book } = await admin
+          .from('organization_product_prices')
+          .select('product_id, price, active')
+          .eq('organization_id', routed.org_id)
+          .in('product_id', priceIds);
+        // deno-lint-ignore no-explicit-any
+        for (const row of (book ?? []) as any[]) {
+          const p = usablePrice(row.price);
+          if (row.active && p != null) priceOverrides[row.product_id] = p;
+        }
+      }
+    }
+
     const merchant = {
       org_id: routed.org_id,
       name: routed.name,
       kind: routed.kind,
       price_source: routed.price_source,
     };
+
     let merchant_contact = {
       commerce_enabled: false,
       order_contact_phone: null as string | null,
@@ -225,22 +278,27 @@ Deno.serve(async (req) => {
       !!merchant_contact.momo_recipient_number?.trim() &&
       !!merchant_contact.order_contact_phone?.trim();
 
+    // Live, role-resolved prices — identical rules to public-report-fetch.
     // deno-lint-ignore no-explicit-any
     const pricedFormulas = (hydratedFormulas as any[]).map((f) => {
       const kit = f.kit_product_id ? kitById.get(f.kit_product_id) : null;
+      const live = f.kit_product_id
+        ? (priceOverrides[f.kit_product_id] ?? usablePrice(kit?.selling_price))
+        : null;
       return {
         ...f,
-        kit_unit_price: f.kit_product_id ? (usablePrice(kit?.selling_price) ?? null) : null,
+        kit_unit_price: live ?? null,
         kit_snapshot_price: usablePrice(f.kit_unit_price),
-        currency: 'XAF',
+        currency,
       };
     });
     // deno-lint-ignore no-explicit-any
     const pricedProducts = ((products ?? []) as any[]).map((p) => ({
       ...p,
-      selling_price: usablePrice(p.selling_price) ?? null,
-      currency: 'XAF',
+      selling_price: priceOverrides[p.id] ?? usablePrice(p.selling_price) ?? null,
+      currency,
     }));
+
 
 
     // ---- Captured image (assessment-scoped, short-lived signed URL) ----
@@ -305,7 +363,7 @@ Deno.serve(async (req) => {
       captured_image,
       merchant_contact,
       ordering_available,
-      currency: 'XAF',
+      currency,
       protocol_recommendation,
       // Synthetic link stub — the shared renderer's inner components accept
       // a `token` + `link.prefix`. Preview links are non-functional; CTAs
