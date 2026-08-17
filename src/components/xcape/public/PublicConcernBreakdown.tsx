@@ -1,4 +1,6 @@
+import { useRef, useState } from 'react';
 import { ChevronDown } from 'lucide-react';
+
 import {
   Accordion,
   AccordionContent,
@@ -40,6 +42,22 @@ const Field = ({ label, value }: { label: string; value: string }) => (
  * page, and no product, kit, dose or price is shown.
  */
 const PublicConcernBreakdown = ({ concerns, report, className }: Props) => {
+  // Every ACTIVE concern opens in full by default; stable findings stay
+  // collapsed. Controlled multi-value state, so opening one item can never
+  // close another active concern the client still needs to read.
+  const activeKeys = concerns.filter((c) => c.isActive).map((c) => c.key);
+  const initialOpen = activeKeys.length > 0
+    ? activeKeys
+    : (concerns[0] ? [concerns[0].key] : []);
+  const [open, setOpen] = useState<string[]>(initialOpen);
+  const signature = concerns.map((c) => `${c.key}:${c.isActive ? 1 : 0}`).join('|');
+  const lastSignature = useRef(signature);
+  if (lastSignature.current !== signature) {
+    // New reading arrived: re-open the freshly active concerns.
+    lastSignature.current = signature;
+    setOpen(initialOpen);
+  }
+
   if (concerns.length === 0) return null;
 
   return (
@@ -48,11 +66,12 @@ const PublicConcernBreakdown = ({ concerns, report, className }: Props) => {
         What we found
       </h3>
       <Accordion
-        type="single"
-        collapsible
-        defaultValue={concerns[0]?.key}
+        type="multiple"
+        value={open}
+        onValueChange={setOpen}
         className="space-y-2.5"
       >
+
         {concerns.map((c) => {
           const observation = observationFor(report, c.key);
           return (

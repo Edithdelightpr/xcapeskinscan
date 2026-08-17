@@ -8,7 +8,7 @@ import { buildCareJourneyBlock } from '../_shared/reportCareJourney.ts';
 import { sanitizeSnapshotLines } from '../_shared/xcapeProtocol.ts';
 import { sanitizePublicProtocolSnapshot } from '../_shared/publicProtocolSnapshot.ts';
 import { sanitizeReportSkinAnalysis } from '../_shared/reportSkinAnalysis.ts';
-import { resolveReportMerchant, usablePrice } from '../_shared/xcapeMerchant.ts';
+import { resolveReportMerchant, usablePrice, resolveReportCurrency } from '../_shared/xcapeMerchant.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -238,6 +238,10 @@ Deno.serve(async (req) => {
 
     // deno-lint-ignore no-explicit-any
     const routed = resolveReportMerchant((link as any).origin_role, originOrg, rootOrg);
+    // Centralised platform currency (no per-org currency column today), so
+    // fetch, staff preview and the PDF cannot drift apart.
+    // deno-lint-ignore no-explicit-any
+    const currency = resolveReportCurrency((originOrg as any)?.currency ?? (rootOrg as any)?.currency ?? null);
     const merchant = {
       org_id: routed.org_id,
       name: routed.name,
@@ -310,7 +314,7 @@ Deno.serve(async (req) => {
         ...f,
         kit_unit_price: live ?? null,
         kit_snapshot_price: usablePrice(f.kit_unit_price),
-        currency: 'XAF',
+        currency,
       };
     });
 
@@ -319,7 +323,7 @@ Deno.serve(async (req) => {
       // Live resolution: positive CDP override wins, otherwise the live XCAPE
       // default. Zero/absent is "not configured", never a free product.
       const resolved = priceOverrides[p.id] ?? usablePrice(p.selling_price);
-      return { ...p, selling_price: resolved ?? null, currency: 'XAF' };
+      return { ...p, selling_price: resolved ?? null, currency };
     });
 
 
@@ -416,7 +420,7 @@ Deno.serve(async (req) => {
       captured_image,
       merchant_contact,
       ordering_available,
-      currency: 'XAF',
+      currency,
       recommended_sessions_by_service_id,
       treatment_plan,
       payment_settings,

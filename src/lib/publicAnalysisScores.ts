@@ -24,17 +24,22 @@ export const PUBLIC_SCORE_LABEL: Record<PublicScoreKey, string> = {
   oil_congestion_balance: 'Oil & Congestion',
 };
 
-/** One short, non-diagnostic line used for the priority box. */
+/**
+ * One short, non-diagnostic fallback line for the priority box. Deliberately
+ * non-causal: it names the focus area only and never attributes a cause,
+ * makes a dermal inference, or promises a result.
+ */
 export const PUBLIC_SCORE_PRIORITY_NOTE: Record<PublicScoreKey, string> = {
   pigmentation_stability:
-    'Uneven tone is the area with the most room to improve. Tropical sun exposure and post-inflammatory marks are the usual drivers.',
+    'Even tone is the area with the most room to improve, so your plan focuses there first.',
   barrier_surface_hydration:
-    'Surface hydration is the area with the most room to improve. A weakened barrier makes skin feel tight and dull.',
+    'Surface hydration is the area with the most room to improve, so your plan focuses there first.',
   firmness_skin_support:
-    'Firmness is the area with the most room to improve. Support and bounce-back decline gradually and respond well to consistent care.',
+    'Firmness is the area with the most room to improve, so your plan focuses there first.',
   oil_congestion_balance:
-    'Oil and congestion is the area with the most room to improve. Excess sebum and blocked pores often follow surface dehydration.',
+    'Oil and congestion balance is the area with the most room to improve, so your plan focuses there first.',
 };
+
 
 export const isPublicScoreKey = (v: unknown): v is PublicScoreKey =>
   typeof v === 'string' && (PUBLIC_SCORE_KEYS as readonly string[]).includes(v);

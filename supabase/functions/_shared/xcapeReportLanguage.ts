@@ -134,19 +134,19 @@ const TIER_BY_STAGE: Record<LanguageStage, Tier> = {
 const DETECTED: Record<LanguageVariableKey, Record<LanguageStage, string>> = {
   pigmentation_stability: {
     critical:
-      'Your images show widespread uneven tone, with dark patches covering several areas of the face. Tone evenness is the weakest reading in this assessment.',
+      'Your images show a widespread uneven tone pattern, with darker areas visible across several parts of the face. Tone evenness is the weakest reading in this assessment.',
     very_low:
-      'Your images show strongly uneven tone, with dark marks that are visible across more than one area of the face.',
-    low: 'Your images show clearly uneven tone, with dark marks concentrated in specific areas rather than spread evenly.',
-    mild: 'Your images show visible unevenness in tone, with some areas reading noticeably darker than the surrounding skin.',
+      'Your images show a strongly uneven tone pattern, with dark marks visible across more than one area of the face.',
+    low: 'Your images show a clearly uneven tone pattern, with dark marks concentrated in specific areas rather than spread evenly.',
+    mild: 'Your images show a visible unevenness in tone, with some areas reading darker than the surrounding skin.',
     moderate:
-      'Your images show moderate unevenness in tone. The pattern is not severe, but it is visible and it is not yet settled.',
-    fair: 'Your images show mild unevenness in tone, mostly in the areas that receive the most sun exposure.',
-    good: 'Your images show mostly even tone, with a small number of visible marks that have not fully faded.',
+      'Your images show a moderate unevenness in tone. The visible surface pattern is not severe, but it can still be seen.',
+    fair: 'Your images show a mild unevenness in tone, mostly in the areas that receive the most sun exposure.',
+    good: 'Your images show mostly even tone, with a small number of visible marks in this capture.',
     strong:
-      'Your images show even tone across most of the face, with only faint traces of past marks still visible.',
+      'Your images show even tone across most of the face, with only faint marks still visible.',
     very_strong:
-      'Your images show even, settled tone. Nothing in this reading points to an active pigmentation concern right now.',
+      'Your images show even, settled tone. Nothing in this capture reads as an active pigmentation pattern.',
     optimal:
       'Your images show consistently even tone with no visible pigmentation pattern in this capture.',
   },
@@ -154,51 +154,51 @@ const DETECTED: Record<LanguageVariableKey, Record<LanguageStage, string>> = {
     critical:
       'Your images show a very dry, tight-looking surface. Surface hydration is the weakest reading in this assessment.',
     very_low:
-      'Your images show a noticeably dry surface, with the flat, dull look that comes with low surface hydration.',
+      'Your images show a noticeably dry surface, with a flat, dull visible surface pattern.',
     low: 'Your images show clear surface dryness, with a texture that reads rough rather than smooth in the light.',
-    mild: 'Your images show early surface dryness, with patches that look drier than the rest of the face.',
+    mild: 'Your images show early surface dryness, with patches that read drier than the rest of the face.',
     moderate:
-      'Your images show moderate surface dryness. Your skin is holding some moisture, but not consistently across the face.',
-    fair: 'Your images show mild surface dryness, mostly around the areas that dry out first.',
-    good: 'Your images show mostly comfortable surface hydration, with light dryness in one or two areas.',
+      'Your images show moderate surface dryness. Some areas read comfortable and others read dry in this capture.',
+    fair: 'Your images show mild surface dryness, mostly in the areas that tend to read dry first.',
+    good: 'Your images show a mostly comfortable-looking surface, with light dryness in one or two areas.',
     strong:
-      'Your images show a smooth, well-hydrated surface, with no meaningful dry patches in this capture.',
+      'Your images show a smooth, well-hydrated-looking surface, with no meaningful dry patches in this capture.',
     very_strong:
-      'Your images show a consistently hydrated surface. Your barrier is doing its job in this reading.',
+      'Your images show a consistently hydrated-looking surface, with no visible dry areas in this capture.',
     optimal:
-      'Your images show an even, well-hydrated surface with no visible dryness in this capture.',
+      'Your images show an even, well-hydrated-looking surface with no visible dryness in this capture.',
   },
   firmness_skin_support: {
     critical:
-      'Your images show significant loss of visible firmness, with softening along the cheeks and jawline. Firmness support is the weakest reading in this assessment.',
+      'Your images show a marked loss of visible firmness, with softening along the cheeks and jawline. Firmness support is the weakest reading in this assessment.',
     very_low:
-      'Your images show clear loss of visible firmness, with lines and softening that are easy to see in the capture.',
+      'Your images show a clear loss of visible firmness, with lines and softening that can be seen in the capture.',
     low: 'Your images show reduced visible firmness, with lines that stay visible when the face is at rest.',
-    mild: 'Your images show early loss of visible firmness, with fine lines starting to hold in a few areas.',
+    mild: 'Your images show an early loss of visible firmness, with fine lines visible in a few areas.',
     moderate:
-      'Your images show moderate firmness support. The structure is holding, but the bounce-back looks reduced.',
-    fair: 'Your images show mild softening in firmness, mostly in the areas that move the most.',
-    good: 'Your images show mostly good firmness support, with only light early signs in one or two areas.',
-    strong: 'Your images show firm, well-supported skin with minimal visible softening.',
+      'Your images show a moderate visible firmness pattern. Contours read supported in places and softer in others.',
+    fair: 'Your images show mild visible softening, mostly in the areas that move the most.',
+    good: 'Your images show mostly good visible firmness, with only light early signs in one or two areas.',
+    strong: 'Your images show firm-looking, well-supported contours with minimal visible softening.',
     very_strong:
-      'Your images show strong firmness support. Nothing in this reading points to an active elasticity concern.',
-    optimal: 'Your images show excellent firmness support with no visible loss in this capture.',
+      'Your images show strong visible firmness. Nothing in this capture reads as an active elasticity pattern.',
+    optimal: 'Your images show excellent visible firmness with no visible softening in this capture.',
   },
   oil_congestion_balance: {
     critical:
-      'Your images show heavy oil on the surface with widespread congestion and visible breakouts. Oil and congestion balance is the weakest reading in this assessment.',
+      'Your images show heavy surface shine with widespread congestion and visible breakouts. Oil and congestion balance is the weakest reading in this assessment.',
     very_low:
-      'Your images show high oil on the surface with clearly congested pores across more than one area.',
-    low: 'Your images show elevated oil with visible congestion, mostly through the T-zone and cheeks.',
-    mild: 'Your images show early oil build-up with pores that read congested in specific areas.',
+      'Your images show high surface shine with clearly congested pores across more than one area.',
+    low: 'Your images show raised surface shine with visible congestion, mostly through the T-zone and cheeks.',
+    mild: 'Your images show early surface shine with pores that read congested in specific areas.',
     moderate:
-      'Your images show moderate oil activity. Congestion is present in places but it is not spread across the face.',
-    fair: 'Your images show mild oil activity with occasional congestion in the areas that oil first.',
-    good: 'Your images show mostly balanced oil, with light congestion in one or two spots.',
-    strong: 'Your images show well-balanced oil and clear pores in this capture.',
+      'Your images show a moderate oil and congestion pattern. Congestion can be seen in places but not across the face.',
+    fair: 'Your images show mild surface shine with occasional congestion in the areas that shine first.',
+    good: 'Your images show mostly balanced surface shine, with light congestion in one or two spots.',
+    strong: 'Your images show balanced surface shine and clear-looking pores in this capture.',
     very_strong:
-      'Your images show consistently balanced oil with no meaningful congestion in this reading.',
-    optimal: 'Your images show clear pores and balanced oil throughout this capture.',
+      'Your images show consistently balanced surface shine with no meaningful visible congestion.',
+    optimal: 'Your images show clear-looking pores and balanced surface shine throughout this capture.',
   },
 };
 
@@ -206,114 +206,118 @@ const DETECTED: Record<LanguageVariableKey, Record<LanguageStage, string>> = {
 const WHY: Record<LanguageVariableKey, Record<Tier, string>> = {
   pigmentation_stability: {
     severe:
-      'Uneven tone is what most people notice first, and in melanin-rich skin the marks left behind by irritation take much longer to fade than the irritation itself.',
+      'Uneven tone is what most people notice first, and in melanin-rich skin marks left after irritation can remain visible long after the irritation itself has settled.',
     clear:
-      'In melanin-rich skin, every episode of irritation can leave a mark that outlasts its cause, so tone unevenness tends to build up over time rather than reset on its own.',
+      'In melanin-rich skin, an episode of irritation can leave a mark that remains visible for some time, so tone unevenness can build up rather than reset on its own.',
     early:
-      'Tone unevenness responds well when it is addressed early, because fresh marks sit closer to the surface than older ones.',
+      'Tone unevenness is generally easier to work with when it is addressed early rather than left in place.',
     stable:
-      'Even tone is easy to lose and slow to rebuild, so protecting it is worth more than correcting it later.',
+      'Even tone can be easy to lose and slow to rebuild, so protecting it is generally worth more than correcting it later.',
   },
   barrier_surface_hydration: {
     severe:
-      'A dry surface makes skin feel tight and uncomfortable, and it limits how well anything you apply is absorbed.',
+      'A dry-looking surface can make skin feel tight and uncomfortable, and it can make a routine harder to tolerate.',
     clear:
-      'When the surface is dry, products sit on top instead of working, and your skin can react to steps it normally tolerates.',
+      'When the surface reads dry, skin can feel less comfortable and can react to steps it normally tolerates.',
     early:
-      'Surface hydration decides how comfortable your skin feels and how well the rest of your routine performs.',
+      'Surface hydration shapes how comfortable your skin feels day to day and how easily a routine can be kept up.',
     stable:
-      'A hydrated surface is what keeps the rest of your routine working, and it is the first thing to drop during travel, heat or air conditioning.',
+      'A hydrated-looking surface is worth protecting, and it can be the first thing to change during travel, heat or air conditioning.',
   },
   firmness_skin_support: {
     severe:
-      'Reduced firmness changes how rested and defined the face looks, and it affects how the skin holds after expression.',
+      'Reduced visible firmness can change how rested and defined the face looks in photographs and in the mirror.',
     clear:
-      'Firmness declines gradually, so the changes you can see now are the ones that respond best to consistent support.',
+      'Visible firmness tends to change gradually, so the changes you can see now are the ones consistent support can work with.',
     early:
-      'Firmness responds to steady support far better than to occasional intensive treatment.',
+      'Visible firmness generally responds better to steady support than to occasional intensive treatment.',
     stable:
-      'Firmness is protected by consistency and by daylight protection, both of which are easier to keep than to restore.',
+      'Visible firmness is supported by consistency and by daylight protection, both of which are easier to keep than to restore.',
   },
   oil_congestion_balance: {
     severe:
-      'Congested pores are where breakouts start, and in melanin-rich skin each breakout can leave a mark that lasts far longer than the spot itself.',
+      'Congested pores are where breakouts can start, and in melanin-rich skin a breakout can leave a mark that remains visible after the spot itself has gone.',
     clear:
-      'Congestion tends to repeat in the same areas, and every repeat raises the chance of a mark that outlasts it.',
+      'Congestion can repeat in the same areas, and each repeat can raise the chance of a mark that remains visible.',
     early:
-      'Excess oil is often the skin compensating for a dry surface, so balance is usually restored by supporting hydration as well as controlling oil.',
+      'Excess surface oil can accompany a dry-reading surface, so balance is usually approached by supporting hydration as well as controlling oil.',
     stable:
-      'Balanced oil keeps pores clear, and it is easier to maintain that balance than to clear congestion once it settles.',
+      'Balanced oil helps keep pores clear, and maintaining that balance is generally easier than clearing congestion once it settles.',
   },
 };
 
 const IF_LEFT: Record<LanguageVariableKey, Record<Tier, string>> = {
   pigmentation_stability: {
     severe:
-      'Without support, and with continued sun exposure, marks like these commonly deepen and spread rather than settle.',
-    clear: 'Without support, this pattern usually stays visible and can darken with sun exposure.',
-    early: 'Without support, mild unevenness tends to become more defined over time.',
+      'Without support, and with continued sun exposure, a pattern like this can remain visible and can become more pronounced.',
+    clear: 'Without support, this visible surface pattern can remain visible and can darken with sun exposure.',
+    early: 'Without support, mild unevenness can become more defined over time.',
     stable: 'Without daily protection, even settled tone can start to shift again.',
   },
   barrier_surface_hydration: {
     severe:
-      'Without support, a dry surface commonly leads to sensitivity, and stronger products become harder to tolerate.',
-    clear: 'Without support, dryness usually persists and your skin may react more easily.',
-    early: 'Without support, early dryness tends to spread across more of the face.',
-    stable: 'Without consistent hydration, comfort can drop quickly in heat or air conditioning.',
+      'Without support, a dry-reading surface can stay uncomfortable and stronger products can become harder to tolerate.',
+    clear: 'Without support, dryness can remain visible and your skin may react more easily.',
+    early: 'Without support, early dryness can spread across more of the face.',
+    stable: 'Without consistent hydration, comfort can drop in heat or air conditioning.',
   },
   firmness_skin_support: {
-    severe: 'Without support, visible softening generally continues rather than reverses on its own.',
-    clear: 'Without support, these early lines usually become more set over time.',
-    early: 'Without support, mild softening tends to progress gradually.',
-    stable: 'Without protection from daily sun exposure, firmness declines faster than it needs to.',
+    severe: 'Without support, visible softening can continue rather than settle on its own.',
+    clear: 'Without support, these early lines can become more set over time.',
+    early: 'Without support, mild visible softening can progress gradually.',
+    stable: 'Without protection from daily sun exposure, visible firmness can decline faster than it needs to.',
   },
   oil_congestion_balance: {
     severe:
-      'Without support, congestion at this level commonly continues to produce breakouts and the marks that follow them.',
-    clear: 'Without support, congestion usually keeps returning in the same areas.',
+      'Without support, congestion at this level can keep producing breakouts and the marks that can follow them.',
+    clear: 'Without support, congestion can keep returning in the same areas.',
     early: 'Without support, early congestion can develop into recurring breakouts.',
     stable: 'Without maintenance, congestion can return during heat, humidity or routine changes.',
   },
 };
 
+/** Practitioner-confirmed protocol direction. Never a product promise. */
+const PRACTITIONER_NOTE =
+  'Your final preparation is confirmed by a practitioner before anything is made.';
+
 const RESPONSE: Record<LanguageVariableKey, Record<Tier, string>> = {
   pigmentation_stability: {
     severe:
-      'XCAPE treats this as an aggressive category: a coordinated exfoliating and melanin-control direction, always paired with the required anti-inflammatory companion, and prepared at the dose your score calls for.',
+      `XCAPE places this in its higher-support protocol direction: a coordinated exfoliating and melanin-control direction, always paired with the required anti-inflammatory companion, at the dose your score calls for. ${PRACTITIONER_NOTE}`,
     clear:
-      'XCAPE treats this as an aggressive category: a coordinated exfoliating and melanin-control direction with the required anti-inflammatory companion, prepared at the dose your score calls for.',
+      `XCAPE places this in its higher-support protocol direction: a coordinated exfoliating and melanin-control direction with the required anti-inflammatory companion, at the dose your score calls for. ${PRACTITIONER_NOTE}`,
     early:
-      'XCAPE applies its exfoliating and melanin-control direction with the required anti-inflammatory companion, at the lighter dose your score calls for.',
+      `XCAPE applies its exfoliating and melanin-control direction with the required anti-inflammatory companion, at the lighter dose your score calls for. ${PRACTITIONER_NOTE}`,
     stable:
       'XCAPE keeps this in preventive care. No pigmentation customization is called for by this score alone.',
   },
   barrier_surface_hydration: {
     severe:
-      'XCAPE customizes your facial moisturizer for surface hydration, at the dose your score calls for. Your cleanser and toner are not customized for this.',
+      `XCAPE customizes your facial moisturizer for surface hydration, at the dose your score calls for. Your cleanser and toner are not customized for this. ${PRACTITIONER_NOTE}`,
     clear:
-      'XCAPE customizes your facial moisturizer for surface hydration, at the dose your score calls for.',
+      `XCAPE customizes your facial moisturizer for surface hydration, at the dose your score calls for. ${PRACTITIONER_NOTE}`,
     early:
-      'XCAPE customizes your facial moisturizer at the lighter dose your score calls for.',
+      `XCAPE customizes your facial moisturizer at the lighter dose your score calls for. ${PRACTITIONER_NOTE}`,
     stable:
       'XCAPE keeps this in maintenance. No hydration customization is called for by this score alone.',
   },
   firmness_skin_support: {
     severe:
-      'XCAPE applies its anti-aging and elasticity direction, prepared at the dose your score calls for.',
+      `XCAPE applies its anti-aging and elasticity direction, at the dose your score calls for. ${PRACTITIONER_NOTE}`,
     clear:
-      'XCAPE applies its anti-aging and elasticity direction, prepared at the dose your score calls for.',
+      `XCAPE applies its anti-aging and elasticity direction, at the dose your score calls for. ${PRACTITIONER_NOTE}`,
     early:
-      'XCAPE applies its anti-aging and elasticity direction at the lighter dose your score calls for.',
+      `XCAPE applies its anti-aging and elasticity direction at the lighter dose your score calls for. ${PRACTITIONER_NOTE}`,
     stable:
       'XCAPE keeps this in preventive care. No elasticity customization is called for by this score alone.',
   },
   oil_congestion_balance: {
     severe:
-      'XCAPE treats this as an aggressive category: the overactive-sebaceous direction with the required anti-inflammatory companion, prepared at the dose your score calls for.',
+      `XCAPE places this in its higher-support protocol direction: the overactive-sebaceous direction with the required anti-inflammatory companion, at the dose your score calls for. ${PRACTITIONER_NOTE}`,
     clear:
-      'XCAPE applies the overactive-sebaceous direction with the required anti-inflammatory companion, prepared at the dose your score calls for.',
+      `XCAPE applies the overactive-sebaceous direction with the required anti-inflammatory companion, at the dose your score calls for. ${PRACTITIONER_NOTE}`,
     early:
-      'XCAPE applies the overactive-sebaceous direction with its required companion at the lighter dose your score calls for.',
+      `XCAPE applies the overactive-sebaceous direction with its required companion at the lighter dose your score calls for. ${PRACTITIONER_NOTE}`,
     stable:
       'XCAPE keeps this in maintenance. No sebaceous customization is called for by this score alone.',
   },
@@ -321,30 +325,31 @@ const RESPONSE: Record<LanguageVariableKey, Record<Tier, string>> = {
 
 const REASSURANCE: Record<LanguageVariableKey, Record<Tier, string>> = {
   pigmentation_stability: {
-    severe: 'This is a known pattern in tropical and melanin-rich skin, and it is workable with the right sequence.',
-    clear: 'This is common, and it responds to a consistent, correctly sequenced routine.',
-    early: 'Caught at this stage, this is one of the easier areas to bring back to even.',
-    stable: 'This area is doing well. Keeping it there is straightforward.',
+    severe: 'This is a familiar pattern in tropical and melanin-rich skin, and it is workable with the right sequence.',
+    clear: 'This is common, and a consistent, correctly sequenced routine is the usual starting point.',
+    early: 'Addressed at this stage, this area is generally one of the more straightforward to work on.',
+    stable: 'This area is reading well. Keeping it there is straightforward.',
   },
   barrier_surface_hydration: {
-    severe: 'Surface hydration is usually the fastest area to improve once it is properly supported.',
-    clear: 'This area typically responds quickly once hydration is consistent.',
-    early: 'Small, steady changes are usually enough here.',
-    stable: 'This area is doing well. A steady routine keeps it that way.',
+    severe: 'Surface hydration is often one of the more straightforward areas to support once a routine is consistent.',
+    clear: 'A consistent hydration routine is the usual starting point for this area.',
+    early: 'Small, steady changes are usually the starting point here.',
+    stable: 'This area is reading well. A steady routine helps keep it that way.',
   },
   firmness_skin_support: {
-    severe: 'Firmness support is a long game, and steady work here shows over time.',
-    clear: 'Consistency matters more than intensity in this area.',
-    early: 'Starting now gives this area the best runway.',
-    stable: 'This area is doing well, and protection keeps it there.',
+    severe: 'Visible firmness is a long game, and steady support here is the usual approach.',
+    clear: 'Consistency generally matters more than intensity in this area.',
+    early: 'Starting now gives this area the longest runway.',
+    stable: 'This area is reading well, and daily protection helps keep it there.',
   },
   oil_congestion_balance: {
-    severe: 'Congestion at this level is common and it does respond, provided the skin is calmed rather than stripped.',
-    clear: 'This area responds well when oil control and hydration are handled together.',
-    early: 'Handled now, this rarely becomes a bigger problem.',
-    stable: 'This area is doing well. Maintenance is enough for now.',
+    severe: 'Congestion at this level is common, and the usual approach is to calm the skin rather than strip it.',
+    clear: 'This area is usually approached by handling oil control and hydration together.',
+    early: 'Handled now, this area is generally more straightforward to keep in balance.',
+    stable: 'This area is reading well. Maintenance is enough for now.',
   },
 };
+
 
 /** Fully materialised 4 x 10 client copy bank. */
 export const REPORT_COPY_BANK_V2: Record<
@@ -387,7 +392,10 @@ export interface PrioritySynthesis {
   lines: string[];
   /** Average of the supplied raw scores, or null. */
   overall: number | null;
+  /** True when no reading is an active concern; the headline is a maintenance focus. */
+  allStable: boolean;
 }
+
 
 const byScoreThenKey = (
   entries: [LanguageVariableKey, number][],
@@ -407,7 +415,7 @@ export function prioritySynthesis(
     .map((k) => [k, clampScore(scores[k] as number)] as [LanguageVariableKey, number]);
 
   if (entries.length === 0) {
-    return { weakest: [], headline: 'No scored areas are available for this assessment.', lines: [], overall: null };
+    return { weakest: [], headline: 'No scored areas are available for this assessment.', lines: [], overall: null, allStable: false };
   }
 
   const sorted = byScoreThenKey(entries);
@@ -419,10 +427,16 @@ export function prioritySynthesis(
   // close behind the weakest reading.
   if (second && second[1] <= 80 && second[1] - first[1] <= 15) weakest.push(second[0]);
 
+  // Every reading is stable. The weakest area is still named, but it is the
+  // first maintenance focus rather than something that needs attention.
+  const allStable = sorted.every(([, v]) => !isActiveConcern(v));
+
   const name = (k: LanguageVariableKey) => LANGUAGE_VARIABLE_NAME[k];
-  const headline = weakest.length > 1
-    ? `${name(weakest[0])} needs attention first, with ${name(weakest[1])} close behind.`
-    : `${name(weakest[0])} needs attention first.`;
+  const headline = allStable
+    ? `${name(weakest[0])} is your first maintenance focus.`
+    : weakest.length > 1
+      ? `${name(weakest[0])} needs attention first, with ${name(weakest[1])} close behind.`
+      : `${name(weakest[0])} needs attention first.`;
 
   const lines: string[] = [];
   for (const [key, value] of sorted.slice(0, weakest.length)) {
@@ -434,25 +448,26 @@ export function prioritySynthesis(
   const oil = scoreOf('oil_congestion_balance');
   if (hydration != null && oil != null && hydration <= 60 && oil <= 60) {
     lines.push(
-      'Surface dehydration and excess oil are reading low together. Excess oil is often the skin compensating for a dry surface, so XCAPE supports hydration alongside oil control rather than stripping the skin.',
+      'Surface dehydration and excess surface oil are reading low together. Excess oil can accompany a dry-reading surface, so XCAPE supports hydration alongside oil control rather than stripping the skin.',
     );
   }
 
   const pigment = scoreOf('pigmentation_stability');
   if (pigment != null && oil != null && pigment <= 60 && oil <= 60) {
     lines.push(
-      'Tone unevenness and congestion are reading low together. Calming congestion first reduces the marks that breakouts can leave behind.',
+      'Tone unevenness and congestion are reading low together. Calming congestion first can reduce the marks that breakouts leave behind.',
     );
   }
 
-  const stableCount = sorted.filter(([, v]) => v > 80).length;
+  const stableCount = sorted.filter(([, v]) => !isActiveConcern(v)).length;
   if (stableCount > 0) {
     lines.push(
       `${stableCount} of your ${sorted.length} readings are stable and are summarised further down, with their scores kept visible.`,
     );
   }
 
-  return { weakest, headline, lines, overall };
+  return { weakest, headline, lines, overall, allStable };
+
 }
 
 // ---- MIRROR REGION END --------------------------------------------------

@@ -8,7 +8,13 @@ import { sanitizeSnapshotLines } from '../_shared/xcapeProtocol.ts';
 import { sanitizePublicProtocolSnapshot } from '../_shared/publicProtocolSnapshot.ts';
 import { sanitizeReportSkinAnalysis } from '../_shared/reportSkinAnalysis.ts';
 import { PDFDocument, StandardFonts, rgb } from 'npm:pdf-lib@1.17.1';
-import { resolveReportMerchant, usablePrice } from '../_shared/xcapeMerchant.ts';
+import {
+  resolveReportMerchant,
+  usablePrice,
+  resolveReportCurrency,
+  formatMoney,
+} from '../_shared/xcapeMerchant.ts';
+
 import {
   formatReport,
   CONCERN_FIELD_ORDER,
@@ -55,13 +61,13 @@ const BAND_COLOR: Record<FormattedConcern['band'], ReturnType<typeof rgb>> = {
 };
 
 /** Role-resolved report currency. Standard PDF fonts cannot draw currency
- *  glyphs, so amounts always render with a plain-text currency code. */
-function formatMoney(amount: unknown, currency: string): string {
+ *  glyphs, so amounts always render in ascii mode. Zero/absent stays blank. */
+function money(amount: unknown, currency: string): string {
   const n = Number(amount);
   if (!Number.isFinite(n) || n <= 0) return '';
-  const nice = n.toLocaleString('en-US');
-  return currency === 'XAF' ? `${nice} FCFA` : `${nice} ${currency}`;
+  return formatMoney(n, currency, { ascii: true, placeholder: '' });
 }
+
 
 function wrap(text: string, font: any, size: number, maxWidth: number): string[] {
   const words = text.replace(/\s+/g, ' ').trim().split(' ');
@@ -84,6 +90,11 @@ async function buildPdf(payload: {
   report: FormattedReport;
   currency: string;
   merchantName: string;
+  merchantContact: {
+    order_contact_phone?: string | null;
+    whatsapp_number?: string | null;
+  } | null;
+
   homeCare: string | null;
   followUp: string | null;
   nextVisitInWeeks: number | null;
@@ -168,7 +179,19 @@ async function buildPdf(payload: {
   drawText('A tailored view of what your skin is asking for right now, what your practitioner observed, and the next steps designed for you.', {
     size: 11, color: COCOA_SOFT,
   });
+  y -= 6;
+
+  // Role-resolved merchant and the contact the client should follow up with.
+  drawText(`Prepared by ${payload.merchantName}`, { size: 10.5, bold: true, color: COCOA });
+  {
+    const contact = payload.merchantContact;
+    const bits: string[] = [];
+    if (contact?.order_contact_phone) bits.push(`Contact ${contact.order_contact_phone}`);
+    if (contact?.whatsapp_number) bits.push(`WhatsApp ${contact.whatsapp_number}`);
+    if (bits.length > 0) drawText(bits.join(' · '), { size: 10, color: COCOA_SOFT });
+  }
   y -= 14;
+
 
   // Main concern
   const { mainConcern, clientGoal } = payload.report.assessment;
@@ -198,14 +221,71 @@ async function buildPdf(payload: {
   if (payload.report.concerns.length > 0) {
     drawText('Your key readings', { size: 12, bold: true, color: BRONZE });
     y -= 6;
+    // Approved XCAPE kit formula for a concern's category. Rendered in the
+    // CUSTOMIZATION position for BOTH active and stable concerns, and never
+    // conditional on an AI observation being present.
+    const drawFormula = (formula: (typeof payload.formulas)[number]) => {
+      drawText('Customization:', { size: 10.5, bold: true, color: COCOA });
+      const priceText = money(formula.kit_unit_price, payload.currency);
+      drawText(
+        `${formula.kit_name ?? 'Customized kit'}${priceText ? `  ·  ${priceText}` : ''}`,
+        { size: 11, bold: true, color: COCOA, x: MARGIN + 12, maxWidth: CONTENT_W - 12 },
+      );
+      if (formula.base_product_name) {
+        drawText(`Customized product: ${formula.base_product_name}`, {
+          size: 10.5, color: COCOA_SOFT, x: MARGIN + 12, maxWidth: CONTENT_W - 12,
+        });
+      }
+      if (formula.active_name) {
+        drawText(
+          `Active solution: ${formula.active_name}${formula.dose_ml != null ? `, ${formula.dose_ml} ml` : ''}`,
+          { size: 10.5, color: COCOA_SOFT, x: MARGIN + 12, maxWidth: CONTENT_W - 12 },
+        );
+      }
+      // Immutable multi-product protocol lines (when snapshotted).
+      const lines = formula.formula_lines ?? [];
+      for (const area of ['face', 'body'] as const) {
+        const group = lines.filter((l) => l.area === area);
+        if (group.length === 0) continue;
+        drawText(area === 'face' ? 'Face' : 'Body (always alongside face)', {
+          size: 10, bold: true, color: COCOA, x: MARGIN + 12, maxWidth: CONTENT_W - 12,
+        });
+        for (const l of group) {
+          drawText(
+            `${l.product_name} + ${l.ds_name}, ${l.dose_ml} ml${l.companion ? ' (companion)' : ''}`,
+            { size: 10.5, color: COCOA_SOFT, x: MARGIN + 22, maxWidth: CONTENT_W - 22 },
+          );
+        }
+      }
+      if (formula.companion_name) {
+        drawText(
+          `Required companion: ${formula.companion_name}${formula.companion_dose_ml != null ? `, ${formula.companion_dose_ml} ml` : ''}`,
+          { size: 10.5, color: COCOA_SOFT, x: MARGIN + 12, maxWidth: CONTENT_W - 12 },
+        );
+      }
+      drawText('Prepared by XCAPE within this one kit. Nothing to buy or mix separately.', {
+        size: 10, italic: true, color: COCOA_SOFT, x: MARGIN + 12, maxWidth: CONTENT_W - 12,
+      });
+      if (formula.instructions) {
+        drawText(formula.instructions, {
+          size: 10.5, italic: true, color: COCOA_SOFT, x: MARGIN + 12, maxWidth: CONTENT_W - 12,
+        });
+      }
+      for (const w of formula.warnings ?? []) {
+        drawText(`Warning: ${w}`, {
+          size: 10, color: BAND_COLOR.low, x: MARGIN + 12, maxWidth: CONTENT_W - 12,
+        });
+      }
+      y -= 2;
+    };
+
     for (const c of payload.report.concerns) {
       ensure(80);
-      drawText(`${c.clinicalName} — ${c.scoreLabel}`, {
+      drawText(`${c.clinicalName}: ${c.scoreLabel}`, {
         size: 13, bold: true, color: COCOA,
       });
-      drawText(`${c.bandLabel} · ${c.stageName}`, {
-        size: 10, color: BAND_COLOR[c.band],
-      });
+      // Internal engine stage names are never client-visible.
+      drawText(c.bandLabel, { size: 10, color: BAND_COLOR[c.band] });
       y -= 2;
       // Score bar
       ensure(10);
@@ -216,75 +296,24 @@ async function buildPdf(payload: {
       });
       y -= 14;
 
-      // The practitioner-approved XCAPE kit formula for this concern's
-      // category — occupies the CUSTOMIZATION position. When no approved
-      // formula exists, that position is omitted entirely; generic engine
-      // copy (SPF, brightening routines…) never prints there.
       const formula = payload.formulas.find((f) => f.category === c.key) ?? null;
 
       if (!c.isActive) {
-        // Stable finding: score stays visible, detail stays short.
+        // Stable finding: compact detail, but an approved formula still shows.
         drawText(c.detected, { size: 11, color: COCOA_SOFT });
+        if (formula) drawFormula(formula);
         y -= 10;
         continue;
       }
 
-      // Required labelled fields in fixed order. The CUSTOMIZATION block is
-      // injected where the customization slot used to sit — just before the
-      // optional AI observation line.
+      // Required labelled fields in fixed order, with the CUSTOMIZATION block
+      // in its fixed position after "XCAPE response" and before the optional
+      // visible observation. Independent of whether that observation exists.
+      let formulaDrawn = false;
       for (const field of CONCERN_FIELD_ORDER) {
-        if (field.key === 'aiObservation' && formula) {
-          drawText('Customization:', { size: 10.5, bold: true, color: COCOA });
-          drawText(
-            `${formula.kit_name ?? 'Customized kit'}${formula.kit_unit_price ? `  —  ${formatMoney(formula.kit_unit_price, payload.currency)}` : ''}`,
-            { size: 11, bold: true, color: COCOA, x: MARGIN + 12, maxWidth: CONTENT_W - 12 },
-          );
-          if (formula.base_product_name) {
-            drawText(`Customized product: ${formula.base_product_name}`, {
-              size: 10.5, color: COCOA_SOFT, x: MARGIN + 12, maxWidth: CONTENT_W - 12,
-            });
-          }
-          if (formula.active_name) {
-            drawText(
-              `Active solution: ${formula.active_name}${formula.dose_ml != null ? ` — ${formula.dose_ml} ml` : ''}`,
-              { size: 10.5, color: COCOA_SOFT, x: MARGIN + 12, maxWidth: CONTENT_W - 12 },
-            );
-          }
-          // Immutable multi-product protocol lines (when snapshotted).
-          const lines = formula.formula_lines ?? [];
-          for (const area of ['face', 'body'] as const) {
-            const group = lines.filter((l) => l.area === area);
-            if (group.length === 0) continue;
-            drawText(area === 'face' ? 'Face' : 'Body (always alongside face)', {
-              size: 10, bold: true, color: COCOA, x: MARGIN + 12, maxWidth: CONTENT_W - 12,
-            });
-            for (const l of group) {
-              drawText(
-                `${l.product_name} + ${l.ds_name} — ${l.dose_ml} ml${l.companion ? ' (companion)' : ''}`,
-                { size: 10.5, color: COCOA_SOFT, x: MARGIN + 22, maxWidth: CONTENT_W - 22 },
-              );
-            }
-          }
-          if (formula.companion_name) {
-            drawText(
-              `Required companion: ${formula.companion_name}${formula.companion_dose_ml != null ? ` — ${formula.companion_dose_ml} ml` : ''}`,
-              { size: 10.5, color: COCOA_SOFT, x: MARGIN + 12, maxWidth: CONTENT_W - 12 },
-            );
-          }
-          drawText('Prepared by XCAPE within this one kit — nothing to buy or mix separately.', {
-            size: 10, italic: true, color: COCOA_SOFT, x: MARGIN + 12, maxWidth: CONTENT_W - 12,
-          });
-          if (formula.instructions) {
-            drawText(formula.instructions, {
-              size: 10.5, italic: true, color: COCOA_SOFT, x: MARGIN + 12, maxWidth: CONTENT_W - 12,
-            });
-          }
-          for (const w of formula.warnings ?? []) {
-            drawText(`Warning: ${w}`, {
-              size: 10, color: BAND_COLOR.low, x: MARGIN + 12, maxWidth: CONTENT_W - 12,
-            });
-          }
-          y -= 2;
+        if (field.key === 'aiObservation' && formula && !formulaDrawn) {
+          drawFormula(formula);
+          formulaDrawn = true;
         }
         const value = c[field.key];
         if (typeof value !== 'string' || !value.trim()) continue;
@@ -292,9 +321,11 @@ async function buildPdf(payload: {
         drawText(value, { size: 11, color: COCOA_SOFT });
         y -= 2;
       }
+      if (formula && !formulaDrawn) drawFormula(formula);
       if (c.reassurance) drawText(c.reassurance, { size: 10.5, italic: true, color: COCOA_SOFT });
       y -= 8;
     }
+
   }
 
   // Practitioner notes
@@ -326,7 +357,7 @@ async function buildPdf(payload: {
     drawText('Recommended treatments', { size: 12, bold: true, color: BRONZE });
     y -= 2;
     for (const s of payload.services) {
-      drawText(`• ${s.name}${s.price_per_session ? `  —  ${formatMoney(s.price_per_session, payload.currency)}` : ''}`, {
+      drawText(`• ${s.name}${s.price_per_session ? `  ·  ${money(s.price_per_session, payload.currency)}` : ''}`, {
         size: 11, bold: true, color: COCOA,
       });
       if (s.description) drawText(s.description, { size: 10.5, color: COCOA_SOFT, x: MARGIN + 12, maxWidth: CONTENT_W - 12 });
@@ -341,7 +372,7 @@ async function buildPdf(payload: {
     drawText('Recommended products', { size: 12, bold: true, color: BRONZE });
     y -= 2;
     for (const p of payload.products) {
-      drawText(`• ${p.name}${p.selling_price ? `  —  ${formatMoney(p.selling_price, payload.currency)}` : ''}`, {
+      drawText(`• ${p.name}${p.selling_price ? `  ·  ${money(p.selling_price, payload.currency)}` : ''}`, {
         size: 11, bold: true, color: COCOA,
       });
       if (p.short_description) drawText(p.short_description, { size: 10.5, color: COCOA_SOFT, x: MARGIN + 12, maxWidth: CONTENT_W - 12 });
@@ -362,7 +393,7 @@ async function buildPdf(payload: {
     drawText('Your XCAPE customization', { size: 12, bold: true, color: BRONZE });
     y -= 2;
     drawText(
-      'Derived from your four skin-health scores. Pending practitioner confirmation — not yet a purchasable formula.',
+      'Derived from your four skin-health scores. Pending practitioner confirmation, and not yet a purchasable formula.',
       { size: 10, italic: true, color: COCOA_SOFT },
     );
     y -= 4;
@@ -373,7 +404,7 @@ async function buildPdf(payload: {
         drawText(`• ${prod.product_name}`, { size: 11, bold: true, color: COCOA, x: MARGIN + 8, maxWidth: CONTENT_W - 8 });
         for (const a of prod.additions) {
           drawText(
-            `${a.ds_name}${a.companion ? ' (companion)' : ''} — ${a.dose_ml} ml · ${a.concern} · score ${a.score}/100 · tier ${a.tier_label}`,
+            `${a.ds_name}${a.companion ? ' (companion)' : ''}, ${a.dose_ml} ml · ${a.concern} · score ${a.score}/100 · tier ${a.tier_label}`,
             { size: 10, color: COCOA_SOFT, x: MARGIN + 20, maxWidth: CONTENT_W - 20 },
           );
         }
@@ -490,7 +521,27 @@ Deno.serve(async (req) => {
     }
     // deno-lint-ignore no-explicit-any
     const routed = resolveReportMerchant((link as any).origin_role, originOrg, rootOrg);
-    const currency = 'XAF';
+    // Centralised platform currency (no per-org currency column today), so
+    // fetch, preview and PDF cannot drift apart.
+    const currency = resolveReportCurrency(
+      // deno-lint-ignore no-explicit-any
+      (originOrg as any)?.currency ?? (rootOrg as any)?.currency ?? null,
+    );
+
+    let merchantContact: { order_contact_phone: string | null; whatsapp_number: string | null } | null = null;
+    if (routed.org_id) {
+      const { data: settings } = await admin
+        .from('xcape_commerce_settings')
+        .select('order_contact_phone, whatsapp_number')
+        .eq('organization_id', routed.org_id)
+        .maybeSingle();
+      if (settings) {
+        merchantContact = {
+          order_contact_phone: settings.order_contact_phone ?? null,
+          whatsapp_number: settings.whatsapp_number ?? null,
+        };
+      }
+    }
 
     const kitIds = [...new Set(
       // deno-lint-ignore no-explicit-any
@@ -532,6 +583,7 @@ Deno.serve(async (req) => {
       report,
       currency,
       merchantName: routed.name,
+      merchantContact,
       homeCare: assessment.home_care,
       followUp: assessment.follow_up_recommendation,
       nextVisitInWeeks: assessment.next_visit_in_weeks,

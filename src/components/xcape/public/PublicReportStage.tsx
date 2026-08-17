@@ -154,23 +154,13 @@ const PublicReportStage = ({
             />
           )}
 
-          {report && (report.combinedInterpretation || report.homeCareDirections.length > 0) && (
+          {/* The legacy `combinedInterpretation` narrative is deliberately not
+              rendered: the deterministic priority synthesis above is the single
+              client-facing summary, so no unreviewed engine prose reaches the
+              client. Home-care direction keeps its own dedicated block. */}
+          {report && report.homeCareDirections.length > 0 && (
             <div className="space-y-4 rounded-2xl border border-slate-700/80 bg-slate-900/40 p-4">
-              {report.combinedInterpretation && (
-                <div className="space-y-1">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
-                    Overall reading
-                    {report.overallSkinStability != null && (
-                      <span className="ml-2 text-slate-300">
-                        {report.overallSkinStability}/100 stability
-                      </span>
-                    )}
-                  </p>
-                  <p className="text-sm leading-relaxed text-slate-200">
-                    {report.combinedInterpretation}
-                  </p>
-                </div>
-              )}
+
               {report.homeCareDirections.length > 0 && (
                 <div className="space-y-1.5">
                   <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
