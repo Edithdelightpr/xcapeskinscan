@@ -10,6 +10,7 @@ import { buildCareJourneyBlock } from '../_shared/reportCareJourney.ts';
 import { sanitizeSnapshotLines } from '../_shared/xcapeProtocol.ts';
 import { sanitizePublicProtocolSnapshot } from '../_shared/publicProtocolSnapshot.ts';
 import { sanitizeReportSkinAnalysis } from '../_shared/reportSkinAnalysis.ts';
+import { resolveReportMerchant, usablePrice } from '../_shared/xcapeMerchant.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -122,13 +123,14 @@ Deno.serve(async (req) => {
       ((treatment_plan as any)?.id as string | undefined) ?? null,
     );
 
-    // Staff preview includes ALL approved formula snapshots — demo-labelled
-    // ones too — so admins can verify mappings before going live.
+    // Staff preview must be identical to the client report: demo-labelled
+    // snapshots are suppressed here exactly as they are on the public path.
     const { data: formulas } = await admin
       .from('xcape_formula_snapshots')
       .select('id, category, score, kit_product_id, kit_name, kit_unit_price, base_product_name, active_name, dose_ml, companion_name, companion_dose_ml, instructions, warnings, formula_lines, protocol_version, rule_version, approved_at, is_demo')
       .eq('assessment_id', assessment.id)
       .eq('status', 'approved')
+      .eq('is_demo', false)
       .order('created_at', { ascending: true });
 
     // Presentation-only hydration — identical to public-report-fetch so
@@ -142,7 +144,7 @@ Deno.serve(async (req) => {
     if (kitIds.length > 0) {
       const { data: kitProducts } = await admin
         .from('products')
-        .select('id, name, image_url, thumbnail_url, public_slug, short_description')
+        .select('id, name, image_url, thumbnail_url, public_slug, short_description, selling_price')
         .in('id', kitIds);
       // deno-lint-ignore no-explicit-any
       kitById = new Map((kitProducts ?? []).map((p: any) => [p.id, p]));
@@ -180,6 +182,66 @@ Deno.serve(async (req) => {
       }
     }
 
+    // ---- Commercial routing parity with public-report-fetch ----
+    // A preview has no report link, so it resolves to the XCAPE-root
+    // fallback, using the same helper and the same live price rules.
+    const { data: rootOrg } = await admin
+      .from('organizations').select('id, name').eq('kind', 'xcape_root').maybeSingle();
+    const routed = resolveReportMerchant(null, null, rootOrg);
+    const merchant = {
+      org_id: routed.org_id,
+      name: routed.name,
+      kind: routed.kind,
+      price_source: routed.price_source,
+    };
+    let merchant_contact = {
+      commerce_enabled: false,
+      order_contact_phone: null as string | null,
+      whatsapp_number: null as string | null,
+      momo_provider: null as string | null,
+      momo_recipient_number: null as string | null,
+      momo_recipient_name: null as string | null,
+    };
+    if (routed.org_id) {
+      const { data: settings } = await admin
+        .from('xcape_commerce_settings')
+        .select('commerce_enabled, order_contact_phone, whatsapp_number, momo_provider, momo_recipient_number, momo_recipient_name')
+        .eq('organization_id', routed.org_id)
+        .maybeSingle();
+      if (settings) {
+        merchant_contact = {
+          commerce_enabled: !!settings.commerce_enabled,
+          order_contact_phone: settings.order_contact_phone ?? null,
+          whatsapp_number: settings.whatsapp_number ?? null,
+          momo_provider: settings.momo_provider ?? null,
+          momo_recipient_number: settings.momo_recipient_number ?? null,
+          momo_recipient_name: settings.momo_recipient_name ?? null,
+        };
+      }
+    }
+    const ordering_available =
+      merchant_contact.commerce_enabled &&
+      !!merchant_contact.momo_provider?.trim() &&
+      !!merchant_contact.momo_recipient_number?.trim() &&
+      !!merchant_contact.order_contact_phone?.trim();
+
+    // deno-lint-ignore no-explicit-any
+    const pricedFormulas = (hydratedFormulas as any[]).map((f) => {
+      const kit = f.kit_product_id ? kitById.get(f.kit_product_id) : null;
+      return {
+        ...f,
+        kit_unit_price: f.kit_product_id ? (usablePrice(kit?.selling_price) ?? null) : null,
+        kit_snapshot_price: usablePrice(f.kit_unit_price),
+        currency: 'XAF',
+      };
+    });
+    // deno-lint-ignore no-explicit-any
+    const pricedProducts = ((products ?? []) as any[]).map((p) => ({
+      ...p,
+      selling_price: usablePrice(p.selling_price) ?? null,
+      currency: 'XAF',
+    }));
+
     const firstName = resolveClientFirstName(null, client.full_name ?? null);
 
     return json({
@@ -201,12 +263,16 @@ Deno.serve(async (req) => {
         next_visit_in_weeks: assessment.next_visit_in_weeks,
       },
       recommended_services: services ?? [],
-      recommended_products: products ?? [],
+      recommended_products: pricedProducts,
       recommended_sessions_by_service_id,
       treatment_plan,
       payment_settings,
       care_journey,
-      formulas: hydratedFormulas,
+      formulas: pricedFormulas,
+      merchant,
+      merchant_contact,
+      ordering_available,
+      currency: 'XAF',
       protocol_recommendation,
       // Synthetic link stub — the shared renderer's inner components accept
       // a `token` + `link.prefix`. Preview links are non-functional; CTAs
