@@ -11,6 +11,7 @@ import {
   type EngineStage,
   type Confidence,
 } from '@/lib/skinEngine';
+import { commBandLabel } from '@/lib/xcapeReportLanguage';
 import type { SkinAnalysisPayload } from '@/hooks/useVisitAssessments';
 
 export type EngineKey = EngineVariableKey;
@@ -22,17 +23,22 @@ export function bandFor(score: number): ScoreBand {
   if (score <= 20) return 'critical';
   if (score <= 40) return 'low';
   if (score <= 60) return 'fair';
-  if (score <= 80) return 'good';
+  if (score <= 89) return 'good';
   return 'strong';
 }
 
-/** Short status label shown to the client — plain, non-diagnostic. */
+/**
+ * Tone-bucket fallback labels. "Healthy" is only ever used from 90 to 100 and
+ * every band below that names a concern. Client-visible status text is taken
+ * from `commBandLabel` (xcape-report-language-v2) so all report surfaces share
+ * one contract; this map only backs legacy callers.
+ */
 export const BAND_LABEL: Record<ScoreBand, string> = {
-  critical: 'Priority focus',
-  low: 'Needs attention',
-  fair: 'Improving',
-  good: 'Healthy',
-  strong: 'Optimal',
+  critical: 'Priority concern',
+  low: 'Active concern',
+  fair: 'Needs correction',
+  good: 'Visible concern / watch area',
+  strong: 'Healthy',
 };
 
 export const BAND_TONE: Record<ScoreBand, string> = {
@@ -111,7 +117,7 @@ export function extractReadings(skinAnalysis: SkinAnalysisPayload | Record<strin
         plainDescription: ENGINE_VARIABLE_DESCRIPTION[key],
         score,
         band,
-        bandLabel: BAND_LABEL[band],
+        bandLabel: commBandLabel(score),
         stage,
         aiReasons: reasons,
         machineScore,

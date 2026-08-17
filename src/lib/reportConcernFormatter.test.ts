@@ -273,7 +273,7 @@ describe('formatReport', () => {
     expect(hydration.score).toBe(72);
     expect(hydration.scoreLabel).toBe('72%');
     // 72 is a watch area under xcape-report-language-v2 — never "Optimal".
-    expect(hydration.bandLabel).toBe('Mild concern / watch area');
+    expect(hydration.bandLabel).toBe('Visible concern / watch area');
     expect(hydration.isActive).toBe(true);
     expect(hydration.detected.trim().length).toBeGreaterThan(0);
     expect(hydration.whyItMatters.trim().length).toBeGreaterThan(0);
@@ -306,7 +306,7 @@ describe('formatReport', () => {
             priority_order: ENGINE_VARIABLE_KEYS,
             variables: {
               pigmentation_stability: { practitioner_score: 95 },
-              barrier_surface_hydration: { practitioner_score: 88 },
+              barrier_surface_hydration: { practitioner_score: 91 },
               firmness_skin_support: { practitioner_score: 96 },
               oil_congestion_balance: { practitioner_score: 97 },
             },
@@ -316,10 +316,11 @@ describe('formatReport', () => {
     });
     expect(report.priority.weakest[0]).toBe('barrier_surface_hydration');
     expect(report.priority.headline).toMatch(/Surface Dehydration/);
-    // Stable findings collapse but stay scored.
+    // Healthy findings (90+) collapse but stay scored.
     const hydration = report.concerns[0];
     expect(hydration.isActive).toBe(false);
-    expect(hydration.score).toBe(88);
+    expect(hydration.score).toBe(91);
+    expect(hydration.bandLabel).toBe('Healthy');
   });
 
   it('never praises a mid score and never says Improving', () => {
