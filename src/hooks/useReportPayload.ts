@@ -247,6 +247,8 @@ export interface ReportPayload {
   /** Who sells and fulfils purchases made from this report. Resolved
    *  server-side from the share link's originating organisation. */
   merchant?: { org_id: string | null; name: string; kind: string; price_source?: 'cdp' | 'xcape' } | null;
+  /** Short-lived signed URL for the image this assessment analysed. */
+  captured_image?: { url: string; captured_at: string | null } | null;
   /** Public order contact + Mobile Money details of the ROLE-RESOLVED
    *  merchant only. Empty until that merchant configures commerce. */
   merchant_contact?: {

@@ -8,6 +8,7 @@ import { sanitizeSnapshotLines } from '../_shared/xcapeProtocol.ts';
 import { sanitizePublicProtocolSnapshot } from '../_shared/publicProtocolSnapshot.ts';
 import { sanitizeReportSkinAnalysis } from '../_shared/reportSkinAnalysis.ts';
 import { PDFDocument, StandardFonts, rgb } from 'npm:pdf-lib@1.17.1';
+import { resolveReportMerchant, usablePrice } from '../_shared/xcapeMerchant.ts';
 import {
   formatReport,
   CONCERN_FIELD_ORDER,
@@ -53,6 +54,15 @@ const BAND_COLOR: Record<FormattedConcern['band'], ReturnType<typeof rgb>> = {
   strong: rgb(0.2, 0.44, 0.28),
 };
 
+/** Role-resolved report currency. Standard PDF fonts cannot draw currency
+ *  glyphs, so amounts always render with a plain-text currency code. */
+function formatMoney(amount: unknown, currency: string): string {
+  const n = Number(amount);
+  if (!Number.isFinite(n) || n <= 0) return '';
+  const nice = n.toLocaleString('en-US');
+  return currency === 'XAF' ? `${nice} FCFA` : `${nice} ${currency}`;
+}
+
 function wrap(text: string, font: any, size: number, maxWidth: number): string[] {
   const words = text.replace(/\s+/g, ' ').trim().split(' ');
   const lines: string[] = [];
@@ -72,6 +82,8 @@ function wrap(text: string, font: any, size: number, maxWidth: number): string[]
 
 async function buildPdf(payload: {
   report: FormattedReport;
+  currency: string;
+  merchantName: string;
   homeCare: string | null;
   followUp: string | null;
   nextVisitInWeeks: number | null;
@@ -168,6 +180,18 @@ async function buildPdf(payload: {
     y -= 10;
   }
 
+  // Priority findings — the first meaningful block, from the same shared
+  // synthesis the live report and public scan render.
+  if (payload.report.concerns.length > 0) {
+    drawText('What needs attention first', { size: 12, bold: true, color: BRONZE });
+    y -= 2;
+    drawText(payload.report.priority.headline, { size: 11.5, bold: true, color: COCOA });
+    for (const line of payload.report.priority.lines) {
+      drawText(line, { size: 10.5, color: COCOA_SOFT });
+    }
+    y -= 10;
+  }
+
   // Concerns — shared canonical formatter output. Same fields, same order,
   // as the live report page. Empty fields are omitted rather than rendered
   // as blank labelled lines.
@@ -198,6 +222,13 @@ async function buildPdf(payload: {
       // copy (SPF, brightening routines…) never prints there.
       const formula = payload.formulas.find((f) => f.category === c.key) ?? null;
 
+      if (!c.isActive) {
+        // Stable finding: score stays visible, detail stays short.
+        drawText(c.detected, { size: 11, color: COCOA_SOFT });
+        y -= 10;
+        continue;
+      }
+
       // Required labelled fields in fixed order. The CUSTOMIZATION block is
       // injected where the customization slot used to sit — just before the
       // optional AI observation line.
@@ -205,7 +236,7 @@ async function buildPdf(payload: {
         if (field.key === 'aiObservation' && formula) {
           drawText('Customization:', { size: 10.5, bold: true, color: COCOA });
           drawText(
-            `${formula.kit_name ?? 'Customized kit'}${formula.kit_unit_price ? `  —  ₦${Number(formula.kit_unit_price).toLocaleString()}` : ''}`,
+            `${formula.kit_name ?? 'Customized kit'}${formula.kit_unit_price ? `  —  ${formatMoney(formula.kit_unit_price, payload.currency)}` : ''}`,
             { size: 11, bold: true, color: COCOA, x: MARGIN + 12, maxWidth: CONTENT_W - 12 },
           );
           if (formula.base_product_name) {
@@ -261,6 +292,7 @@ async function buildPdf(payload: {
         drawText(value, { size: 11, color: COCOA_SOFT });
         y -= 2;
       }
+      if (c.reassurance) drawText(c.reassurance, { size: 10.5, italic: true, color: COCOA_SOFT });
       y -= 8;
     }
   }
@@ -294,7 +326,7 @@ async function buildPdf(payload: {
     drawText('Recommended treatments', { size: 12, bold: true, color: BRONZE });
     y -= 2;
     for (const s of payload.services) {
-      drawText(`• ${s.name}${s.price_per_session ? `  —  ₦${Number(s.price_per_session).toLocaleString()}` : ''}`, {
+      drawText(`• ${s.name}${s.price_per_session ? `  —  ${formatMoney(s.price_per_session, payload.currency)}` : ''}`, {
         size: 11, bold: true, color: COCOA,
       });
       if (s.description) drawText(s.description, { size: 10.5, color: COCOA_SOFT, x: MARGIN + 12, maxWidth: CONTENT_W - 12 });
@@ -309,7 +341,7 @@ async function buildPdf(payload: {
     drawText('Recommended products', { size: 12, bold: true, color: BRONZE });
     y -= 2;
     for (const p of payload.products) {
-      drawText(`• ${p.name}${p.selling_price ? `  —  ₦${Number(p.selling_price).toLocaleString()}` : ''}`, {
+      drawText(`• ${p.name}${p.selling_price ? `  —  ${formatMoney(p.selling_price, payload.currency)}` : ''}`, {
         size: 11, bold: true, color: COCOA,
       });
       if (p.short_description) drawText(p.short_description, { size: 10.5, color: COCOA_SOFT, x: MARGIN + 12, maxWidth: CONTENT_W - 12 });
@@ -385,7 +417,7 @@ Deno.serve(async (req) => {
 
     const { data: link, error: linkErr } = await admin
       .from('client_report_links')
-      .select('id, client_id, assessment_id, expires_at, revoked_at, token_prefix')
+      .select('id, client_id, assessment_id, expires_at, revoked_at, token_prefix, origin_role, origin_org_id')
       .eq('token_hash', token_hash)
       .maybeSingle();
     if (linkErr) throw linkErr;
@@ -413,7 +445,7 @@ Deno.serve(async (req) => {
       svcIds.length ? admin.from('services').select('id, name, description, price_per_session').in('id', svcIds) : Promise.resolve({ data: [] as any[] }),
       prodIds.length ? admin.from('products').select('id, name, short_description, selling_price').in('id', prodIds) : Promise.resolve({ data: [] as any[] }),
       admin.from('xcape_formula_snapshots')
-        .select('category, kit_name, kit_unit_price, base_product_name, active_name, dose_ml, companion_name, companion_dose_ml, instructions, warnings, formula_lines')
+        .select('category, kit_product_id, kit_name, kit_unit_price, base_product_name, active_name, dose_ml, companion_name, companion_dose_ml, instructions, warnings, formula_lines')
         .eq('assessment_id', assessment.id)
         .eq('status', 'approved')
         .eq('is_demo', false)
@@ -441,16 +473,75 @@ Deno.serve(async (req) => {
       },
     });
 
+    // ---- Role-resolved merchant, live prices, report currency ----
+    // Same routing contract as public-report-fetch: only a cdp-origin link
+    // with an ACTIVE cdp org routes away from XCAPE root.
+    const { data: rootOrg } = await admin
+      .from('organizations').select('id, name').eq('kind', 'xcape_root').maybeSingle();
+    // deno-lint-ignore no-explicit-any
+    let originOrg: any = null;
+    // deno-lint-ignore no-explicit-any
+    if ((link as any).origin_org_id) {
+      const { data } = await admin
+        .from('organizations').select('id, name, kind, status')
+        // deno-lint-ignore no-explicit-any
+        .eq('id', (link as any).origin_org_id).maybeSingle();
+      originOrg = data ?? null;
+    }
+    // deno-lint-ignore no-explicit-any
+    const routed = resolveReportMerchant((link as any).origin_role, originOrg, rootOrg);
+    const currency = 'XAF';
+
+    const kitIds = [...new Set(
+      // deno-lint-ignore no-explicit-any
+      (formulas ?? []).map((f: any) => f?.kit_product_id).filter(Boolean),
+    )] as string[];
+    const priceOverrides: Record<string, number> = {};
+    if (routed.price_source === 'cdp' && routed.org_id) {
+      const priceIds = [...new Set([...prodIds, ...kitIds])];
+      if (priceIds.length > 0) {
+        const { data: book } = await admin
+          .from('organization_product_prices')
+          .select('product_id, price, active')
+          .eq('organization_id', routed.org_id)
+          .in('product_id', priceIds);
+        // deno-lint-ignore no-explicit-any
+        for (const row of (book ?? []) as any[]) {
+          const v = usablePrice(row.price);
+          if (row.active && v != null) priceOverrides[row.product_id] = v;
+        }
+      }
+    }
+    // deno-lint-ignore no-explicit-any
+    let kitPriceById = new Map<string, number | null>();
+    if (kitIds.length > 0) {
+      const { data: kitProducts } = await admin
+        .from('products').select('id, selling_price').in('id', kitIds);
+      // deno-lint-ignore no-explicit-any
+      kitPriceById = new Map((kitProducts ?? []).map((p: any) => [
+        p.id, priceOverrides[p.id] ?? usablePrice(p.selling_price),
+      ]));
+    }
+    // deno-lint-ignore no-explicit-any
+    const pricedProducts = ((products ?? []) as any[]).map((p) => ({
+      ...p,
+      selling_price: priceOverrides[p.id] ?? usablePrice(p.selling_price),
+    }));
+
     const pdfBytes = await buildPdf({
       report,
+      currency,
+      merchantName: routed.name,
       homeCare: assessment.home_care,
       followUp: assessment.follow_up_recommendation,
       nextVisitInWeeks: assessment.next_visit_in_weeks,
       services: (services ?? []) as any[],
-      products: (products ?? []) as any[],
+      products: pricedProducts as any[],
       // deno-lint-ignore no-explicit-any
       formulas: (formulas ?? []).map((f: any) => ({
         ...f,
+        // Live, role-resolved kit price — never the historical snapshot price.
+        kit_unit_price: f.kit_product_id ? (kitPriceById.get(f.kit_product_id) ?? null) : null,
         formula_lines: sanitizeSnapshotLines(f.formula_lines),
       })) as any[],
       // Only when nothing has been practitioner-approved for this assessment.

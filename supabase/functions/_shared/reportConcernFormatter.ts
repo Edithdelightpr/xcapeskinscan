@@ -16,9 +16,17 @@ import {
   ENGINE_VARIABLE_KEYS,
   ENGINE_VARIABLE_LABEL,
   ENGINE_VARIABLE_DESCRIPTION,
-  stageFor,
+  STAGE_TABLE,
   type EngineVariableKey,
 } from './skinEngine.ts';
+import {
+  clientCopyFor,
+  communicationBandFor,
+  prioritySynthesis,
+  REPORT_LANGUAGE_VERSION,
+  type CommBand,
+  type PrioritySynthesis,
+} from './xcapeReportLanguage.ts';
 
 // ---- MIRROR REGION START ------------------------------------------------
 // Everything between the MIRROR REGION markers must be byte-identical in the
@@ -35,9 +43,20 @@ export interface FormattedConcern {
   score: number;
   scoreLabel: string;
   band: ScoreBand;
+  /** Truthful client band label from xcape-report-language-v2. */
   bandLabel: string;
+  /** Communication band driving hierarchy (active vs stable). */
+  commBand: CommBand;
+  /** Active concerns render in full; stable findings may collapse. */
+  isActive: boolean;
   stageName: string;
-  /** Required labelled fields — engine copy, never rewritten. */
+  /** ---- Client communication fields (xcape-report-language-v2) ---- */
+  detected: string;
+  whyItMatters: string;
+  ifLeftUnsupported: string;
+  xcapeResponse: string;
+  reassurance: string;
+  /** Legacy aliases kept so older consumers keep compiling. */
   analysis: string;
   impact: string;
   callToAction: string;
@@ -65,22 +84,33 @@ export interface FormattedReport {
     clientGoal: string | null;
   };
   concerns: FormattedConcern[];
+  /** Always names the weakest one or two areas. Rendered first. */
+  priority: PrioritySynthesis;
+  languageVersion: string;
 }
 
-const BAND_LABEL: Record<ScoreBand, string> = {
-  critical: 'Priority focus',
-  low: 'Needs attention',
-  fair: 'Improving',
-  good: 'Healthy',
-  strong: 'Optimal',
+/**
+ * Visual tone bucket only. The client-visible wording comes from
+ * `communicationBandFor` (xcape-report-language-v2), never from this map.
+ */
+const COMM_TO_TONE: Record<CommBand, ScoreBand> = {
+  priority: 'critical',
+  active: 'low',
+  correction: 'fair',
+  watch: 'good',
+  maintenance: 'strong',
+  preventive: 'strong',
 };
 
-function bandFor(score: number): ScoreBand {
-  if (score <= 20) return 'critical';
-  if (score <= 40) return 'low';
-  if (score <= 60) return 'fair';
-  if (score <= 80) return 'good';
-  return 'strong';
+function toneFor(commBand: CommBand): ScoreBand {
+  return COMM_TO_TONE[commBand] ?? 'good';
+}
+
+/** Raw-score engine stage. Report wording never uses variable calibration. */
+function rawEngineStage(key: EngineKey, score: number) {
+  const table = STAGE_TABLE[key];
+  const s = Math.max(0, Math.min(100, Math.round(score)));
+  return table.find((row) => s >= row.range[0] && s <= row.range[1]) ?? table[0];
 }
 
 const clamp01 = (n: number) => Math.max(0, Math.min(100, Math.round(n)));
@@ -194,23 +224,37 @@ export function formatConcerns(skinAnalysis: unknown): FormattedConcern[] {
   }
 
   const order = normalizePriorityOrder(engine?.priority_order, scoredKeys);
+  // Report hierarchy: weakest first. Ties keep the saved priority order, so
+  // stored assessment data is never rewritten, only presented.
+  const ranked = [...order].sort((a, b) => {
+    const diff = (scores.get(a) ?? 0) - (scores.get(b) ?? 0);
+    return diff !== 0 ? diff : order.indexOf(a) - order.indexOf(b);
+  });
 
-  return order.map<FormattedConcern>((key) => {
+  return ranked.map<FormattedConcern>((key) => {
     const score = scores.get(key)!;
-    const band = bandFor(score);
-    const stage = stageFor(key, score);
+    const comm = communicationBandFor(score);
+    const stage = rawEngineStage(key, score);
+    const copy = clientCopyFor(key, score);
     return {
       key,
       clinicalName: ENGINE_VARIABLE_LABEL[key],
       plainDescription: ENGINE_VARIABLE_DESCRIPTION[key],
       score,
       scoreLabel: `${score}%`,
-      band,
-      bandLabel: BAND_LABEL[band],
+      band: toneFor(comm.band),
+      bandLabel: comm.label,
+      commBand: comm.band,
+      isActive: comm.active,
       stageName: stage.stage,
-      analysis: stage.analysis ?? '',
-      impact: stage.impact ?? '',
-      callToAction: stage.call_to_action ?? '',
+      detected: copy.detected,
+      whyItMatters: copy.whyItMatters,
+      ifLeftUnsupported: copy.ifLeftUnsupported,
+      xcapeResponse: copy.xcapeResponse,
+      reassurance: copy.reassurance,
+      analysis: copy.detected,
+      impact: copy.whyItMatters,
+      callToAction: copy.xcapeResponse,
       treatmentDirection: stage.treatment_direction ?? '',
       aiObservation: pickAiObservation(skinAnalysis, key),
       anchorId: `concern-${key.replace(/_/g, '-')}`,
@@ -230,6 +274,7 @@ export interface FormatReportInput {
 }
 
 export function formatReport(input: FormatReportInput): FormattedReport {
+  const concerns = formatConcerns(input.assessment.skin_analysis);
   return {
     client: {
       firstName: sanitizeFirstName(input.clientFirstName),
@@ -242,7 +287,11 @@ export function formatReport(input: FormatReportInput): FormattedReport {
       mainConcern: input.assessment.main_concern,
       clientGoal: input.assessment.client_goal,
     },
-    concerns: formatConcerns(input.assessment.skin_analysis),
+    concerns,
+    priority: prioritySynthesis(
+      Object.fromEntries(concerns.map((c) => [c.key, c.score])),
+    ),
+    languageVersion: REPORT_LANGUAGE_VERSION,
   };
 }
 
@@ -250,11 +299,11 @@ export function formatReport(input: FormatReportInput): FormattedReport {
  *  is intentionally absent — it belongs to the practitioner-approved XCAPE
  *  kit formula, injected by the renderer (never engine copy). */
 export const CONCERN_FIELD_ORDER = [
-  { key: 'analysis', label: 'Analysis' },
-  { key: 'impact', label: 'Impact' },
-  { key: 'callToAction', label: 'Call to action' },
-  { key: 'treatmentDirection', label: 'Treatment direction' },
-  { key: 'aiObservation', label: 'AI observation' },
+  { key: 'detected', label: 'What XCAPE detected' },
+  { key: 'whyItMatters', label: 'Why it matters' },
+  { key: 'ifLeftUnsupported', label: 'If left unsupported' },
+  { key: 'xcapeResponse', label: 'XCAPE response' },
+  { key: 'aiObservation', label: 'Visible observation' },
 ] as const;
 
 // ---- MIRROR REGION END --------------------------------------------------

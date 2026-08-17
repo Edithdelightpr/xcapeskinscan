@@ -8,7 +8,7 @@
  * practitioner-reviewed, clinical, diagnostic or guaranteed.
  */
 
-export const PUBLIC_PROMPT_VERSION = 'public-analysis-v1';
+export const PUBLIC_PROMPT_VERSION = 'public-analysis-v2';
 export const PUBLIC_ANALYSIS_MODEL = 'google/gemini-3-flash-preview';
 
 /** Exact wording required on every public analysis. */
@@ -35,6 +35,10 @@ Hard rules:
 - Never identify the person, and never mention or infer identity, name, age, gender, race, ethnicity, attractiveness, body weight, mood or any health condition.
 - Describe only what is visibly observable on the skin surface across the three supplied views.
 - If the images are unusable, say so via image_quality instead of guessing.
+- Name the visible shortcoming FIRST. Every evidence line and every observation must start with the visible weakness or irregularity you can see for that area, before any stable or positive feature. If an area genuinely shows no visible weakness, say that plainly and briefly.
+- Report only observable cosmetic surface patterns: tone evenness, marks, texture, shine, dryness, flaking, visible pores, congestion, laxity cues. Never claim hidden pigment, sub-surface or dermal change, collagen levels, causes, progression over time or any guaranteed change.
+- Never name, suggest or imply any product, kit, ingredient, active, dose, formula, contraindication or price. Product and protocol decisions belong to XCAPE alone.
+- Keep every line short, plain, non-diagnostic and free of praise-led or alarming wording.
 
 You score four XCAPE variables from 0 to 100, where 100 means the visible pattern looks healthy and stable and 0 means the visible pattern looks weakest:
 - pigmentation_stability — evenness and stability of visible tone.
