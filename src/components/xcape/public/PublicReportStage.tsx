@@ -19,6 +19,7 @@ import { SCAN_VIEWS, type ScanViewId } from '@/lib/scan/scanQuality';
 import PublicConcernBreakdown from '@/components/xcape/public/PublicConcernBreakdown';
 import ClientProtocolPlan from '@/components/xcape/protocol/ClientProtocolPlan';
 import { concernsFromReport, type PublicAnalysisReport } from '@/lib/publicAnalysisReport';
+import { prioritySynthesis } from '@/lib/xcapeReportLanguage';
 
 interface Props {
   photoUrl: string | null;
@@ -53,6 +54,10 @@ const PublicReportStage = ({
   const { user } = useAuth();
   const key = priority ?? priorityFromScores(scores);
   const concerns = concernsFromReport(report);
+  // Same pure synthesis the secure report and PDF use.
+  const priority = prioritySynthesis(
+    Object.fromEntries(concerns.map((c) => [c.key, c.score])),
+  );
 
   return (
     <section
@@ -104,12 +109,32 @@ const PublicReportStage = ({
             </p>
           )}
 
-          {key && (
+          {(priority.weakest.length > 0 || key) && (
             <div className="rounded-2xl border border-sky-500/30 bg-sky-500/10 p-4">
               <p className="text-xs uppercase tracking-[0.16em] text-sky-200">
-                Priority detected: {PUBLIC_SCORE_LABEL[key]}
+                What needs attention first
               </p>
-              <p className="mt-1.5 text-sm text-slate-200">{PUBLIC_SCORE_PRIORITY_NOTE[key]}</p>
+              {priority.weakest.length > 0 ? (
+                <>
+                  <p className="mt-1.5 text-sm font-medium text-slate-100">{priority.headline}</p>
+                  <ul className="mt-1.5 space-y-1 text-sm text-slate-200">
+                    {priority.lines.map((line) => (
+                      <li key={line}>{line}</li>
+                    ))}
+                  </ul>
+                </>
+              ) : (
+                key && (
+                  <>
+                    <p className="mt-1.5 text-sm font-medium text-slate-100">
+                      {PUBLIC_SCORE_LABEL[key]} needs attention first.
+                    </p>
+                    <p className="mt-1.5 text-sm text-slate-200">
+                      {PUBLIC_SCORE_PRIORITY_NOTE[key]}
+                    </p>
+                  </>
+                )
+              )}
             </div>
           )}
 
@@ -125,7 +150,7 @@ const PublicReportStage = ({
               face={report.protocol.face}
               body={report.protocol.body}
               addons={report.protocol.addons}
-              footnote="Your XCAPE protocol, resolved from your four health scores. Use the steps in order. Only your Face Cream and Body Milk are customized; your body protocol is derived from your facial findings, with the weak-elasticity Body Milk line prepared at 5× the face amount. The other products are simply recommended for your routine. Availability and pricing are confirmed by XCAPE before anything is prepared."
+              footnote="Your XCAPE protocol, resolved from your four health scores. Use the steps in order. Only your Face Cream and Body Milk are customized; your body protocol is derived from your facial findings, and each body amount shown is the amount the protocol resolved for that line. The other products are simply recommended for your routine. Availability and pricing are confirmed by XCAPE before anything is prepared."
             />
           )}
 

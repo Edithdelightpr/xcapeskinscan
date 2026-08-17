@@ -94,15 +94,18 @@ const PublicConcernBreakdown = ({ concerns, report, className }: Props) => {
                 {observation && (
                   <div className="rounded-xl border border-slate-700/70 bg-slate-800/40 p-3">
                     <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
-                      What we observed
+                      Visible observation
                     </p>
                     <p className="mt-1 text-sm leading-relaxed text-slate-200">{observation}</p>
                   </div>
                 )}
-                <Field label="Analysis" value={c.analysis} />
-                <Field label="Impact" value={c.impact} />
-                <Field label="What to do next" value={c.callToAction} />
-                <Field label="Treatment direction" value={c.treatmentDirection} />
+                <Field label="What XCAPE detected" value={c.detected} />
+                <Field label="Why it matters" value={c.whyItMatters} />
+                <Field label="If left unsupported" value={c.ifLeftUnsupported} />
+                <Field label="XCAPE response" value={c.xcapeResponse} />
+                {c.reassurance && (
+                  <p className="text-xs leading-relaxed text-slate-400">{c.reassurance}</p>
+                )}
               </AccordionContent>
             </AccordionItem>
           );
