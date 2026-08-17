@@ -110,7 +110,7 @@ describe('client-copy safety', () => {
         firmness_skin_support: s,
         oil_congestion_balance: s,
       });
-      out.push(syn.headline, syn.body);
+      out.push(syn.headline, ...syn.lines);
     }
     return out;
   };
@@ -156,8 +156,8 @@ describe('priority synthesis', () => {
       oil_congestion_balance: 66,
     });
     expect(syn.allStable).toBe(false);
-    expect(syn.keys[0]).toBe('barrier_surface_hydration');
-    expect(syn.body.toLowerCase()).toContain('surface hydration');
+    expect(syn.weakest[0]).toBe('barrier_surface_hydration');
+    expect(syn.lines.join(' ').toLowerCase()).toContain('surface dehydration');
   });
 
   it('uses a maintenance headline when every reading is stable', () => {
@@ -170,12 +170,12 @@ describe('priority synthesis', () => {
     expect(syn.allStable).toBe(true);
     expect(syn.headline.toLowerCase()).toContain('maintain');
     // Even when stable it must still name a focus area, never claim perfection.
-    expect(syn.keys.length).toBeGreaterThan(0);
+    expect(syn.weakest.length).toBeGreaterThan(0);
   });
 
   it('returns a safe empty synthesis with no scores', () => {
     const syn = prioritySynthesis({});
-    expect(syn.keys).toEqual([]);
+    expect(syn.weakest).toEqual([]);
     expect(syn.overall).toBeNull();
   });
 });
