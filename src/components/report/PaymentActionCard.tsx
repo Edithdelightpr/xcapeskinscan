@@ -115,7 +115,7 @@ const PaymentActionCard = ({ plan, paymentSettings, token, preview = false }: Pr
         <div className="mb-3 sm:mb-5">
           <div className="text-[10.5px] uppercase tracking-[0.22em] text-bronze font-semibold">Payment</div>
           <h2 id="payment-action" className="mt-1 font-display text-xl sm:text-3xl text-cocoa tracking-tight">
-            Fully settled — thank you
+            Fully settled. Thank you
           </h2>
         </div>
         <div className="rounded-3xl border border-emerald-500/25 bg-emerald-500/8 p-4 sm:p-6 flex items-center gap-3 text-emerald-800">

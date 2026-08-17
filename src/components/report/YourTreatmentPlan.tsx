@@ -179,7 +179,7 @@ const YourTreatmentPlan = ({ plan }: Props) => {
             <span className="font-semibold text-cocoa">{formatNaira(unallocated)}</span>{' '}
             of your payment is available for your next session
             {nextRequired > 0 ? (
-              <> — {formatNaira(Math.min(unallocated, nextRequired))} already covers it.</>
+              <>: {formatNaira(Math.min(unallocated, nextRequired))} already covers it.</>
             ) : (
               <>.</>
             )}
@@ -209,7 +209,7 @@ const YourTreatmentPlan = ({ plan }: Props) => {
                 <div className="text-[10.5px] uppercase tracking-[0.16em] text-cocoa/50 font-semibold">Latest completed</div>
                 <div className="mt-0.5 text-cocoa">
                   Session {latest.plan_sequence_number}
-                  {latest.service_name ? ` — ${latest.service_name}` : ''}
+                  {latest.service_name ? `: ${latest.service_name}` : ''}
                   {latest.performed_at ? ` · ${new Date(latest.performed_at).toLocaleDateString()}` : ''}
                 </div>
               </div>

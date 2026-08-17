@@ -11,7 +11,8 @@ import { PDFDocument, StandardFonts, rgb } from 'npm:pdf-lib@1.17.1';
 import {
   resolveReportMerchant,
   usablePrice,
-  resolveReportCurrency,
+  resolveMerchantReportCurrency,
+  overrideMatchesCurrency,
   formatMoney,
 } from '../_shared/xcapeMerchant.ts';
 
@@ -521,12 +522,10 @@ Deno.serve(async (req) => {
     }
     // deno-lint-ignore no-explicit-any
     const routed = resolveReportMerchant((link as any).origin_role, originOrg, rootOrg);
-    // Centralised platform currency (no per-org currency column today), so
-    // fetch, preview and PDF cannot drift apart.
-    const currency = resolveReportCurrency(
-      // deno-lint-ignore no-explicit-any
-      (originOrg as any)?.currency ?? (rootOrg as any)?.currency ?? null,
-    );
+    // Real currency, identical resolution to public-report-fetch: resolved
+    // merchant's xcape_commerce_settings.currency, then the XCAPE-root
+    // setting, then the XAF platform default.
+    const currency = await resolveMerchantReportCurrency(admin, routed.org_id, rootOrg?.id ?? null);
 
     let merchantContact: { order_contact_phone: string | null; whatsapp_number: string | null } | null = null;
     if (routed.org_id) {
@@ -553,13 +552,15 @@ Deno.serve(async (req) => {
       if (priceIds.length > 0) {
         const { data: book } = await admin
           .from('organization_product_prices')
-          .select('product_id, price, active')
+          .select('product_id, price, active, currency')
           .eq('organization_id', routed.org_id)
           .in('product_id', priceIds);
         // deno-lint-ignore no-explicit-any
         for (const row of (book ?? []) as any[]) {
           const v = usablePrice(row.price);
-          if (row.active && v != null) priceOverrides[row.product_id] = v;
+          if (row.active && v != null && overrideMatchesCurrency(row.currency, currency)) {
+            priceOverrides[row.product_id] = v;
+          }
         }
       }
     }

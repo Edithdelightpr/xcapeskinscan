@@ -199,7 +199,7 @@ describe('shared currency helper', () => {
   });
 
   it('never renders an absent amount as free', () => {
-    expect(formatMoney(null)).toBe('—');
+    expect(formatMoney(null)).toBe('Not available');
     expect(formatMoney(undefined, 'XAF', { placeholder: 'Price on request' }))
       .toBe('Price on request');
   });

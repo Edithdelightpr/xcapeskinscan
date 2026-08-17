@@ -34,19 +34,35 @@ export const isXcapeRetailSku = (sku: string | null | undefined): sku is XcapeRe
   !!sku && (XCAPE_RETAIL_SKUS as readonly string[]).includes(sku);
 
 /**
- * The single platform default report currency. There is no per-organization
- * currency column today, so every surface (public-report-fetch, staff preview
- * and the PDF) resolves through `resolveReportCurrency` instead of hard-coding
- * a code of its own. When per-org currency lands, only this helper changes.
+ * Last-resort platform report currency. The real per-organization currency
+ * lives on public.xcape_commerce_settings.currency (NOT NULL, default XAF);
+ * `organizations` has no currency column. Report surfaces resolve the
+ * merchant's commerce-settings currency, then the XCAPE-root setting, and
+ * only then this XAF default.
  */
 export const PLATFORM_REPORT_CURRENCY = XCAPE_CURRENCY;
+
+/** Strict ISO-4217-shaped code, or null when unusable. */
+export const normalizeCurrencyCode = (value: unknown): string | null => {
+  const code = String(value ?? '').trim().toUpperCase();
+  return /^[A-Z]{3}$/.test(code) ? code : null;
+};
 
 /** Role-resolved report currency. Falls back to the platform default. */
 export const resolveReportCurrency = (
   orgCurrency?: string | null,
-): string => {
-  const code = (orgCurrency ?? '').trim().toUpperCase();
-  return /^[A-Z]{3}$/.test(code) ? code : PLATFORM_REPORT_CURRENCY;
+): string => normalizeCurrencyCode(orgCurrency) ?? PLATFORM_REPORT_CURRENCY;
+
+/**
+ * A CDP price override is only honoured when its own currency (NOT NULL on
+ * organization_product_prices) matches the resolved report currency.
+ */
+export const overrideMatchesCurrency = (
+  rowCurrency: unknown,
+  reportCurrency: string,
+): boolean => {
+  const row = normalizeCurrencyCode(rowCurrency);
+  return row != null && row === normalizeCurrencyCode(reportCurrency);
 };
 
 /**
@@ -59,7 +75,7 @@ export const formatMoney = (
   currency: string | null | undefined = PLATFORM_REPORT_CURRENCY,
   opts: { ascii?: boolean; placeholder?: string } = {},
 ): string => {
-  const placeholder = opts.placeholder ?? '—';
+  const placeholder = opts.placeholder ?? 'Not available';
   if (amount == null || !Number.isFinite(Number(amount))) return placeholder;
   const nice = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 })
     .format(Math.round(Number(amount)));

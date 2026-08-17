@@ -10,7 +10,7 @@ interface Props {
 
 const AskOnWhatsAppBlock = ({ token, firstName, linkPrefix }: Props) => {
   const greeting = firstName
-    ? `Hi ${BRAND.name}! I just read my Personal Report — ${firstName} here. I have a question:`
+    ? `Hi ${BRAND.name}! I just read my Personal Report. ${firstName} here. I have a question:`
     : `Hi ${BRAND.name}! I just read my Personal Report and I have a question:`;
   const waHref = whatsAppLink(greeting);
 

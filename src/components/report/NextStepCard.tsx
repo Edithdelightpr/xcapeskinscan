@@ -14,12 +14,12 @@ const NextStepCard = ({ plan }: Props) => {
   if (!paid && !sequenced) {
     body = 'Your treatment sequence will be scheduled after payment confirmation. Once your payment is confirmed by our team, your practitioner will map out the order and rhythm of your sessions.';
   } else if (paid && !sequenced) {
-    body = 'Payment received — thank you. Your practitioner will confirm the order and rhythm of your sessions shortly.';
+    body = 'Payment received. Thank you. Your practitioner will confirm the order and rhythm of your sessions shortly.';
   } else if (sequenced && next?.service_name) {
     const cost = typeof next.planned_unit_cost === 'number' ? next.planned_unit_cost : 0;
     const required = typeof next.amount_required === 'number' ? next.amount_required : cost;
     if (required <= 0) {
-      body = `Your next session — ${next.service_name} — is fully covered by your confirmed payment. Your practitioner will confirm the date shortly.`;
+      body = `Your next session, ${next.service_name}, is fully covered by your confirmed payment. Your practitioner will confirm the date shortly.`;
     } else {
       body = `Your next session is ${next.service_name}. A minimum of ${formatNaira(required)} is needed to begin this session${cost > 0 ? ` (session cost ${formatNaira(cost)})` : ''}.`;
     }

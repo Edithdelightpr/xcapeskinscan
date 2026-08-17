@@ -150,7 +150,7 @@ const PublicReportStage = ({
               face={report.protocol.face}
               body={report.protocol.body}
               addons={report.protocol.addons}
-              footnote="Your XCAPE protocol, resolved from your four health scores. Use the steps in order. Only your Face Cream and Body Milk are customized; your body protocol is derived from your facial findings, and each body amount shown is the amount the protocol resolved for that line. The other products are simply recommended for your routine. Availability and pricing are confirmed by XCAPE before anything is prepared."
+              footnote="Pending practitioner confirmation. This protocol is not yet purchasable. Your XCAPE protocol, resolved from your four health scores. Use the steps in order. Only your Face Cream and Body Milk are customized; your body protocol is derived from your facial findings, and each body amount shown is the amount the protocol resolved for that line. The other products are simply recommended for your routine. Availability and pricing are confirmed by XCAPE before anything is prepared."
             />
           )}
 
@@ -199,7 +199,7 @@ const PublicReportStage = ({
               <p className="text-sm font-semibold text-slate-100">Keep this analysis permanently</p>
               <p className="mt-1 text-sm text-slate-300">
                 Create a free XCAPE Affiliate account to save this scan, its images and report under
-                your own clients — you come straight back to this analysis.
+                your own clients. You come straight back to this analysis.
               </p>
               <div className="mt-3 flex flex-wrap gap-2">
                 <Link

@@ -52,7 +52,7 @@ const ConcernCard = ({ concern, token, formula, orderingAvailable = true }: Prop
             <h3 className="font-display text-[17px] sm:text-[24px] text-cocoa tracking-tight leading-tight">
               {concern.clinicalName}
               <span className="ml-2 sm:ml-3 text-[13px] sm:text-[15px] font-normal text-cocoa/55 tabular-nums align-middle">
-                — {concern.scoreLabel}
+                : {concern.scoreLabel}
               </span>
             </h3>
           </div>

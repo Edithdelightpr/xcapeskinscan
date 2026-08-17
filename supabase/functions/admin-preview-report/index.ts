@@ -10,7 +10,9 @@ import { buildCareJourneyBlock } from '../_shared/reportCareJourney.ts';
 import { sanitizeSnapshotLines } from '../_shared/xcapeProtocol.ts';
 import { sanitizePublicProtocolSnapshot } from '../_shared/publicProtocolSnapshot.ts';
 import { sanitizeReportSkinAnalysis } from '../_shared/reportSkinAnalysis.ts';
-import { resolveReportMerchant, usablePrice, resolveReportCurrency } from '../_shared/xcapeMerchant.ts';
+import { pickCapturedImageRow } from '../_shared/capturedImage.ts';
+import { pickCurrentPreviewLink } from '../_shared/previewLink.ts';
+import { resolveReportMerchant, usablePrice, resolveMerchantReportCurrency, overrideMatchesCurrency } from '../_shared/xcapeMerchant.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -187,14 +189,19 @@ Deno.serve(async (req) => {
     // client will see, so resolve the relevant report link for this
     // assessment (latest non-revoked) to recover origin_role / origin_org.
     // With no link yet, routing falls back to XCAPE root.
-    const { data: previewLink } = await admin
+    const { data: previewLinkRow } = await admin
       .from('client_report_links')
-      .select('origin_role, origin_org_id, revoked_at, created_at')
+      .select('origin_role, origin_org_id, revoked_at, expires_at, created_at')
       .eq('assessment_id', assessment.id)
       .is('revoked_at', null)
+      // Only a CURRENT link routes the preview: null expires_at means
+      // "persistent until revoked", anything already past is ignored.
+      .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`)
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle();
+    // Defensive, testable re-check of the same contract the query encodes.
+    const previewLink = pickCurrentPreviewLink(previewLinkRow ? [previewLinkRow] : []);
 
     // deno-lint-ignore no-explicit-any
     let originOrg: any = null;
@@ -213,10 +220,10 @@ Deno.serve(async (req) => {
       originOrg,
       rootOrg,
     );
-    // Centralised platform currency, shared with fetch and the PDF.
-    const currency = resolveReportCurrency(
-      originOrg?.currency ?? (rootOrg as any)?.currency ?? null,
-    );
+    // Real currency, identical resolution to public-report-fetch: the
+    // resolved merchant's xcape_commerce_settings.currency, then the
+    // XCAPE-root setting, then the XAF platform default.
+    const currency = await resolveMerchantReportCurrency(admin, routed.org_id, rootOrg?.id ?? null);
 
     // Live price book for the resolved merchant (never a frozen snapshot).
     const priceOverrides: Record<string, number> = {};
@@ -229,13 +236,15 @@ Deno.serve(async (req) => {
       if (priceIds.length > 0) {
         const { data: book } = await admin
           .from('organization_product_prices')
-          .select('product_id, price, active')
+          .select('product_id, price, active, currency')
           .eq('organization_id', routed.org_id)
           .in('product_id', priceIds);
         // deno-lint-ignore no-explicit-any
         for (const row of (book ?? []) as any[]) {
           const p = usablePrice(row.price);
-          if (row.active && p != null) priceOverrides[row.product_id] = p;
+          if (row.active && p != null && overrideMatchesCurrency(row.currency, currency)) {
+            priceOverrides[row.product_id] = p;
+          }
         }
       }
     }
@@ -310,22 +319,24 @@ Deno.serve(async (req) => {
     try {
       const { data: shot } = await admin
         .from('client_media')
-        .select('bucket_path, upload_date, archived, file_type')
+        .select('bucket_path, upload_date, archived, file_type, assessment_id')
         .eq('assessment_id', assessment.id)
         .eq('archived', false)
         .eq('file_type', 'image')
         .order('upload_date', { ascending: true })
         .limit(1)
         .maybeSingle();
-      // deno-lint-ignore no-explicit-any
-      const path = (shot as any)?.bucket_path as string | undefined;
+      // Pure, testable authorisation contract: only a non-archived image row
+      // belonging to THIS assessment ever gets a signed URL.
+      const eligible = pickCapturedImageRow(shot ? [shot] : [], assessment.id);
+      const path = eligible?.bucket_path ?? undefined;
       if (path) {
         const { data: signed } = await admin.storage
           .from('client-media')
           .createSignedUrl(path, 60 * 15);
         if (signed?.signedUrl) {
           // deno-lint-ignore no-explicit-any
-          captured_image = { url: signed.signedUrl, captured_at: (shot as any)?.upload_date ?? null };
+          captured_image = { url: signed.signedUrl, captured_at: eligible?.upload_date ?? null };
         }
       }
     } catch (_e) {

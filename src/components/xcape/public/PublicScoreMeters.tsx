@@ -40,7 +40,7 @@ const PublicScoreMeters = ({ scores, pending = 0, className }: Props) => (
             <Icon className="h-3.5 w-3.5 shrink-0 text-slate-400" aria-hidden />
             <dt className="flex-1 text-sm text-slate-200">{PUBLIC_SCORE_LABEL[key]}</dt>
             <dd className="text-sm font-semibold tabular-nums text-slate-100">
-              {has ? value : <span className="text-slate-500">—</span>}
+              {has ? value : <span className="text-slate-500">n/a</span>}
             </dd>
           </div>
           <div

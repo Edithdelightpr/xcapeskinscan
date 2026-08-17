@@ -202,6 +202,8 @@ export interface ReportFormula {
   kit_image_url?: string | null;
   kit_public_slug?: string | null;
   kit_short_description?: string | null;
+  /** Resolved report currency for `kit_unit_price` (ISO code, e.g. "XAF"). */
+  currency?: string;
 }
 
 /**
