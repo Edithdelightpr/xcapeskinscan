@@ -78,9 +78,9 @@ describe('PublicConcernBreakdown hierarchy', () => {
         concerns={[concern('pigmentation_stability', true, 30)]}
         report={
           {
-            concerns: [
-              { key: 'pigmentation_stability', observation: 'observed surface pattern' },
-            ],
+            variables: {
+              pigmentation_stability: { note: 'observed surface pattern' },
+            },
           } as never
         }
       />,
