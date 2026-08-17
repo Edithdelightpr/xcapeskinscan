@@ -8,7 +8,7 @@ import { buildCareJourneyBlock } from '../_shared/reportCareJourney.ts';
 import { sanitizeSnapshotLines } from '../_shared/xcapeProtocol.ts';
 import { sanitizePublicProtocolSnapshot } from '../_shared/publicProtocolSnapshot.ts';
 import { sanitizeReportSkinAnalysis } from '../_shared/reportSkinAnalysis.ts';
-import { pickCapturedImageRow } from '../_shared/capturedImage.ts';
+import { pickCapturedImageRow } from '../_shared/aiMediaAccess.ts';
 import { resolveReportMerchant, usablePrice, resolveMerchantReportCurrency, overrideMatchesCurrency } from '../_shared/xcapeMerchant.ts';
 
 const corsHeaders = {

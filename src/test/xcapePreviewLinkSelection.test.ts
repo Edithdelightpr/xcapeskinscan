@@ -6,11 +6,11 @@ import { describe, expect, it } from 'vitest';
 import {
   isCurrentPreviewLink,
   pickCurrentPreviewLink,
-} from '../../supabase/functions/_shared/previewLink.ts';
+} from '../../supabase/functions/_shared/reportLinkAccess.ts';
 import {
   isEligibleCapturedImage,
   pickCapturedImageRow,
-} from '../../supabase/functions/_shared/capturedImage.ts';
+} from '../../supabase/functions/_shared/aiMediaAccess.ts';
 
 const NOW = Date.parse('2026-08-17T10:00:00Z');
 const iso = (offsetMs: number) => new Date(NOW + offsetMs).toISOString();
