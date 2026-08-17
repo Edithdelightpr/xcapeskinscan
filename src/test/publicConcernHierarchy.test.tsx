@@ -11,6 +11,7 @@ import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
 import PublicConcernBreakdown from '@/components/xcape/public/PublicConcernBreakdown';
+import { commBandLabel, isActiveConcern } from '@/lib/xcapeReportLanguage';
 import type { FormattedConcern } from '@/lib/reportConcernFormatter';
 
 const concern = (
@@ -24,8 +25,8 @@ const concern = (
     plainDescription: `plain ${key}`,
     score,
     scoreLabel: `${score}/100`,
-    band: isActive ? 'low' : 'good',
-    bandLabel: isActive ? 'Needs support' : 'Stable',
+    band: isActive ? 'low' : 'strong',
+    bandLabel: commBandLabel(score),
     commBand: isActive ? 'priority' : 'stable',
     isActive,
     stageName: '',
@@ -95,6 +96,24 @@ describe('PublicConcernBreakdown hierarchy', () => {
       text.indexOf('why pigmentation_stability'),
     );
     expect(text.indexOf('risk pigmentation_stability')).toBeLessThan(responseIdx);
+  });
+});
+
+describe('score status contract on the public surface', () => {
+  it('renders an 89 concern expanded and a 90 concern collapsed', () => {
+    render(
+      <PublicConcernBreakdown
+        concerns={[
+          concern('pigmentation_stability', isActiveConcern(89), 89),
+          concern('firmness_skin_support', isActiveConcern(90), 90),
+        ]}
+        report={null}
+      />,
+    );
+    expect(screen.getByText('detected pigmentation_stability')).toBeInTheDocument();
+    expect(screen.queryByText('detected firmness_skin_support')).toBeNull();
+    expect(screen.getByText('Maintenance concern')).toBeInTheDocument();
+    expect(screen.getByText('Healthy')).toBeInTheDocument();
   });
 });
 
