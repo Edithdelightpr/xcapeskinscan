@@ -55,7 +55,7 @@ const PublicReportStage = ({
   const key = priority ?? priorityFromScores(scores);
   const concerns = concernsFromReport(report);
   // Same pure synthesis the secure report and PDF use.
-  const priority = prioritySynthesis(
+  const synthesis = prioritySynthesis(
     Object.fromEntries(concerns.map((c) => [c.key, c.score])),
   );
 
@@ -109,16 +109,16 @@ const PublicReportStage = ({
             </p>
           )}
 
-          {(priority.weakest.length > 0 || key) && (
+          {(synthesis.weakest.length > 0 || key) && (
             <div className="rounded-2xl border border-sky-500/30 bg-sky-500/10 p-4">
               <p className="text-xs uppercase tracking-[0.16em] text-sky-200">
                 What needs attention first
               </p>
-              {priority.weakest.length > 0 ? (
+              {synthesis.weakest.length > 0 ? (
                 <>
-                  <p className="mt-1.5 text-sm font-medium text-slate-100">{priority.headline}</p>
+                  <p className="mt-1.5 text-sm font-medium text-slate-100">{synthesis.headline}</p>
                   <ul className="mt-1.5 space-y-1 text-sm text-slate-200">
-                    {priority.lines.map((line) => (
+                    {synthesis.lines.map((line) => (
                       <li key={line}>{line}</li>
                     ))}
                   </ul>
