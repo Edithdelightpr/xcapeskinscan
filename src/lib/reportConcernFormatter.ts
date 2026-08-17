@@ -97,8 +97,8 @@ const COMM_TO_TONE: Record<CommBand, ScoreBand> = {
   correction: 'fair',
   watch: 'good',
   maintenance: 'strong',
-  strong_preventive: 'strong',
-} as unknown as Record<CommBand, ScoreBand>;
+  preventive: 'strong',
+};
 
 function toneFor(commBand: CommBand): ScoreBand {
   return COMM_TO_TONE[commBand] ?? 'good';
