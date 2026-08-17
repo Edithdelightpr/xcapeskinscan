@@ -336,6 +336,7 @@ Deno.serve(async (req) => {
         .select('bucket_path, upload_date, archived, file_type')
         .eq('assessment_id', assessment.id)
         .eq('archived', false)
+        .eq('file_type', 'image')
         .order('upload_date', { ascending: true })
         .limit(1)
         .maybeSingle();
