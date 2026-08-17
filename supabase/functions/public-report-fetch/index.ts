@@ -323,6 +323,37 @@ Deno.serve(async (req) => {
     });
 
 
+
+    // ---- Captured image (assessment-scoped, short-lived signed URL) ----
+    // Proves which image was analysed. Scoped strictly to THIS assessment,
+    // non-archived image media only. Storage paths are never exposed and no
+    // storage policy is broadened — the URL is minted with the service key
+    // and expires in 15 minutes. Unavailable or expired media is omitted.
+    let captured_image: { url: string; captured_at: string | null } | null = null;
+    try {
+      const { data: shot } = await admin
+        .from('client_media')
+        .select('bucket_path, upload_date, archived, file_type')
+        .eq('assessment_id', assessment.id)
+        .eq('archived', false)
+        .order('upload_date', { ascending: true })
+        .limit(1)
+        .maybeSingle();
+      // deno-lint-ignore no-explicit-any
+      const path = (shot as any)?.bucket_path as string | undefined;
+      if (path) {
+        const { data: signed } = await admin.storage
+          .from('client-media')
+          .createSignedUrl(path, 60 * 15);
+        if (signed?.signedUrl) {
+          // deno-lint-ignore no-explicit-any
+          captured_image = { url: signed.signedUrl, captured_at: (shot as any)?.upload_date ?? null };
+        }
+      }
+    } catch (_e) {
+      captured_image = null;
+    }
+
     // ---- Engagement: persistent open counters on the link itself ----
     const nowIso = new Date().toISOString();
     await admin
@@ -381,6 +412,7 @@ Deno.serve(async (req) => {
       recommended_services: services ?? [],
       recommended_products: pricedProducts,
       merchant,
+      captured_image,
       merchant_contact,
       ordering_available,
       currency: 'XAF',
