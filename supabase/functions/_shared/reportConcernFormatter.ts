@@ -98,8 +98,8 @@ const COMM_TO_TONE: Record<CommBand, ScoreBand> = {
   active: 'low',
   correction: 'fair',
   watch: 'good',
-  maintenance: 'strong',
-  preventive: 'strong',
+  maintenance: 'good',
+  healthy: 'strong',
 };
 
 function toneFor(commBand: CommBand): ScoreBand {
