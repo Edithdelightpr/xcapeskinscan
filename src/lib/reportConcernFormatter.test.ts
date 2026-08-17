@@ -14,6 +14,7 @@ import {
   stageFor,
   type EngineVariableKey,
 } from './skinEngine';
+import { clientCopyFor, communicationBandFor } from './xcapeReportLanguage';
 
 const baseAssessment = {
   id: 'a-1',
@@ -111,25 +112,30 @@ describe('normalizePriorityOrder', () => {
 });
 
 describe('formatConcerns', () => {
-  it('returns four concerns in the priority order', () => {
+  it('orders concerns weakest first, whatever the saved priority order', () => {
     const concerns = formatConcerns(buildSkinAnalysis());
     expect(concerns.map((c) => c.key)).toEqual([
-      'barrier_surface_hydration',
       'pigmentation_stability',
+      'barrier_surface_hydration',
       'firmness_skin_support',
       'oil_congestion_balance',
     ]);
+    const scores = concerns.map((c) => c.score);
+    expect([...scores].sort((a, b) => a - b)).toEqual(scores);
   });
 
-  it('uses the engine label and stage copy verbatim for every concern', () => {
+  it('uses the engine label and the v2 client language for every concern', () => {
     const concerns = formatConcerns(buildSkinAnalysis());
     for (const c of concerns) {
-      const stage = stageFor(c.key, c.score);
+      const copy = clientCopyFor(c.key, c.score);
       expect(c.clinicalName).toBe(ENGINE_VARIABLE_LABEL[c.key]);
-      expect(c.analysis).toBe(stage.analysis);
-      expect(c.impact).toBe(stage.impact);
-      expect(c.callToAction).toBe(stage.call_to_action);
-      expect(c.treatmentDirection).toBe(stage.treatment_direction);
+      expect(c.detected).toBe(copy.detected);
+      expect(c.whyItMatters).toBe(copy.whyItMatters);
+      expect(c.ifLeftUnsupported).toBe(copy.ifLeftUnsupported);
+      expect(c.xcapeResponse).toBe(copy.xcapeResponse);
+      expect(c.bandLabel).toBe(communicationBandFor(c.score).label);
+      // Legacy aliases stay wired to the v2 copy for older consumers.
+      expect(c.analysis).toBe(copy.detected);
     }
   });
 
@@ -192,6 +198,7 @@ describe('formatConcerns', () => {
       ['firmness_skin_support', 56],
       ['oil_congestion_balance', 78],
     ]);
+
     const report = formatReport({
       clientFirstName: 'Ada',
       assessment: { ...baseAssessment, skin_analysis: analysis },
@@ -265,19 +272,75 @@ describe('formatReport', () => {
     expect(hydration.clinicalName).toBe('Surface Dehydration');
     expect(hydration.score).toBe(72);
     expect(hydration.scoreLabel).toBe('72%');
-    expect(hydration.analysis).toMatch(/highly stable surface hydration/);
-    expect(hydration.impact).toMatch(/Minimal concern/);
-    expect(hydration.callToAction).toMatch(/Continue prevention/);
-    expect(hydration.treatmentDirection).toMatch(/Preventive hydration support only/);
+    // 72 is a watch area under xcape-report-language-v2 — never "Optimal".
+    expect(hydration.bandLabel).toBe('Mild concern / watch area');
+    expect(hydration.isActive).toBe(true);
+    expect(hydration.detected.trim().length).toBeGreaterThan(0);
+    expect(hydration.whyItMatters.trim().length).toBeGreaterThan(0);
+    expect(hydration.ifLeftUnsupported.trim().length).toBeGreaterThan(0);
+    expect(hydration.xcapeResponse.trim().length).toBeGreaterThan(0);
+    expect(hydration.treatmentDirection).toBe(stageFor('barrier_surface_hydration', 72).treatment_direction);
+  });
+
+  it('leads with a priority synthesis naming the weakest area', () => {
+    const report = formatReport({
+      clientFirstName: 'Ada',
+      assessment: { ...baseAssessment, skin_analysis: buildSkinAnalysis() },
+    });
+    expect(report.languageVersion).toBe('xcape-report-language-v2');
+    expect(report.priority.weakest[0]).toBe('pigmentation_stability');
+    expect(report.priority.headline).toMatch(/Hyperpigmentation/);
+  });
+
+  it('names the weakest area even when every score is high', () => {
+    const report = formatReport({
+      clientFirstName: 'Ada',
+      assessment: {
+        ...baseAssessment,
+        skin_analysis: {
+          engine: {
+            priority_order: ENGINE_VARIABLE_KEYS,
+            variables: {
+              pigmentation_stability: { practitioner_score: 95 },
+              barrier_surface_hydration: { practitioner_score: 88 },
+              firmness_skin_support: { practitioner_score: 96 },
+              oil_congestion_balance: { practitioner_score: 97 },
+            },
+          },
+        },
+      },
+    });
+    expect(report.priority.weakest[0]).toBe('barrier_surface_hydration');
+    expect(report.priority.headline).toMatch(/Surface Dehydration/);
+    // Stable findings collapse but stay scored.
+    const hydration = report.concerns[0];
+    expect(hydration.isActive).toBe(false);
+    expect(hydration.score).toBe(88);
+  });
+
+  it('never praises a mid score and never says Improving', () => {
+    for (let score = 0; score <= 100; score += 1) {
+      const band = communicationBandFor(score);
+      expect(band.label).not.toMatch(/Improving/i);
+      if (score < 91) expect(band.label).not.toMatch(/Optimal/i);
+      if (score < 81) expect(band.label).not.toMatch(/Healthy|Stable/i);
+    }
   });
 
   it('CONCERN_FIELD_ORDER is fixed and complete — with no customization slot', () => {
     expect(CONCERN_FIELD_ORDER.map((f) => f.key)).toEqual([
-      'analysis',
-      'impact',
-      'callToAction',
-      'treatmentDirection',
+      'detected',
+      'whyItMatters',
+      'ifLeftUnsupported',
+      'xcapeResponse',
       'aiObservation',
+    ]);
+    expect(CONCERN_FIELD_ORDER.map((f) => f.label)).toEqual([
+      'What XCAPE detected',
+      'Why it matters',
+      'If left unsupported',
+      'XCAPE response',
+      'Visible observation',
     ]);
   });
 });

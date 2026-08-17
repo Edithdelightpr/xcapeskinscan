@@ -76,11 +76,18 @@ describe('sanitizeReportPayload', () => {
 
   it('formats concerns with the shared clinical formatter', () => {
     const concerns = concernsFromReport(report);
-    expect(concerns.map((c) => c.key)).toEqual(report.priorityOrder);
+    // Report hierarchy is weakest-first, not the saved priority order.
+    expect(concerns.map((c) => c.key)).toEqual([
+      'pigmentation_stability',
+      'barrier_surface_hydration',
+      'firmness_skin_support',
+    ]);
+    expect(new Set(concerns.map((c) => c.key))).toEqual(new Set(report.priorityOrder));
     for (const c of concerns) {
-      expect(c.analysis.length).toBeGreaterThan(0);
-      expect(c.impact.length).toBeGreaterThan(0);
-      expect(c.callToAction.length).toBeGreaterThan(0);
+      expect(c.detected.length).toBeGreaterThan(0);
+      expect(c.whyItMatters.length).toBeGreaterThan(0);
+      expect(c.ifLeftUnsupported.length).toBeGreaterThan(0);
+      expect(c.xcapeResponse.length).toBeGreaterThan(0);
       expect(c.treatmentDirection.length).toBeGreaterThan(0);
     }
   });
