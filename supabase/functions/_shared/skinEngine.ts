@@ -183,7 +183,7 @@ export const VARIABLE_COPY_BANK: Record<EngineVariableKey, Record<StageBand, Var
     },
     very_strong: {
       analysis: 'Analyses indicate highly stable sebum activity, with very mild congestion risk.',
-      impact: 'Minimal concern; preventive care is sufficient.',
+      impact: 'A maintenance concern remains; light, consistent support is what keeps it in check.',
       call_to_action: 'Continue prevention and routine check-ins.',
       treatment_direction: 'Preventive maintenance only.',
       home_care_alternatives: 'Preventive routine and non-comedogenic SPF.',
@@ -255,7 +255,7 @@ export const VARIABLE_COPY_BANK: Record<EngineVariableKey, Record<StageBand, Var
     },
     very_strong: {
       analysis: 'Analyses indicate highly stable surface hydration, with a resilient barrier supporting comfort and treatment tolerance.',
-      impact: 'Minimal concern.',
+      impact: 'A maintenance concern remains in this area; light, consistent support is what keeps it in check.',
       call_to_action: 'Continue prevention and routine check-ins.',
       treatment_direction: 'Preventive hydration support only.',
       home_care_alternatives: 'Preventive hydration routine, ceramides, SPF.',
@@ -327,7 +327,7 @@ export const VARIABLE_COPY_BANK: Record<EngineVariableKey, Record<StageBand, Var
     },
     very_strong: {
       analysis: 'Analyses indicate highly stable firmness and elasticity support, with very mild concern about collagen, elastin or hydration-plumpness.',
-      impact: 'Minimal concern.',
+      impact: 'A maintenance concern remains in this area; light, consistent support is what keeps it in check.',
       call_to_action: 'Continue prevention and routine check-ins.',
       treatment_direction: 'Preventive firming and hydration-plumpness support.',
       home_care_alternatives: 'Preventive routine, antioxidants, SPF.',
@@ -399,7 +399,7 @@ export const VARIABLE_COPY_BANK: Record<EngineVariableKey, Record<StageBand, Var
     },
     very_strong: {
       analysis: 'Analysis indicates that pigment stability appears highly stable, with very mild concern about melanocyte activity or uneven tone.',
-      impact: 'Minimal concern.',
+      impact: 'A maintenance concern remains in this area; light, consistent support is what keeps it in check.',
       call_to_action: 'Continue photoprotection and routine check-ins.',
       treatment_direction: 'Preventive maintenance only.',
       home_care_alternatives: 'Daily SPF, antioxidants, gentle maintenance routine.',
@@ -746,14 +746,19 @@ export function personalizeCopy(text: string, ctx: PersonalizeCtx): string {
   return out;
 }
 
-/** Human label for engine stability (higher score = more stable). */
+/**
+ * Client-visible status label. Mirrors the xcape-report-language-v2
+ * communication contract: "Healthy" only from 90 to 100, and every score
+ * below 90 names a concern or a correction/maintenance need.
+ */
 export function stabilityLabel(score: number | null | undefined): string {
-  if (typeof score !== 'number') return '—';
-  if (score >= 80) return 'Very stable';
-  if (score >= 65) return 'Stable';
-  if (score >= 50) return 'Watch';
-  if (score >= 35) return 'Needs support';
-  return 'Priority';
+  if (typeof score !== 'number') return 'Not available';
+  if (score >= 90) return 'Healthy';
+  if (score >= 81) return 'Maintenance concern';
+  if (score >= 61) return 'Visible concern / watch area';
+  if (score >= 41) return 'Needs correction';
+  if (score >= 21) return 'Active concern';
+  return 'Priority concern';
 }
 
 /** Build a personalization context from the assessment row + client. */
