@@ -178,7 +178,7 @@ const PublicFlowPanel = ({
           </button>
         )}
         <p className="text-xs text-muted-foreground">
-          Your photos are stored privately and deleted within 24 hours.
+          Your photos are stored privately. Side views are deleted within 24 hours; your front photo is kept only if you request your report.
         </p>
       </div>
     </aside>

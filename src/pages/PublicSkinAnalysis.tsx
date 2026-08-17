@@ -385,7 +385,7 @@ const PublicSkinAnalysis = () => {
     <div className="xcape-public min-h-screen bg-background text-foreground">
       <Seo
         title="Free Skin Analysis for Tropical Skin | XCAPE"
-        description="Take three guided photos and get your four XCAPE skin-health scores in about two minutes. No account needed. Photos deleted within 24 hours."
+        description="Take three guided photos and get your four XCAPE skin-health scores in about two minutes. No account needed. Side view photos deleted within 24 hours."
         path="/skin-analysis"
       />
 

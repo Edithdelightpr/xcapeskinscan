@@ -11,6 +11,8 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
 import { corsHeaders, json, sha256Hex } from '../_shared/publicAnalysis.ts';
 import { deriveToken, reportUrl, sha256Hex as tokenHash } from '../_shared/reportLinkToken.ts';
+import { retainFrontCapture } from '../_shared/retainScanPhoto.ts';
+
 import { publicAppUrl } from '../_shared/publicAppUrl.ts';
 import { buildReportShareMessage, whatsAppShareUrl } from '../_shared/reportShareMessage.ts';
 import {
@@ -206,11 +208,25 @@ Deno.serve(async (req) => {
     try {
       const { data: sessionRow, error: sessionErr } = await admin
         .from('public_analysis_sessions')
-        .select('engine')
+        .select('engine, image_paths')
         .eq('token_hash', token_hash)
         .maybeSingle();
       if (sessionErr) throw sessionErr;
       if (!sessionRow?.engine) throw new Error('session engine missing');
+
+      // ---- Retain the FRONT capture on the client record ----
+      // Best-effort and idempotent: the practitioner needs a photo with the
+      // analysis, but a storage hiccup must never withhold the report. The
+      // other views stay ephemeral and are purged within 24 hours.
+      const retained = await retainFrontCapture(admin, {
+        clientId: client_id,
+        assessmentId: assessment_id,
+        imagePaths: sessionRow.image_paths,
+      });
+      if (retained === 'failed') {
+        console.error('public-analysis-share-report front capture not retained', assessment_id);
+      }
+
 
       const alignments = await loadAlignments(admin);
       const dsAvailable = await loadDsAvailability(admin);

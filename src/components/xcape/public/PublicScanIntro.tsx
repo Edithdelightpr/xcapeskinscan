@@ -36,7 +36,7 @@ const STEPS = [
 ];
 
 const PRIVACY_TEXT =
-  'Photos travel over an encrypted connection into a private area only the analysis service can read, and are deleted within 24 hours. No account is created and nothing is posted anywhere. Choosing the camera also confirms you allow camera access for this session.';
+  'Photos travel over an encrypted connection into a private area only the analysis service can read, and are deleted within 24 hours. If you ask for your report, your front photo is kept securely on your record for your practitioner; the side views are still deleted. No account is created and nothing is posted anywhere. Choosing the camera also confirms you allow camera access for this session.';
 
 const DISCLAIMER_TEXT =
   'XCAPE provides cosmetic skin-health guidance only. It is not a medical device and does not diagnose, treat or cure any condition. For any medical concern, consult a qualified healthcare professional.';
@@ -105,7 +105,7 @@ const ConsentBody = ({
 
       <p className="flex items-start gap-2 text-xs leading-relaxed text-muted-foreground">
         <Lock className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
-        Encrypted in transit · deleted within 24 hours · no account created.
+        Encrypted in transit · side views deleted within 24 hours · no account created.
       </p>
     </div>
   );
@@ -254,7 +254,7 @@ const PublicScanIntro = ({ starting, error, onStart }: Props) => {
           </ol>
           <p className="mt-4 flex items-start gap-2 text-xs leading-relaxed text-muted-foreground">
             <Lock className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
-            Photos are encrypted in transit and deleted within 24 hours.
+            Photos are encrypted in transit. Side views are deleted within 24 hours; your front photo is kept only if you request your report.
           </p>
         </aside>
       </div>
