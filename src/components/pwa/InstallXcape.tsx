@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
-import { Share, Plus, X, Download, MoreVertical } from 'lucide-react';
+import { Share, Plus, X, Download, MoreVertical, Chrome } from 'lucide-react';
 import {
   INSTALL_DISMISS_KEY,
+  buildChromeIntentUrl,
   readInstallEnv,
   resolveInstallAffordance,
 } from '@/lib/pwa/installState';
@@ -10,6 +11,7 @@ import {
   subscribeToInstallPrompt,
   type BeforeInstallPromptEvent,
 } from '@/lib/pwa/installPromptStore';
+
 
 interface Props {
   /** `inline` sits in page flow; `floating` docks to the bottom of the viewport. */
