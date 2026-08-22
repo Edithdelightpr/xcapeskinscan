@@ -15,14 +15,34 @@ const IOS_SAFARI =
 const DESKTOP = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/126 Safari/537.36';
 
 describe('android install affordance', () => {
-  it('falls back to manual Android instructions when no prompt event arrives', () => {
+  it('falls back to manual Chrome instructions when no prompt event arrives', () => {
     expect(
       resolveInstallAffordance({ userAgent: ANDROID_CHROME, displayModeStandalone: false }, { hasDeferredPrompt: false }),
     ).toBe('android');
+  });
+
+  it('steers Play-Protect-blocked browsers to Chrome instead', () => {
     expect(
       resolveInstallAffordance({ userAgent: ANDROID_INAPP, displayModeStandalone: false }, { hasDeferredPrompt: false }),
-    ).toBe('android');
+    ).toBe('android-blocked');
+    expect(
+      resolveInstallAffordance(
+        { userAgent: ANDROID_SAMSUNG, displayModeStandalone: false },
+        // Samsung Internet does fire the prompt, but its install is the blocked one.
+        { hasDeferredPrompt: true },
+      ),
+    ).toBe('android-blocked');
+    expect(
+      resolveInstallAffordance({ userAgent: ANDROID_FB, displayModeStandalone: false }, { hasDeferredPrompt: false }),
+    ).toBe('android-blocked');
   });
+
+  it('builds a Chrome intent URL for the current page', () => {
+    expect(buildChromeIntentUrl('https://xcapeskinscan.lovable.app/skin-analysis')).toBe(
+      'intent://xcapeskinscan.lovable.app/skin-analysis#Intent;scheme=https;package=com.android.chrome;end',
+    );
+  });
+
 
   it('prefers the native prompt and never shows iOS copy on Android', () => {
     expect(
