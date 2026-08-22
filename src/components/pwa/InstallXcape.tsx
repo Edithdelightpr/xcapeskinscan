@@ -66,6 +66,31 @@ const InstallXcape = ({ variant = 'floating', className = '' }: Props) => {
     if (choice?.outcome === 'accepted') setDismissed(true);
   };
 
+  /**
+   * Escape hatch out of Samsung Internet / in-app webviews. The Android
+   * intent URL hands the current page to Chrome; when nothing handles it we
+   * fall back to copying the link so the user can paste it into Chrome.
+   */
+  const openInChrome = () => {
+    const href = window.location.href;
+    try {
+      window.location.href = buildChromeIntentUrl(href);
+    } catch {
+      /* intent not handled — the clipboard fallback below still applies */
+    }
+    window.setTimeout(() => {
+      if (document.hidden) return; // Chrome took over
+      navigator.clipboard?.writeText(href).then(
+        () => {
+          setCopied(true);
+          window.setTimeout(() => setCopied(false), 4000);
+        },
+        () => undefined,
+      );
+    }, 1200);
+  };
+
+
   const shell =
     variant === 'floating'
       ? 'fixed inset-x-4 bottom-4 z-50 mx-auto max-w-md pb-[env(safe-area-inset-bottom)]'
