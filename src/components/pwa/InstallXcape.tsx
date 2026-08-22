@@ -28,7 +28,9 @@ interface Props {
  */
 const InstallXcape = ({ variant = 'floating', className = '' }: Props) => {
   const [deferred, setDeferred] = useState<BeforeInstallPromptEvent | null>(null);
+  const [copied, setCopied] = useState(false);
   const [dismissed, setDismissed] = useState(() => {
+
     try {
       return localStorage.getItem(INSTALL_DISMISS_KEY) === '1';
     } catch {
