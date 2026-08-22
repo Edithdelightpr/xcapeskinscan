@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { resolveInstallAffordance } from '@/lib/pwa/installState';
+import { buildChromeIntentUrl, resolveInstallAffordance } from '@/lib/pwa/installState';
 import {
   clearDeferredInstallPrompt,
   getDeferredInstallPrompt,
@@ -10,6 +10,11 @@ import {
 const ANDROID_CHROME =
   'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126 Mobile Safari/537.36';
 const ANDROID_INAPP = `${ANDROID_CHROME} Instagram 300.0`;
+const ANDROID_FB =
+  'Mozilla/5.0 (Linux; Android 13; SM-A536B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125 Mobile Safari/537.36 [FBAN/FB4A;FBAV/450.0]';
+const ANDROID_SAMSUNG =
+  'Mozilla/5.0 (Linux; Android 14; SM-S911B) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/25.0 Chrome/121 Mobile Safari/537.36';
+
 const IOS_SAFARI =
   'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1';
 const DESKTOP = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/126 Safari/537.36';
