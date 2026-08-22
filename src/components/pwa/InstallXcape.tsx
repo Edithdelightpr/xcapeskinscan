@@ -130,12 +130,35 @@ const InstallXcape = ({ variant = 'floating', className = '' }: Props) => {
                 or
                 <span className="font-medium text-foreground">Add to Home screen</span>.
               </p>
-              <p className="mt-1 text-xs text-muted-foreground">
-                In Instagram, Facebook or another in-app browser, choose “Open in Chrome” first.
+            </div>
+          </div>
+        )}
+
+        {affordance === 'android-blocked' && (
+          <div className="flex items-start gap-4 pr-6">
+            <img src="/icons-xcape-192.png" alt="" aria-hidden className="mt-0.5 h-10 w-10" />
+            <div className="min-w-0">
+              <p className="text-sm font-medium text-foreground">Install XCAPE from Chrome</p>
+              <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                This browser builds its own app package, and Google Play Protect blocks it with
+                “Unsafe app blocked”. Installing from Chrome avoids that completely.
+              </p>
+              <button
+                type="button"
+                onClick={openInChrome}
+                className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-foreground px-4 py-2 text-xs font-medium text-background transition hover:opacity-90"
+              >
+                <Chrome className="h-3.5 w-3.5" aria-hidden />
+                {copied ? 'Link copied' : 'Open in Chrome'}
+              </button>
+              <p className="mt-2 text-xs text-muted-foreground">
+                Already tapped through the warning? Delete that icon and install again from Chrome,
+                the blocked version will not open.
               </p>
             </div>
           </div>
         )}
+
       </div>
     </div>
   );
