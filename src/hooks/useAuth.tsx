@@ -143,6 +143,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   );
 };
 
+/**
+ * Auth access for surfaces that may render outside the provider (public
+ * pages in isolation tests). Returns null instead of throwing.
+ */
+export const useOptionalAuth = () => useContext(AuthContext) ?? null;
+
 export const useAuth = () => {
   const ctx = useContext(AuthContext);
   if (!ctx) throw new Error('useAuth must be used within AuthProvider');

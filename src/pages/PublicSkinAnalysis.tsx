@@ -8,6 +8,8 @@ import PublicCaptureStage from '@/components/xcape/public/PublicCaptureStage';
 import PublicUploadFallback from '@/components/xcape/public/PublicUploadFallback';
 import AnalysisScanAnimation from '@/components/xcape/public/AnalysisScanAnimation';
 import PublicReportStage from '@/components/xcape/public/PublicReportStage';
+import JoinToViewResults from '@/components/xcape/public/JoinToViewResults';
+import { useOptionalAuth } from '@/hooks/useAuth';
 import { priorityFromScores, type PublicScoreKey, type PublicScores } from '@/lib/publicAnalysisScores';
 import { scoresFromReport, type PublicAnalysisReport } from '@/lib/publicAnalysisReport';
 import { isAnalysisPhase, type AnalysisPhase } from '@/lib/analysisPhases';
@@ -52,6 +54,11 @@ export const MIN_ANIMATION_MS = 2_500;
  */
 const PublicSkinAnalysis = () => {
   const renderedAt = useMemo(() => Date.now(), []);
+  // Results are XCAPE-member content: anyone may scan, only a signed-in
+  // XCAPE account may see the scores and report.
+  const auth = useOptionalAuth();
+  const user = auth?.user ?? null;
+  const authLoading = auth?.loading ?? false;
   const honeypot = useRef('');
 
   const [stage, setStage] = useState<Stage>(() => (readStoredToken() ? 'resuming' : 'intro'));
@@ -385,7 +392,7 @@ const PublicSkinAnalysis = () => {
     <div className="xcape-public min-h-screen bg-background text-foreground">
       <Seo
         title="Free Skin Analysis for Tropical Skin | XCAPE"
-        description="Take three guided photos and get your four XCAPE skin-health scores in about two minutes. No account needed. Side view photos deleted within 24 hours."
+        description="Take three guided photos and get your four XCAPE skin-health scores in about two minutes. Join XCAPE free to view your results. Side view photos deleted within 24 hours."
         path="/skin-analysis"
       />
 
@@ -455,7 +462,9 @@ const PublicSkinAnalysis = () => {
           />
         )}
 
-        {stage === 'analyzed' && (
+        {stage === 'analyzed' && !user && !authLoading && <JoinToViewResults />}
+
+        {stage === 'analyzed' && user && (
           <PublicReportStage
             photoUrl={frontUrl}
             scores={scores}

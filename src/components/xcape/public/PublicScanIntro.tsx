@@ -36,7 +36,7 @@ const STEPS = [
 ];
 
 const PRIVACY_TEXT =
-  'Photos travel over an encrypted connection into a private area only the analysis service can read, and are deleted within 24 hours. If you ask for your report, your front photo is kept securely on your record for your practitioner; the side views are still deleted. No account is created and nothing is posted anywhere. Choosing the camera also confirms you allow camera access for this session.';
+  'Photos travel over an encrypted connection into a private area only the analysis service can read, and are deleted within 24 hours. If you ask for your report, your front photo is kept securely on your record for your practitioner; the side views are still deleted. Nothing is posted anywhere. Choosing the camera also confirms you allow camera access for this session.';
 
 const DISCLAIMER_TEXT =
   'XCAPE provides cosmetic skin-health guidance only. It is not a medical device and does not diagnose, treat or cure any condition. For any medical concern, consult a qualified healthcare professional.';
@@ -238,7 +238,7 @@ const PublicScanIntro = ({ starting, error, onStart }: Props) => {
         <aside className="rounded-3xl border border-border bg-muted/40 p-5">
           <h2 className="text-sm font-semibold text-foreground">Ready when you are</h2>
           <p className="mt-2 text-sm text-muted-foreground">
-            Three quick views, four XCAPE skin-health scores, about two minutes. No account needed.
+            Three quick views, four XCAPE skin-health scores, about two minutes. Join XCAPE free to view your results.
           </p>
           <ol className="mt-4 space-y-3">
             {STEPS.map((s, i) => (
