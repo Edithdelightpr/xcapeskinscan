@@ -32,7 +32,11 @@ const Auth = () => {
   useEffect(() => {
     if (joinRole) persistJoinRole(joinRole);
   }, [joinRole]);
-  const [mode, setMode] = useState<'signin' | 'signup' | 'forgot'>('signin');
+  // Entry points that ask a visitor to JOIN (e.g. the scanner results gate)
+  // link with ?mode=signup so the form opens ready to create an account.
+  const [mode, setMode] = useState<'signin' | 'signup' | 'forgot'>(
+    searchParams.get('mode') === 'signup' ? 'signup' : 'signin',
+  );
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
