@@ -9,7 +9,7 @@ import PublicUploadFallback from '@/components/xcape/public/PublicUploadFallback
 import AnalysisScanAnimation from '@/components/xcape/public/AnalysisScanAnimation';
 import PublicReportStage from '@/components/xcape/public/PublicReportStage';
 import JoinToViewResults from '@/components/xcape/public/JoinToViewResults';
-import { useAuth } from '@/hooks/useAuth';
+import { useOptionalAuth } from '@/hooks/useAuth';
 import { priorityFromScores, type PublicScoreKey, type PublicScores } from '@/lib/publicAnalysisScores';
 import { scoresFromReport, type PublicAnalysisReport } from '@/lib/publicAnalysisReport';
 import { isAnalysisPhase, type AnalysisPhase } from '@/lib/analysisPhases';
@@ -56,7 +56,9 @@ const PublicSkinAnalysis = () => {
   const renderedAt = useMemo(() => Date.now(), []);
   // Results are XCAPE-member content: anyone may scan, only a signed-in
   // XCAPE account may see the scores and report.
-  const { user, loading: authLoading } = useAuth();
+  const auth = useOptionalAuth();
+  const user = auth?.user ?? null;
+  const authLoading = auth?.loading ?? false;
   const honeypot = useRef('');
 
   const [stage, setStage] = useState<Stage>(() => (readStoredToken() ? 'resuming' : 'intro'));
